@@ -9,7 +9,9 @@ This project uses the following technologies:
 
 # Badges
 
-TODO
+[![Build and test packages](https://github.com/Knoblauchpilze/backend-toolkit/actions/workflows/build-and-test-packages.yml/badge.svg)](https://github.com/Knoblauchpilze/backend-toolkit/actions/workflows/build-and-test-packages.yml)
+
+[![codecov](https://codecov.io/gh/Knoblauchpilze/backend-toolkit/graph/badge.svg?token=GDVROJ3V4Q)](https://codecov.io/gh/Knoblauchpilze/backend-toolkit)
 
 # Installation
 
