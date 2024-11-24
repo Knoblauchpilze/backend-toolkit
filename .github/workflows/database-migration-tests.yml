@@ -1,0 +1,78 @@
+name: Database migration tests
+
+on:
+  push:
+    paths:
+      - ".github/workflows/database-migration-tests.yml"
+      - "database/**"
+
+jobs:
+  # https://github.com/dorny/paths-filter
+  detect-code-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      ci: ${{ steps.filter.outputs.ci }}
+      test-db: ${{ steps.filter.outputs.test-db }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          base: ${{ github.ref_name }}
+          filters: |
+            ci:
+              - '.github/workflows/database-migration-tests.yml'
+            test-db:
+              - 'database/test/**'
+  validate-test-db:
+    runs-on: ubuntu-latest
+    needs: [detect-code-changes]
+    if: ${{ needs.detect-code-changes.outputs.test-db == 'true' || needs.detect-code-changes.outputs.ci == 'true' }}
+    # https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_iddefaultsrunworking-directory
+    defaults:
+      run:
+        working-directory: ./database
+    # https://dev.to/techschoolguru/how-to-setup-github-actions-for-go-postgres-to-run-automated-tests-81o
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23.2"
+      - name: Install migrate tool
+        run: go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+      - name: Create user
+        run: |
+          psql postgresql://postgres@localhost -v user_password=$USER_PASSWORD -f test/db_user_create.sql
+        env:
+          PGPASSWORD: postgres
+          USER_PASSWORD: test_password
+      - name: Create database
+        run: |
+          psql postgresql://postgres@localhost -f test/db_create.sql
+        env:
+          PGPASSWORD: postgres
+      - name: Migrate schema up
+        run: |
+          migrate -path test/migrations -database postgresql://test_user@localhost/test_db?sslmode=disable up
+        env:
+          PGPASSWORD: test_password
+      - name: Migrate schema down
+        run: |
+          migrate -path test/migrations -database postgresql://test_user@localhost/test_db?sslmode=disable down -all
+        env:
+          PGPASSWORD: test_password
