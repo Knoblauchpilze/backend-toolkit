@@ -41,4 +41,4 @@ echo "Creating release ${VERSION}"
 # https://stackoverflow.com/questions/18216991/create-a-tag-in-a-github-repository
 git tag ${VERSION}
 
-# git push origin ${VERSION}
+git push origin ${VERSION}
