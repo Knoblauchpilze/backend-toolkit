@@ -1,8 +1,13 @@
 #!/bin/bash
 
 if [[ $# -ge 1 ]]; then
-  echo "Using version from input: ${1}"
   VERSION=${1}
+  if ! [[ $VERSION =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "Usage: ./create_release.sh v1.2.3"
+    exit 1
+  fi
+
+  echo "Using version from input: ${1}"
 fi
 
 if [[ $VERSION == "" ]]; then
@@ -11,13 +16,13 @@ if [[ $VERSION == "" ]]; then
   VERSION=$(git tag --sort=-creatordate | tail -n 1)
 
   if [[ $VERSION == "" ]]; then
-    echo "No versions defined yet, picking 0.0.0 as base revision"
-    VERSION="0.0.0"
+    echo "No versions defined yet, picking v0.0.0 as base revision"
+    VERSION="v0.0.0"
   fi
 
   # Add a revision as per:
   # https://en.wikipedia.org/wiki/Software_versioning#Semantic_versioning
-  BASE_VERSION=$(echo $VERSION | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+')
+  BASE_VERSION=$(echo $VERSION | grep -Eo 'v[0-9]+\.[0-9]+\.[0-9]+')
   REVISION=$(echo $VERSION | cut -d. -f4)
   if [[ $REVISION == "" ]]; then
     REVISION="0"
@@ -36,4 +41,4 @@ echo "Creating release ${VERSION}"
 # https://stackoverflow.com/questions/18216991/create-a-tag-in-a-github-repository
 git tag ${VERSION}
 
-git push origin ${VERSION}
+# git push origin ${VERSION}
