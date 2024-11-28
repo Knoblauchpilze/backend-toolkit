@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"reflect"
+	"time"
 
 	"github.com/KnoblauchPilze/backend-toolkit/pkg/db/pgx"
 	"github.com/KnoblauchPilze/backend-toolkit/pkg/errors"
@@ -54,11 +55,17 @@ func QueryAll[T any](ctx context.Context, conn Connection, sql string, arguments
 	return out, nil
 }
 
+var timeStructName = reflect.ValueOf(time.Time{}).Type().Name()
+
 func getCollectorForType[T any]() jpgx.RowToFunc[T] {
 	var value T
 
+	kind := reflect.ValueOf(value).Kind()
+	typeName := reflect.ValueOf(value).Type().Name()
+
 	// https://pkg.go.dev/github.com/jackc/pgx/v5#RowToStructByName
-	if reflect.ValueOf(value).Kind() == reflect.Struct {
+	if kind == reflect.Struct &&
+		typeName != timeStructName {
 		return jpgx.RowToStructByName[T]
 	}
 
