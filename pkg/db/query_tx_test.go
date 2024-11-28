@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/KnoblauchPilze/backend-toolkit/pkg/db/pgx"
 	"github.com/KnoblauchPilze/backend-toolkit/pkg/errors"
@@ -99,6 +100,18 @@ func TestIT_QueryOneTx_ToUuid(t *testing.T) {
 	assert.Equal(t, expected.Id, actual)
 }
 
+func TestIT_QueryOneTx_ToTime(t *testing.T) {
+	conn, tx := newTestTransaction(t)
+	beforeInsert := time.Now()
+	expected := insertTestData(t, conn)
+
+	sqlQuery := "SELECT updated_at FROM my_table WHERE name = $1"
+	actual, err := QueryOneTx[time.Time](context.Background(), tx, sqlQuery, expected.Name)
+
+	assert.Nil(t, err)
+	assert.True(t, beforeInsert.Before(actual))
+}
+
 func TestIT_QueryAllTx_UnsupportedConnection(t *testing.T) {
 	_, err := QueryAllTx[int](context.Background(), &dummyTransaction{}, sampleSqlQuery)
 
@@ -176,4 +189,18 @@ func TestIT_QueryAllTx_ToUuid(t *testing.T) {
 	assert.Nil(t, err)
 	expected := []uuid.UUID{v1.Id, v2.Id}
 	assert.Equal(t, expected, actual)
+}
+
+func TestIT_QueryAllTx_ToTime(t *testing.T) {
+	conn, tx := newTestTransaction(t)
+	beforeInsert := time.Now()
+	v1 := insertTestData(t, conn)
+	v2 := insertTestData(t, conn)
+
+	sqlQuery := "SELECT updated_at FROM my_table WHERE id IN ($1, $2)"
+	actual, err := QueryAllTx[time.Time](context.Background(), tx, sqlQuery, v1.Id, v2.Id)
+
+	assert.Nil(t, err)
+	assert.True(t, beforeInsert.Before(actual[0]))
+	assert.True(t, beforeInsert.Before(actual[1]))
 }
