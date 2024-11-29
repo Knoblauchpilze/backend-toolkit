@@ -29,7 +29,7 @@ func QueryOne[T any](ctx context.Context, conn Connection, sql string, arguments
 		} else if err == jpgx.ErrTooManyRows {
 			return out, errors.WrapCode(err, TooManyMatchingRows)
 		}
-		return out, err
+		return out, pgx.AnalyzeAndWrapPgError(err)
 	}
 
 	return out, nil

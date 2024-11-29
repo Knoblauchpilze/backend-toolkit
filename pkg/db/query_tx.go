@@ -27,7 +27,7 @@ func QueryOneTx[T any](ctx context.Context, tx Transaction, sql string, argument
 		} else if err == jpgx.ErrTooManyRows {
 			return out, errors.WrapCode(err, TooManyMatchingRows)
 		}
-		return out, err
+		return out, pgx.AnalyzeAndWrapPgError(err)
 	}
 
 	return out, nil

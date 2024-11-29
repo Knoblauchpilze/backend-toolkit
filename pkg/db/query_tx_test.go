@@ -67,6 +67,21 @@ func TestIT_QueryOneTx_WhenTooManyRows_ExpectFailure(t *testing.T) {
 	assert.True(t, errors.IsErrorWithCode(err, TooManyMatchingRows), "Actual err: %v", err)
 }
 
+func TestIT_QueryOneTx_WhenUniqueConstraintViolation_ExpectFailure(t *testing.T) {
+	conn, tx := newTestTransaction(t)
+	data := insertTestData(t, conn)
+
+	duplicate := element{
+		Id:   uuid.New(),
+		Name: data.Name,
+	}
+
+	sqlQuery := "INSERT INTO my_table (id, name) VALUES($1, $2)"
+	_, err := QueryOneTx[element](context.Background(), tx, sqlQuery, duplicate.Id, duplicate.Name)
+
+	assert.True(t, errors.IsErrorWithCode(err, pgx.UniqueConstraintViolation), "Actual err: %v", err)
+}
+
 func TestIT_QueryOneTx_ToStruct(t *testing.T) {
 	_, tx := newTestTransaction(t)
 	expected := insertTestDataTx(t, tx)
