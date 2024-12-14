@@ -11,9 +11,13 @@ if [[ $# -ge 1 ]]; then
 fi
 
 if [[ $VERSION == "" ]]; then
+  # Update local tags:
+  # https://stackoverflow.com/questions/16678072/fetching-all-tags-from-a-remote-with-git-pull
+  git fetch --tags
+
   # Try to pick the latest version:
   # https://stackoverflow.com/questions/6269927/how-can-i-list-all-tags-in-my-git-repository-by-the-date-they-were-created
-  VERSION=$(git tag --sort=-creatordate | tail -n 1)
+  VERSION=$(git tag --sort=-creatordate | head -n 1)
 
   if [[ $VERSION == "" ]]; then
     echo "No versions defined yet, picking v0.0.0 as base revision"
@@ -28,12 +32,9 @@ if [[ $VERSION == "" ]]; then
     REVISION="0"
   fi
 
-  echo "BASE: $BASE_VERSION, rev: $REVISION"
-
   NEXT_REVISION=$(echo "${REVISION} + 1" | bc)
   VERSION="${BASE_VERSION}.${NEXT_REVISION}"
 
-  echo "BASE: $BASE_VERSION, rev: $REVISION, next: $NEXT_REVISION"
   echo "No version provided in input, will go on with ${VERSION}"
 fi
 
@@ -41,4 +42,4 @@ echo "Creating release ${VERSION}"
 # https://stackoverflow.com/questions/18216991/create-a-tag-in-a-github-repository
 git tag ${VERSION}
 
-git push origin ${VERSION}
+# git push origin ${VERSION}
