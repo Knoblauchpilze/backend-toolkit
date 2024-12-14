@@ -55,17 +55,20 @@ func main() {
 	}
 	defer conn.Close(context.Background())
 
+	// Create the server
 	serverConfig := server.Config{
 		Port: 1234,
 	}
 	s := server.NewWithLogger(serverConfig, log)
 
+	// Add a route with some handler
 	route := rest.NewRoute(http.MethodGet, "/info", infoHandlerGenerator(conn))
 	if err := s.AddRoute(route); err != nil {
 		log.Errorf("Failed to register route %v: %v", route.Path(), err)
 		os.Exit(1)
 	}
 
+	// Start the server
 	err = s.Start(context.Background())
 	if err != nil {
 		log.Errorf("Error while serving: %v", err)
@@ -77,6 +80,8 @@ func infoHandlerGenerator(conn db.Connection) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		sqlQuery := "SELECT count FROM my-table"
 
+		// Use the connection to query the database and unmarshal the result
+		// easily in an integer or a struct or anything you want
 		value, err := db.QueryOne[int](c.Request().Context(), conn, sqlQuery)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, "Failed to query database")
@@ -91,7 +96,7 @@ By using only packges provided by this package we are able to setup a server han
 
 The key features of the project are:
 
-- a simple way to configure a connection to a `postgres` database.
+- a simple way to configure a connection to a `postgres` database using [pgx](https://github.com/jackc/pgx).
 - an easy to use server using [echo](https://echo.labstack.com/) as a base.
 - a powerful logging system that leverages [zerolog](https://github.com/rs/zerolog) and integrates it with `echo`.
 
