@@ -160,3 +160,27 @@ git clone git@github.com:Knoblauchpilze/backend-toolkit.git
 ```
 
 **Note:** the migrate tool and postgres are only used for the test database and for tests. If you don't install them it means you'll not be able to run the tests locally.
+
+# How to extend this project
+
+As this project is meant to contain common tools to kick-start a backend project in Go, additions are welcomed. As a general rule, anything we add here should be:
+
+- generic enough so that it can be used in multiple projects.
+- well tested in order to guarantee a good level of quality for the base code.
+- convenient to use either with structures from the standard library or from this project.
+
+If you think what you want to propose fits those criteria, you can open a [new PR](https://github.com/Knoblauchpilze/backend-toolkit/pulls) in this project or [an issue](https://github.com/Knoblauchpilze/backend-toolkit/issues).
+
+# Create a new release
+
+A convenience script is provided in the [scripts](scripts) folder to create a new release: [create_release.sh](scripts/create_release.sh).
+
+You can run this script as follows:
+
+```bash
+./create_release.sh v1.2.3
+```
+
+The version is optional: in case it's not provided, the script will try to determine the latest one and add one to it. Typically if the latest published version available in the repository (**locally**) is `v1.2.3`, running the script without arguments will result in a version `v1.2.3.1` being created.
+
+The new version will automatically be published to the public repository. Therefore use this script with care.
