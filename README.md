@@ -137,11 +137,157 @@ It is encouraged to create custom error codes specialized to our business logic.
 
 ## Logging
 
+As a transverse concern, logging is usually quite important in a backend service. The main attributes we want to guarantee with a common package is:
+
+- easy to read.
+- easily customizable to allow display of headers and prefixes (typically modules or services).
+- ability to correlate logs for a request with one another.
+
+To this end we used some capabilities provided by `echo` and `zerolog` and tried to make them work in combination.
+
+### Echo context
+
+By default a handler using `echo` has the following prototype:
+
+```go
+type HandlerFunc func(c echo.Context) error
+```
+
+The `echo.Context` contains a logger which is attached by default to each request. It stems from the general logger configured when instantiating the `echo.Echo` object.
+
+### Binding zerolog to echo logger
+
+The `zerolog` package and the `echo` package have slightly different interfaces to allow logging. In the future we might want to use a different logging backend. Therefore it does not seem very secure to expose the internals of the logging system we use outside of the package.
+
+In the [logger](pkg/logger) package we defined a general log interface (`logger.Logger`) and provide some adapters to convert to other types. This is a typical way to bind different logging systems (see e.g. [pgx's adapter](https://github.com/jackc/pgx-zerolog) for `zerolog`).
+
+For this project we have the following function:
+
+```go
+func Wrap(log Logger) echo.Logger {
+	/* ... */
+}
+```
+
+This allows to create a logger as usual and pass it over to the `echo` object easily.
+
 ## Database interaction
+
+An important part of a backend service is usually to interact with some database where the information is stored. For most of the projects we had to work with in the past this meant spinning up a `postgres` database and interact with it.
+
+We've been using the [pgx](https://github.com/jackc/pgx) for a long time and found it quite versatile. The `db` package is using it under the hood but hiding some of the internals in an attempt to allow easily upgrading to newer version and hide some of the complexity of managing the connection to the database.
+
+### The connection
+
+The main type brought by the `db` package is the [db.Connection](pkg/db/connection.go). It allows to start a transaction and execute some SQL code.
+
+### Querying
+
+`pgx` defines two main concepts: `Exec` and `Query`. The difference is explained in [this StackOverflow](https://stackoverflow.com/questions/60180651/what-are-the-differences-between-queryrow-and-exec-in-golang-sql-package) post and boils down (roughly) to whether we use `SELECT` or some other statement.
+
+`pgx` defines some very convenient methods to query data and automatically scan it into the fields of a struct or return it as a specific type. This eliminates a lot of the boilerplate we had to do in the past with the `rows.Scan(...)`.
+
+In order to leverage generics, we would like to offer something like:
+
+```go
+type myStruct struct {
+	A int
+	B string
+}
+
+func foo(conn db.Connection) error {
+	s, err := conn.Query[myStruct](conn, "SELECT A, B FROM my_table")
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("My struct: %v\n", s)
+
+	return nil
+}
+```
+
+The problem with this syntax is that the generic type to assign to the `Query` method would have to be known when creating the connection. Additionally we can't change the generic type of the `Query` method when a connection is created so it's not so flexible.
+
+To this end, the `db` package defines a free function like below:
+
+```go
+func Query[T any](conn db.Connection, sqlQuery string, arguments ...any) (T, error) {
+	/* ... */
+}
+```
 
 ## The rest server
 
+Another common aspect of offering a backend service is to have an HTTP server. In the past we usually used the [echo](https://echo.labstack.com/) framework. Although it's already providing some good abstraction, we noticed that some operations were quite common:
+
+- configuring the server (base path, port)
+- start and stop gracefully
+- register routes
+
+This is the purpose of the [rest](pkg/rest) and [server](pkg/server) packages: they define utilities that can be used to easily register routes and attach them to a server. This server can in turn started and stopped easily.
+
 ## Middleware
+
+No matter the project and what HTTP handlers are actually doing, it's common that we expect some processing to happen for all of them. Typical examples are:
+
+- error recovery
+- timing
+- observability
+
+In Go (and in most HTTP framework) those concerns are usually handled through middlewares. A middleware is a piece of code that 'decorates' an existing handler to enhance its capabilities. A typical example is a rate-limiting middleware which keeps track of how often an endpoint was called and by whom and denies some requests in case too many are received.
+
+### Request tracing
+
+An important aspect of microservices is tracing. This allows to effectively follow the path of a request across services boundaries and is usually accomplished by adding a _correlation id_ to a request.
+
+In this toolkit we act on this premise with two middlewares, described below.
+
+### The response envelope middleware
+
+In order to provide consistent response format across an APIs, the [response_envelope](pkg/middleware/response_envelope.go) middleware captures the output of any incoming request and wraps it into something that looks like the following:
+
+```json
+{
+  "requestId": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
+  "status": "SUCCESS",
+  "details": {
+    "value": 12
+  }
+}
+```
+
+This clearly indicates:
+
+- the request identifier
+- whether it succeeded or not
+- potential details about the success or failure
+
+Having something like this in place for an API allows consumers to easily know whether a request was successful or not. Additionally we can rely on HTTP status codes to provided information about what went wrong.
+
+The `ResponseEnvelope` middleware is added by default to the `Server`.
+
+### A note on generating the request identifier
+
+In order to keep track of the journey of a request in the microservice architecture, the `ResponseEnvelope` middleware tries to retrieve an existing identifier from the headers of the request: if this exists, it uses it as a request id. If not, it generates a new one.
+
+This allows to make sure that if the request is forwarded to another service (and as long as **the code is attaching the request id to the new HTTP request**) we will also see traces for the other service with this request's id.
+
+### Logging for a request
+
+Any backend service usually produces logs: in case a request fails or misbehave, it might be interesting to inspect traces for this specific request.
+
+We already mentioned in the [logging](#logging) section that this framework makes it easy to configure a global logger than can be shared across the controllers and services.
+
+Additionally with the [RequestTracer](pkg/middleware/request_tracer.go) middleware we can attach a custom logger with a prefix matching the request identifier.
+
+This looks like the following:
+
+```
+2024-12-15 13:55:26 INF [95ad22c8-8854-466c-83f7-2630fac365ba] GET localhost:60001/v1/users processed in 14.187412ms -> 200
+```
+
+We clearly see which request it is and can correlate the request across multiple services.
 
 # Installation
 
