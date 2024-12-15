@@ -281,7 +281,7 @@ We already mentioned in the [logging](#logging) section that this framework make
 
 Additionally with the [RequestTracer](pkg/middleware/request_tracer.go) middleware we can attach a custom logger with a prefix matching the request identifier.
 
-This looks like the following:
+This looks like the following (for an example with the [user-service](https://github.com/Knoblauchpilze/user-service)):
 
 ```
 2024-12-15 13:55:26 INF [95ad22c8-8854-466c-83f7-2630fac365ba] GET localhost:60001/v1/users processed in 14.187412ms -> 200
