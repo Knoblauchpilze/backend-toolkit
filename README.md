@@ -87,12 +87,12 @@ func infoHandlerGenerator(conn db.Connection) echo.HandlerFunc {
 			return c.JSON(http.StatusInternalServerError, "Failed to query database")
 		}
 
-		return c.JSON(http.StatusOK, value)
+		return c.String(http.StatusOK, value)
 	}
 }
 ```
 
-By using only packges provided by this package we are able to setup a server handling requests and fetching information from a database very easily.
+By using only packges provided in this repository we are able to setup a server handling requests and fetching information from a database very easily.
 
 The key features of the project are:
 
