@@ -11,6 +11,10 @@ on:
       - "pkg/**"
       - "internal/**"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check-test-names:
     runs-on: ubuntu-latest
