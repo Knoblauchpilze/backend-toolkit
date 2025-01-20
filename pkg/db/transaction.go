@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/KnoblauchPilze/backend-toolkit/pkg/db/pgx"
-	"github.com/KnoblauchPilze/backend-toolkit/pkg/errors"
+	"github.com/Knoblauchpilze/backend-toolkit/pkg/db/pgx"
+	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 	jpgx "github.com/jackc/pgx/v5"
 )
 

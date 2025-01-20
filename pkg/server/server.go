@@ -9,10 +9,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/KnoblauchPilze/backend-toolkit/pkg/errors"
-	"github.com/KnoblauchPilze/backend-toolkit/pkg/logger"
-	om "github.com/KnoblauchPilze/backend-toolkit/pkg/middleware"
-	"github.com/KnoblauchPilze/backend-toolkit/pkg/rest"
+	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
+	"github.com/Knoblauchpilze/backend-toolkit/pkg/logger"
+	om "github.com/Knoblauchpilze/backend-toolkit/pkg/middleware"
+	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )

@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"github.com/KnoblauchPilze/backend-toolkit/pkg/rest"
+	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"

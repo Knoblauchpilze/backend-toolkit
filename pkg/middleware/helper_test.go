@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/KnoblauchPilze/backend-toolkit/pkg/logger"
+	"github.com/Knoblauchpilze/backend-toolkit/pkg/logger"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/require"
 )

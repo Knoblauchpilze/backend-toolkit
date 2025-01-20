@@ -1,4 +1,4 @@
-module github.com/KnoblauchPilze/backend-toolkit
+module github.com/Knoblauchpilze/backend-toolkit
 
 go 1.23.2
 

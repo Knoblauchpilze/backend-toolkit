@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/KnoblauchPilze/backend-toolkit/pkg/errors"
+	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )
