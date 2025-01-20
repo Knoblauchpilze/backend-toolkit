@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/KnoblauchPilze/backend-toolkit/pkg/db/postgresql"
+	"github.com/Knoblauchpilze/backend-toolkit/pkg/db/postgresql"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )

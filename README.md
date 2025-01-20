@@ -33,11 +33,11 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/KnoblauchPilze/backend-toolkit/pkg/db"
-	"github.com/KnoblauchPilze/backend-toolkit/pkg/db/postgresql"
-	"github.com/KnoblauchPilze/backend-toolkit/pkg/logger"
-	"github.com/KnoblauchPilze/backend-toolkit/pkg/rest"
-	"github.com/KnoblauchPilze/backend-toolkit/pkg/server"
+	"github.com/Knoblauchpilze/backend-toolkit/pkg/db"
+	"github.com/Knoblauchpilze/backend-toolkit/pkg/db/postgresql"
+	"github.com/Knoblauchpilze/backend-toolkit/pkg/logger"
+	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
+	"github.com/Knoblauchpilze/backend-toolkit/pkg/server"
 	"github.com/labstack/echo/v4"
 )
 

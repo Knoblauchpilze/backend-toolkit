@@ -1,6 +1,6 @@
 package db
 
-import "github.com/KnoblauchPilze/backend-toolkit/pkg/errors"
+import "github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 
 const (
 	NotConnected         errors.ErrorCode = 100

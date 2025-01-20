@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/KnoblauchPilze/backend-toolkit/pkg/db/pgx"
-	"github.com/KnoblauchPilze/backend-toolkit/pkg/errors"
+	"github.com/Knoblauchpilze/backend-toolkit/pkg/db/pgx"
+	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
