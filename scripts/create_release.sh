@@ -27,13 +27,14 @@ if [[ $VERSION == "" ]]; then
   # Add a revision as per:
   # https://en.wikipedia.org/wiki/Software_versioning#Semantic_versioning
   BASE_VERSION=$(echo $VERSION | grep -Eo 'v[0-9]+\.[0-9]+\.[0-9]+')
-  REVISION=$(echo $VERSION | cut -d. -f4)
+  REVISION=$(echo $VERSION | cut -d. -f3)
   if [[ $REVISION == "" ]]; then
     REVISION="0"
   fi
 
   NEXT_REVISION=$(echo "${REVISION} + 1" | bc)
-  VERSION="${BASE_VERSION}.${NEXT_REVISION}"
+  TRIMMED_VERSION=$(echo ${BASE_VERSION} | grep -Eo 'v[0-9]+\.+[0-9]+\.')
+  VERSION="${TRIMMED_VERSION}${NEXT_REVISION}"
 
   echo "No version provided in input, will go on with ${VERSION}"
 fi
