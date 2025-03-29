@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type sampleServerConfig struct {
@@ -75,7 +74,7 @@ func TestUnit_Load_WhenFileDoesNotExist_ExpectDefaultConfigReturned(t *testing.T
 	otherConfigName := configName + "-suffix"
 
 	actual, err := Load(otherConfigName, in)
-	require.NotNil(t, err)
+	assert.NotNil(t, err)
 	assert.Equal(t, in.Server.Port, actual.Server.Port)
 }
 
@@ -114,6 +113,58 @@ func TestUnit_Load_WhenConfigDoesNotExistInFileButEnvironmentVariableDoes_Expect
 	assert.Equal(t, uint16(22), actual.Server.Port)
 }
 
+func TestUnit_Load_WhenUuidInConfig_ExpectSuccess(t *testing.T) {
+	type sampleServiceConfig struct {
+		Id       uuid.UUID
+		IdString string
+	}
+
+	type sampleConfig struct {
+		Service sampleServiceConfig
+	}
+
+	sampleYaml := "Service:\n  Id: 4db2ed08-a1b0-45bf-8ffb-c93e4096372d\n  IdString: 5db2ed08-a1b0-45bf-8ffb-c93e4096372d\n"
+	configName := writeConfigFile(t, []byte(sampleYaml))
+
+	in := sampleConfig{
+		Service: sampleServiceConfig{
+			Id:       uuid.New(),
+			IdString: uuid.NewString(),
+		},
+	}
+
+	actual, err := Load(configName, in)
+	assert.Nil(t, err)
+	expectedId := uuid.MustParse("4db2ed08-a1b0-45bf-8ffb-c93e4096372d")
+	assert.Equal(t, expectedId, actual.Service.Id)
+	expectedIdString := "5db2ed08-a1b0-45bf-8ffb-c93e4096372d"
+	assert.Equal(t, expectedIdString, actual.Service.IdString)
+}
+
+func TestUnit_Load_WhenUuidInConfigAndInvalidData_ExpectFailure(t *testing.T) {
+	type sampleServiceConfig struct {
+		Id uuid.UUID
+	}
+
+	type sampleConfig struct {
+		Service sampleServiceConfig
+	}
+
+	sampleYaml := "Service:\n  Id: 4db2ed08-a1b0-45bf-8ffb-c93e409\n"
+	configName := writeConfigFile(t, []byte(sampleYaml))
+
+	in := sampleConfig{
+		Service: sampleServiceConfig{
+			Id: uuid.New(),
+		},
+	}
+
+	actual, err := Load(configName, in)
+
+	assert.NotNil(t, err)
+	assert.Equal(t, in.Service.Id, actual.Service.Id)
+}
+
 func writeSampleConfigFile(t *testing.T) string {
 	// https://stackoverflow.com/questions/19975954/a-yaml-file-cannot-contain-tabs-as-indentation
 	sampleYaml := "Server:\n  Port: 20\n"
@@ -124,7 +175,7 @@ func writeConfigFile(t *testing.T, content []byte) string {
 	configName := fmt.Sprintf("config-%s", uuid.New())
 	configFileName := fmt.Sprintf("configs/%s.yml", configName)
 	err := os.WriteFile(configFileName, content, 0666)
-	require.Nil(t, err)
+	assert.Nil(t, err, "Actual err: %v", err)
 
 	return configName
 }
