@@ -23,7 +23,7 @@ Additionally we don't need to worry so much about testing those common packages 
 
 # Sample code
 
-A bit of code is usually really helpful to see what's possible with a certain module. So here's what possible with this project:
+A bit of code is usually really helpful to see what's possible with a certain module. So here's what's possible with this project:
 
 ```go
 package main
