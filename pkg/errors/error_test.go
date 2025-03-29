@@ -13,11 +13,11 @@ var errSomeError = fmt.Errorf("some error")
 const someCode = ErrorCode(26)
 
 func TestUnit_Error_New(t *testing.T) {
-	err := New("haha")
+	err := New("foo")
 
 	impl, ok := err.(errorImpl)
 	assert.True(t, ok)
-	assert.Equal(t, "haha", impl.Message)
+	assert.Equal(t, "foo", impl.Message)
 	assert.Nil(t, impl.Cause)
 	assert.Equal(t, GenericErrorCode, impl.Value)
 }
@@ -72,11 +72,11 @@ func TestUnit_Error_NewCodeWithDetails(t *testing.T) {
 }
 
 func TestUnit_Error_Newf(t *testing.T) {
-	err := Newf("haha %d", 22)
+	err := Newf("foo %d", 22)
 
 	impl, ok := err.(errorImpl)
 	assert.True(t, ok)
-	assert.Equal(t, "haha 22", impl.Message)
+	assert.Equal(t, "foo 22", impl.Message)
 	assert.Nil(t, impl.Cause)
 }
 
@@ -115,11 +115,11 @@ func TestUnit_Error_Unwrap(t *testing.T) {
 	err = Unwrap(errSomeError)
 	assert.Nil(t, err)
 
-	err = New("haha")
+	err = New("foo")
 	cause := Unwrap(err)
 	assert.Nil(t, cause)
 
-	err = Wrap(errSomeError, "haha")
+	err = Wrap(errSomeError, "foo")
 	cause = Unwrap(err)
 	assert.Equal(t, errSomeError, cause)
 
@@ -148,13 +148,13 @@ func TestUnit_Error_Code(t *testing.T) {
 }
 
 func TestUnit_Error_MarshalJSON(t *testing.T) {
-	err := New("haha")
+	err := New("foo")
 	out, mErr := json.Marshal(err)
 
 	expected := `
 	{
 		"Code": 1,
-		"Message": "haha"
+		"Message": "foo"
 	}`
 	assert.Nil(t, mErr)
 	assert.JSONEq(t, expected, string(out))
@@ -182,16 +182,16 @@ func TestUnit_Error_MarshalJSON(t *testing.T) {
 	assert.Nil(t, mErr)
 	assert.JSONEq(t, expected, string(out))
 
-	err = Wrap(New("haha"), "hihi")
+	err = Wrap(New("foo"), "bar")
 	out, mErr = json.Marshal(err)
 
 	expected = `
 	{
 		"Code": 1,
-		"Message": "hihi",
+		"Message": "bar",
 		"Cause": {
 			"Code": 1,
-			"Message": "haha"
+			"Message": "foo"
 		}
 	}`
 	assert.Nil(t, mErr)
@@ -203,5 +203,5 @@ func TestUnit_Error_IsErrorWithCode(t *testing.T) {
 	assert.False(t, IsErrorWithCode(errSomeError, someCode))
 	assert.True(t, IsErrorWithCode(NewCode(someCode), someCode))
 	assert.False(t, IsErrorWithCode(NewCode(27), someCode))
-	assert.False(t, IsErrorWithCode(New("haha"), someCode))
+	assert.False(t, IsErrorWithCode(New("foo"), someCode))
 }

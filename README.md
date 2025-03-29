@@ -125,10 +125,10 @@ The errors are also defining a message that can explain the code. An error can a
 ```json
 {
   "Code": 1,
-  "Message": "hihi",
+  "Message": "foo",
   "Cause": {
     "Code": 1,
-    "Message": "haha"
+    "Message": "bar"
   }
 }
 ```
