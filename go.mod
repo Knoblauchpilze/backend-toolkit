@@ -1,7 +1,6 @@
 module github.com/Knoblauchpilze/backend-toolkit
 
 go 1.23.2
-
 require (
 	github.com/go-viper/mapstructure/v2 v2.2.1
 	github.com/labstack/echo/v4 v4.13.3
@@ -29,7 +28,7 @@ require (
 
 require (
 	github.com/google/uuid v1.6.0
-	github.com/jackc/pgx/v5 v5.7.3
+	github.com/jackc/pgx/v5 v5.7.4
 	github.com/labstack/gommon v0.4.2
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
