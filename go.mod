@@ -1,7 +1,6 @@
 module github.com/Knoblauchpilze/backend-toolkit
 
 go 1.23.2
-
 require (
 	github.com/go-viper/mapstructure/v2 v2.2.1
 	github.com/labstack/echo/v4 v4.13.3
@@ -34,7 +33,7 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/rs/zerolog v1.34.0
-	github.com/spf13/viper v1.20.0
+	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.10.0
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
