@@ -6,9 +6,7 @@ import (
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 )
 
-type Process func()
-
-func SafeRunSync(proc Process) error {
+func SafeRunSync(proc RunFunc) error {
 	var err error
 
 	func() {
