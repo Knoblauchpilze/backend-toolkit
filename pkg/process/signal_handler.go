@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 )
 
 var defaultSignals = []os.Signal{
@@ -18,7 +20,11 @@ type WaitFunc func() error
 func AsyncStartWithSignalHandler(
 	ctx context.Context,
 	process Process,
-) WaitFunc {
+) (WaitFunc, error) {
+	if !process.Valid() {
+		return nil, errors.NewCode(ErrInvalidProcess)
+	}
+
 	sCtx, stop := signal.NotifyContext(ctx, defaultSignals...)
 
 	done := make(chan error, 1)
@@ -31,7 +37,7 @@ func AsyncStartWithSignalHandler(
 		fmt.Printf("async loop finished\n")
 	}()
 
-	return func() error {
+	waitFunc := func() error {
 		defer stop()
 
 		var err error
@@ -48,4 +54,6 @@ func AsyncStartWithSignalHandler(
 		fmt.Printf("waiting finished, err: %v\n", err)
 		return err
 	}
+
+	return waitFunc, nil
 }
