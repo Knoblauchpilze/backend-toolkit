@@ -161,10 +161,6 @@ func TestUnit_AsyncStartWithSignalHandler_ExpectInterruptErrorToBeReturned(t *te
 
 	actual := formatTestOutput(output)
 
-	fmt.Printf("----------\n")
-	fmt.Printf("output:\n%s\n", string(output))
-	fmt.Printf("----------\n")
-
 	expected := []string{
 		"interrupt called",
 		"stopping process",
@@ -228,16 +224,32 @@ func runInterruptedProcess(interruptError error) {
 	}
 }
 
+var testFrameworkPrefixes = []string{
+	"=== RUN",
+	"--- PASS",
+	"--- FAIL",
+	"PASS",
+	"FAIL",
+	// Happens in CI when the coverage is on"
+	"coverage:",
+}
+
+func shouldBeFiltered(line string) bool {
+	for _, prefix := range testFrameworkPrefixes {
+		if strings.HasPrefix(line, prefix) {
+			return true
+		}
+	}
+
+	return line == ""
+}
+
 func formatTestOutput(output []byte) []string {
 	var out []string
 
 	for _, line := range strings.Split(string(output), "\n") {
-		if !strings.HasPrefix(line, "=== RUN") &&
-			!strings.HasPrefix(line, "--- PASS") &&
-			!strings.HasPrefix(line, "--- FAIL") &&
-			!strings.HasPrefix(line, "PASS") &&
-			!strings.HasPrefix(line, "FAIL") &&
-			line != "" {
+		fmt.Printf("line: \"%s\" -> %t\n", line, shouldBeFiltered(line))
+		if !shouldBeFiltered(line) {
 			out = append(out, line)
 		}
 	}
