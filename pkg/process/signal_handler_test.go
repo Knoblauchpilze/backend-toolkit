@@ -104,7 +104,7 @@ var (
 	waitForInterruption = flag.Bool(
 		"wait_for_interruption",
 		false,
-		"if true, TestUnit_AsyncStartWithSignalHandler_WhenSignalReceived_ExpectCloseToBeCalled will wait for SIGINT to be received for 5 seconds",
+		"if true, the test will wait will emit a signal to itself and wait for it to be received for 5 seconds",
 	)
 )
 
