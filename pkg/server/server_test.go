@@ -19,96 +19,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type responseEnvelope struct {
-	RequestId string          `json:"requestId"`
-	Status    string          `json:"status"`
-	Details   json.RawMessage `json:"details"`
-}
-
-func newTestServer(port uint16) Server {
-	return newTestServerWithPath(port, "/")
-}
-
-func newTestServerWithPath(port uint16, path string) Server {
-	config := Config{
-		BasePath:        path,
-		Port:            port,
-		ShutdownTimeout: 2 * time.Second,
-	}
-	log := logger.New(os.Stdout)
-
-	return NewWithLogger(config, log)
-}
-
-func newTestServerWithOkHandler(t *testing.T, port uint16) Server {
-	s := newTestServer(port)
-
-	route := rest.NewRoute(http.MethodGet, "/", testHttpHandler)
-	err := s.AddRoute(route)
-	assert.Nil(t, err, "Actual err: %v", err)
-
-	return s
-}
-
-func testHttpHandler(c echo.Context) error {
-	return c.JSON(http.StatusOK, "OK")
-}
-
-func asyncRunServerAndAssertStopWithoutError(
-	t *testing.T, s Server,
-) <-chan struct{} {
-	done := make(chan struct{}, 1)
-
-	go func() {
-		defer func() {
-			done <- struct{}{}
-		}()
-
-		err := process.SafeRunSync(s.Start)
-		assert.Nil(t, err, "Actual err: %v", err)
-	}()
-
-	const reasonableTimeForServerToBeUp = 50 * time.Millisecond
-	time.Sleep(reasonableTimeForServerToBeUp)
-
-	return done
-}
-
-func doRequest(
-	t *testing.T, method string, url string,
-) *http.Response {
-	req, err := http.NewRequest(method, url, nil)
-	assert.Nil(t, err, "Actual err: %v", err)
-
-	client := &http.Client{}
-	rw, err := client.Do(req)
-	assert.Nil(t, err, "Actual err: %v", err)
-
-	return rw
-}
-
-func unmarshalResponseAndAssertRequestId(t *testing.T, resp *http.Response) responseEnvelope {
-	defer resp.Body.Close()
-	data, err := io.ReadAll(resp.Body)
-	assert.Nil(t, err, "Actual err: %v", err)
-
-	var out responseEnvelope
-	err = json.Unmarshal(data, &out)
-	assert.Nil(t, err, "Actual err: %v", err)
-
-	const idRegex = `[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`
-	assert.Regexp(t, idRegex, out.RequestId)
-
-	return out
-}
-
-func assertIsOkResponse(t *testing.T, response *http.Response) {
-	assert.Equal(t, http.StatusOK, response.StatusCode)
-	actual := unmarshalResponseAndAssertRequestId(t, response)
-	assert.Equal(t, "SUCCESS", actual.Status)
-	assert.Equal(t, `"OK"`, string(actual.Details))
-}
-
 func TestUnit_Server_WhenAddingUnSupportedRoutes_ExpectFailure(t *testing.T) {
 	s := newTestServer(4000)
 
@@ -232,4 +142,94 @@ func TestUnit_Server_ExpectRequestIsProvidedALoggerWithARequestIdAsPrefix(t *tes
 
 	assert.Nil(t, err, "Actual err: %v", err)
 	assertIsOkResponse(t, response)
+}
+
+type responseEnvelope struct {
+	RequestId string          `json:"requestId"`
+	Status    string          `json:"status"`
+	Details   json.RawMessage `json:"details"`
+}
+
+func newTestServer(port uint16) Server {
+	return newTestServerWithPath(port, "/")
+}
+
+func newTestServerWithPath(port uint16, path string) Server {
+	config := Config{
+		BasePath:        path,
+		Port:            port,
+		ShutdownTimeout: 2 * time.Second,
+	}
+	log := logger.New(os.Stdout)
+
+	return NewWithLogger(config, log)
+}
+
+func newTestServerWithOkHandler(t *testing.T, port uint16) Server {
+	s := newTestServer(port)
+
+	route := rest.NewRoute(http.MethodGet, "/", testHttpHandler)
+	err := s.AddRoute(route)
+	assert.Nil(t, err, "Actual err: %v", err)
+
+	return s
+}
+
+func testHttpHandler(c echo.Context) error {
+	return c.JSON(http.StatusOK, "OK")
+}
+
+func asyncRunServerAndAssertStopWithoutError(
+	t *testing.T, s Server,
+) <-chan struct{} {
+	done := make(chan struct{}, 1)
+
+	go func() {
+		defer func() {
+			done <- struct{}{}
+		}()
+
+		err := process.SafeRunSync(s.Start)
+		assert.Nil(t, err, "Actual err: %v", err)
+	}()
+
+	const reasonableTimeForServerToBeUp = 50 * time.Millisecond
+	time.Sleep(reasonableTimeForServerToBeUp)
+
+	return done
+}
+
+func doRequest(
+	t *testing.T, method string, url string,
+) *http.Response {
+	req, err := http.NewRequest(method, url, nil)
+	assert.Nil(t, err, "Actual err: %v", err)
+
+	client := &http.Client{}
+	rw, err := client.Do(req)
+	assert.Nil(t, err, "Actual err: %v", err)
+
+	return rw
+}
+
+func unmarshalResponseAndAssertRequestId(t *testing.T, resp *http.Response) responseEnvelope {
+	defer resp.Body.Close()
+	data, err := io.ReadAll(resp.Body)
+	assert.Nil(t, err, "Actual err: %v", err)
+
+	var out responseEnvelope
+	err = json.Unmarshal(data, &out)
+	assert.Nil(t, err, "Actual err: %v", err)
+
+	const idRegex = `[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`
+	assert.Regexp(t, idRegex, out.RequestId)
+
+	return out
+}
+
+func assertIsOkResponse(t *testing.T, response *http.Response) {
+	assert.Equal(t, http.StatusOK, response.StatusCode)
+	actual := unmarshalResponseAndAssertRequestId(t, response)
+	assert.Equal(t, "SUCCESS", actual.Status)
+	assert.Equal(t, `"OK"`, string(actual.Details))
 }
