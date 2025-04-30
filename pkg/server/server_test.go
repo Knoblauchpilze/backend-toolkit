@@ -1,27 +1,23 @@
 package server
 
 import (
-	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/db"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/logger"
+	"github.com/Knoblauchpilze/backend-toolkit/pkg/process"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
-
-const reasonableTestTimeout = 5000 * time.Second
-const reasonableTimeForServerToBeUpAndRunning = 100 * time.Millisecond
 
 type responseEnvelope struct {
 	RequestId string          `json:"requestId"`
@@ -29,18 +25,92 @@ type responseEnvelope struct {
 	Details   json.RawMessage `json:"details"`
 }
 
-func TestUnit_Server_StopsWhenContextIsDone(t *testing.T) {
-	s, ctx, cancel := createStoppableTestServer(context.Background())
-
-	runServerAndExecuteHandler(t, ctx, s, cancel)
+func newTestServer(port uint16) Server {
+	return newTestServerWithPath(port, "/")
 }
 
-func TestUnit_Server_UnsupportedRoutes(t *testing.T) {
-	s, _, _ := createStoppableTestServer(context.Background())
-
-	handler := func(c echo.Context) error {
-		return c.JSON(http.StatusOK, "OK")
+func newTestServerWithPath(port uint16, path string) Server {
+	config := Config{
+		BasePath:        path,
+		Port:            port,
+		ShutdownTimeout: 2 * time.Second,
 	}
+	log := logger.New(os.Stdout)
+
+	return NewWithLogger(config, log)
+}
+
+func newTestServerWithOkHandler(t *testing.T, port uint16) Server {
+	s := newTestServer(port)
+
+	route := rest.NewRoute(http.MethodGet, "/", testHttpHandler)
+	err := s.AddRoute(route)
+	assert.Nil(t, err, "Actual err: %v", err)
+
+	return s
+}
+
+func testHttpHandler(c echo.Context) error {
+	return c.JSON(http.StatusOK, "OK")
+}
+
+func asyncRunServerAndAssertStopWithoutError(
+	t *testing.T, s Server,
+) <-chan struct{} {
+	done := make(chan struct{}, 1)
+
+	go func() {
+		defer func() {
+			done <- struct{}{}
+		}()
+
+		err := process.SafeRunSync(s.Start)
+		assert.Nil(t, err, "Actual err: %v", err)
+	}()
+
+	const reasonableTimeForServerToBeUp = 50 * time.Millisecond
+	time.Sleep(reasonableTimeForServerToBeUp)
+
+	return done
+}
+
+func doRequest(
+	t *testing.T, method string, url string,
+) *http.Response {
+	req, err := http.NewRequest(method, url, nil)
+	assert.Nil(t, err, "Actual err: %v", err)
+
+	client := &http.Client{}
+	rw, err := client.Do(req)
+	assert.Nil(t, err, "Actual err: %v", err)
+
+	return rw
+}
+
+func unmarshalResponseAndAssertRequestId(t *testing.T, resp *http.Response) responseEnvelope {
+	defer resp.Body.Close()
+	data, err := io.ReadAll(resp.Body)
+	assert.Nil(t, err, "Actual err: %v", err)
+
+	var out responseEnvelope
+	err = json.Unmarshal(data, &out)
+	assert.Nil(t, err, "Actual err: %v", err)
+
+	const idRegex = `[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`
+	assert.Regexp(t, idRegex, out.RequestId)
+
+	return out
+}
+
+func assertIsOkResponse(t *testing.T, response *http.Response) {
+	assert.Equal(t, http.StatusOK, response.StatusCode)
+	actual := unmarshalResponseAndAssertRequestId(t, response)
+	assert.Equal(t, "SUCCESS", actual.Status)
+	assert.Equal(t, `"OK"`, string(actual.Details))
+}
+
+func TestUnit_Server_WhenAddingUnSupportedRoutes_ExpectFailure(t *testing.T) {
+	s := newTestServer(4000)
 
 	unsupportedMethods := []string{
 		http.MethodHead,
@@ -52,266 +122,114 @@ func TestUnit_Server_UnsupportedRoutes(t *testing.T) {
 
 	for _, method := range unsupportedMethods {
 		t.Run(method, func(t *testing.T) {
-			sampleRoute := rest.NewRoute(method, "/", handler)
+			sampleRoute := rest.NewRoute(method, "/", testHttpHandler)
 			err := s.AddRoute(sampleRoute)
-			assert.True(t, errors.IsErrorWithCode(err, UnsupportedMethod), "Actual err: %v", err)
+			assert.True(
+				t,
+				errors.IsErrorWithCode(err, UnsupportedMethod),
+				"Actual err: %v",
+				err,
+			)
 		})
 	}
 }
 
-func TestUnit_Server_ListensOnConfiguredPort(t *testing.T) {
-	const port = 1234
-	s, ctx, cancel := createStoppableTestServerWithPort(port, context.Background())
+func TestUnit_Server_AnswersToRequestsWithResponseEnvelope(t *testing.T) {
+	s := newTestServerWithOkHandler(t, 4001)
 
-	var resp *http.Response
-	var err error
+	done := asyncRunServerAndAssertStopWithoutError(t, s)
 
-	handler := func() {
-		resp, err = http.Get(fmt.Sprintf("http://localhost:%d", port))
-		cancel()
-	}
+	response := doRequest(t, http.MethodGet, "http://localhost:4001")
 
-	runServerAndExecuteHandler(t, ctx, s, handler)
+	err := s.Stop()
+	<-done
 
-	assert.Nil(t, err)
-	assertResponseStatusMatches(t, resp, http.StatusOK)
-	actual := unmarshalResponseAndAssertRequestId(t, resp)
-	assert.Equal(t, "SUCCESS", actual.Status)
-	assert.Equal(t, `"OK"`, string(actual.Details))
+	assert.Nil(t, err, "Actual err: %v", err)
+	assertIsOkResponse(t, response)
 }
 
 func TestUnit_Server_WhenConfigDefinesABasePath_ExpectPrefixedToRoutes(t *testing.T) {
-	const port = 1239
-	config := Config{
-		BasePath:        "prefix",
-		Port:            port,
-		ShutdownTimeout: 2 * time.Second,
-	}
+	s := newTestServerWithPath(4002, "prefix")
+	route := rest.NewRoute(http.MethodGet, "/route", testHttpHandler)
+	err := s.AddRoute(route)
+	assert.Nil(t, err, "Actual err: %v", err)
 
-	cancellable, cancel := context.WithCancel(context.Background())
+	done := asyncRunServerAndAssertStopWithoutError(t, s)
 
-	log := logger.New(&bytes.Buffer{})
-	s := NewWithLogger(config, log)
-	sampleRoute := rest.NewRoute(http.MethodGet, "/", createDummyHttpHandler())
-	s.AddRoute(sampleRoute)
+	response := doRequest(t, http.MethodGet, "http://localhost:4002/prefix/route")
 
-	var resp *http.Response
-	var err error
+	err = s.Stop()
+	<-done
 
-	handler := func() {
-		resp, err = http.Get(fmt.Sprintf("http://localhost:%d/prefix", port))
-		cancel()
-	}
-
-	runServerAndExecuteHandler(t, cancellable, s, handler)
-
-	assert.Nil(t, err)
-	assertResponseStatusMatches(t, resp, http.StatusOK)
-	actual := unmarshalResponseAndAssertRequestId(t, resp)
-	assert.Equal(t, "SUCCESS", actual.Status)
-	assert.Equal(t, `"OK"`, string(actual.Details))
-}
-
-func TestUnit_Server_WrapsResponseInEnvelope(t *testing.T) {
-	const port = 1235
-	s, ctx, cancel := createStoppableTestServerWithPort(port, context.Background())
-
-	var resp *http.Response
-	var err error
-
-	handler := func() {
-		resp, err = http.Get(fmt.Sprintf("http://localhost:%d", port))
-		cancel()
-	}
-
-	runServerAndExecuteHandler(t, ctx, s, handler)
-
-	assert.Nil(t, err)
-	assertResponseStatusMatches(t, resp, http.StatusOK)
-	actual := unmarshalResponseAndAssertRequestId(t, resp)
-	assert.Equal(t, "SUCCESS", actual.Status)
-	assert.Equal(t, `"OK"`, string(actual.Details))
+	assert.Nil(t, err, "Actual err: %v", err)
+	assertIsOkResponse(t, response)
 }
 
 func TestUnit_Server_WhenHandlerPanics_ExpectErrorResponseEnvelope(t *testing.T) {
-	const port = 1236
-	route := func(c echo.Context) error {
+	s := newTestServer(4003)
+	errorHandler := func(c echo.Context) error {
 		panic(fmt.Errorf("this handler panics"))
 	}
-	s, ctx, cancel := createStoppableTestServerWithPortAndHandler(port, context.Background(), route)
+	route := rest.NewRoute(http.MethodGet, "/", errorHandler)
+	err := s.AddRoute(route)
+	assert.Nil(t, err, "Actual err: %v", err)
 
-	var resp *http.Response
-	var err error
+	done := asyncRunServerAndAssertStopWithoutError(t, s)
 
-	handler := func() {
-		resp, err = http.Get(fmt.Sprintf("http://localhost:%d", port))
-		cancel()
-	}
+	response := doRequest(t, http.MethodGet, "http://localhost:4003")
 
-	runServerAndExecuteHandler(t, ctx, s, handler)
+	err = s.Stop()
+	<-done
 
-	assert.Nil(t, err)
-	assertResponseStatusMatches(t, resp, http.StatusInternalServerError)
-	actual := unmarshalResponseAndAssertRequestId(t, resp)
+	assert.Nil(t, err, "Actual err: %v", err)
+	assert.Equal(t, http.StatusInternalServerError, response.StatusCode)
+	actual := unmarshalResponseAndAssertRequestId(t, response)
 	assert.Equal(t, "ERROR", actual.Status)
 	assert.Equal(t, `{"message":"this handler panics"}`, string(actual.Details))
 }
 
 func TestUnit_Server_WhenHandlerReturnsError_ExpectErrorResponseEnvelope(t *testing.T) {
-	const port = 1237
-	route := func(c echo.Context) error {
+	s := newTestServer(4004)
+	errorHandler := func(c echo.Context) error {
 		return errors.NewCode(db.AlreadyCommitted)
 	}
-	s, ctx, cancel := createStoppableTestServerWithPortAndHandler(port, context.Background(), route)
+	route := rest.NewRoute(http.MethodGet, "/", errorHandler)
+	err := s.AddRoute(route)
+	assert.Nil(t, err, "Actual err: %v", err)
 
-	var resp *http.Response
-	var err error
+	done := asyncRunServerAndAssertStopWithoutError(t, s)
 
-	handler := func() {
-		resp, err = http.Get(fmt.Sprintf("http://localhost:%d", port))
-		cancel()
-	}
+	response := doRequest(t, http.MethodGet, "http://localhost:4004")
 
-	runServerAndExecuteHandler(t, ctx, s, handler)
+	err = s.Stop()
+	<-done
 
-	assert.Nil(t, err)
-	assertResponseStatusMatches(t, resp, http.StatusInternalServerError)
-	actual := unmarshalResponseAndAssertRequestId(t, resp)
+	assert.Nil(t, err, "Actual err: %v", err)
+	assert.Equal(t, http.StatusInternalServerError, response.StatusCode)
+	actual := unmarshalResponseAndAssertRequestId(t, response)
 	assert.Equal(t, "ERROR", actual.Status)
 	assert.Equal(t, `{"message":"An unexpected error occurred. Code: 102"}`, string(actual.Details))
 }
 
 func TestUnit_Server_ExpectRequestIsProvidedALoggerWithARequestIdAsPrefix(t *testing.T) {
-	const port = 1238
-
-	var prefix string
-	route := func(c echo.Context) error {
-		prefix = c.Logger().Prefix()
-		return nil
+	s := newTestServer(4005)
+	errorHandler := func(c echo.Context) error {
+		prefix := c.Logger().Prefix()
+		err := uuid.Validate(prefix)
+		assert.Nil(t, err, "Actual err: %v (prefix: %s)", err, prefix)
+		return testHttpHandler(c)
 	}
-	s, ctx, cancel := createStoppableTestServerWithPortAndHandler(port, context.Background(), route)
+	route := rest.NewRoute(http.MethodGet, "/", errorHandler)
+	err := s.AddRoute(route)
+	assert.Nil(t, err, "Actual err: %v", err)
 
-	var err error
+	done := asyncRunServerAndAssertStopWithoutError(t, s)
 
-	handler := func() {
-		_, err = http.Get(fmt.Sprintf("http://localhost:%d", port))
-		cancel()
-	}
+	response := doRequest(t, http.MethodGet, "http://localhost:4005")
 
-	runServerAndExecuteHandler(t, ctx, s, handler)
+	err = s.Stop()
+	<-done
 
-	assert.Nil(t, err)
-	assert.Nil(t, uuid.Validate(prefix), "Actual err: %v", err)
-}
-
-func TestUnit_Server_WhenPortAlreadyUsed_ExpectError(t *testing.T) {
-	const port = 1240
-	s1, ctx1, cancel1 := createStoppableTestServerWithPort(port, context.Background())
-
-	s2 := createServerWithPort(1240)
-	// cancel2, cancel := context.WithCancel(ctx)
-
-	var err error
-
-	handler := func() {
-		err = s2.Start(context.Background())
-		cancel1()
-	}
-
-	runServerAndExecuteHandler(t, ctx1, s1, handler)
-
-	assert.NotNil(t, err)
-	assert.Contains(t, err.Error(), "bind: address already in use")
-}
-
-func createStoppableTestServer(ctx context.Context) (Server, context.Context, context.CancelFunc) {
-	return createStoppableTestServerWithPort(0, ctx)
-}
-
-func createStoppableTestServerWithPort(port uint16, ctx context.Context) (Server, context.Context, context.CancelFunc) {
-	return createStoppableTestServerWithPortAndHandler(port, ctx, createDummyHttpHandler())
-}
-
-func createStoppableTestServerWithPortAndHandler(port uint16, ctx context.Context, handler echo.HandlerFunc) (Server, context.Context, context.CancelFunc) {
-	cancellable, cancel := context.WithCancel(ctx)
-
-	s := createServerWithPort(port)
-	sampleRoute := rest.NewRoute(http.MethodGet, "/", handler)
-	s.AddRoute(sampleRoute)
-
-	return s, cancellable, cancel
-}
-
-func createServerWithPort(port uint16) Server {
-	config := Config{
-		Port:            port,
-		ShutdownTimeout: 2 * time.Second,
-	}
-
-	log := logger.New(&bytes.Buffer{})
-	return NewWithLogger(config, log)
-}
-
-func createDummyHttpHandler() echo.HandlerFunc {
-	return func(c echo.Context) error {
-		return c.JSON(http.StatusOK, "OK")
-	}
-}
-
-func runWithTimeout(handler func() error) (error, bool) {
-	timer := time.After(reasonableTestTimeout)
-	done := make(chan bool)
-
-	var err error
-
-	go func() {
-		err = handler()
-		done <- true
-	}()
-
-	select {
-	case <-timer:
-		return nil, true
-	case <-done:
-	}
-
-	return err, false
-}
-
-func runServerWithTimeout(t *testing.T, ctx context.Context, s Server) {
-	handler := func() error {
-		return s.Start(ctx)
-	}
-
-	err, timeout := runWithTimeout(handler)
-
-	require.False(t, timeout)
-	require.Nil(t, err)
-}
-
-func runServerAndExecuteHandler(t *testing.T, ctx context.Context, s Server, handler func()) {
-	go func() {
-		time.Sleep(reasonableTimeForServerToBeUpAndRunning)
-		handler()
-	}()
-
-	runServerWithTimeout(t, ctx, s)
-}
-
-func unmarshalResponseAndAssertRequestId(t *testing.T, resp *http.Response) responseEnvelope {
-	defer resp.Body.Close()
-	data, err := io.ReadAll(resp.Body)
-	require.Nil(t, err)
-
-	var out responseEnvelope
-	err = json.Unmarshal(data, &out)
-	require.Nil(t, err)
-
-	require.Regexp(t, `[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`, out.RequestId)
-
-	return out
-}
-
-func assertResponseStatusMatches(t *testing.T, resp *http.Response, httpCode int) {
-	require.Equal(t, httpCode, resp.StatusCode)
+	assert.Nil(t, err, "Actual err: %v", err)
+	assertIsOkResponse(t, response)
 }

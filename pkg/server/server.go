@@ -4,9 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
@@ -19,7 +16,8 @@ import (
 
 type Server interface {
 	AddRoute(route rest.Route) error
-	Start(ctx context.Context) error
+	Start() error
+	Stop() error
 }
 
 type serverImpl struct {
@@ -65,41 +63,24 @@ func (s *serverImpl) AddRoute(route rest.Route) error {
 	return nil
 }
 
-func (s *serverImpl) Start(ctx context.Context) error {
+func (s *serverImpl) Start() error {
 	// https://echo.labstack.com/docs/cookbook/graceful-shutdown
-	notifyCtx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
-	defer stop()
+	address := fmt.Sprintf(":%d", s.port)
 
-	waitCtx, cancel := context.WithCancel(notifyCtx)
+	s.echo.Logger.Infof("Starting server at %s", address)
+	err := s.echo.Start(address)
 
-	var runError error
-
-	go func() {
-		address := fmt.Sprintf(":%d", s.port)
-
-		s.echo.Logger.Infof("Starting server at %s", address)
-		err := s.echo.Start(address)
+	if err == http.ErrServerClosed {
 		s.echo.Logger.Infof("Server at %s gracefully shutdown", address)
-
-		if err != nil && err != http.ErrServerClosed {
-			runError = err
-			cancel()
-		}
-	}()
-
-	const reasonableWaitTimeToInitializeServer = 50 * time.Millisecond
-	time.Sleep(reasonableWaitTimeToInitializeServer)
-
-	<-waitCtx.Done()
-
-	err := s.shutdown()
-	if err != nil {
-		return err
+		return nil
 	}
-	return runError
+
+	s.echo.Logger.Infof("Server at %s failed with error: %v", address, err)
+
+	return err
 }
 
-func (s *serverImpl) shutdown() error {
+func (s *serverImpl) Stop() error {
 	ctx, cancel := context.WithTimeout(context.Background(), s.shutdownTimeout)
 	defer cancel()
 	return s.echo.Shutdown(ctx)
