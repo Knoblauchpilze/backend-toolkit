@@ -20,7 +20,7 @@ func SafeRunSync(proc RunFunc) error {
 			}
 		}()
 
-		proc()
+		err = proc()
 	}()
 
 	return err
