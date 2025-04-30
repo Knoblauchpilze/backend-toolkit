@@ -37,7 +37,7 @@ func TestUnit_AsyncStartWithSignalHandler_WhenProcessInvalid_ExpectError(t *test
 		{
 			name: "no run func",
 			process: Process{
-				Run: func() {},
+				Run: func() error { return nil },
 			},
 		},
 	}
@@ -60,7 +60,7 @@ func TestUnit_AsyncStartWithSignalHandler_WhenProcessInvalid_ExpectError(t *test
 
 func TestUnit_AsyncStartWithSignalHandler_ContextCancelled(t *testing.T) {
 	process := Process{
-		Run: func() {},
+		Run: func() error { return nil },
 		Interrupt: func() error {
 			return nil
 		},
@@ -80,8 +80,9 @@ func TestUnit_AsyncStartWithSignalHandler_ContextCancelled(t *testing.T) {
 func TestUnit_AsyncStartWithSignalHandler_ProcessCalled(t *testing.T) {
 	var called int
 	process := Process{
-		Run: func() {
+		Run: func() error {
 			called++
+			return nil
 		},
 		Interrupt: func() error {
 			return nil
@@ -97,6 +98,26 @@ func TestUnit_AsyncStartWithSignalHandler_ProcessCalled(t *testing.T) {
 	err = wait()
 	assert.Equal(t, 1, called)
 	assert.Nil(t, err, "Actual err: %v", err)
+}
+
+func TestUnit_AsyncStartWithSignalHandler_ReturnsProcessError(t *testing.T) {
+	process := Process{
+		Run: func() error {
+			return errSample
+		},
+		Interrupt: func() error {
+			return nil
+		},
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	wait, err := AsyncStartWithSignalHandler(ctx, process)
+	assert.Nil(t, err, "Actual err: %v", err)
+
+	err = wait()
+	assert.Equal(t, errSample, err, "Actual err: %v", err)
 }
 
 // https://github.com/golang/go/blob/master/src/os/signal/signal_test.go#L713
@@ -171,7 +192,7 @@ func TestUnit_AsyncStartWithSignalHandler_ExpectInterruptErrorToBeReturned(t *te
 
 func TestUnit_AsyncStartWithSignalHandler_WhenProcessPanics_ExpectWaitStopsAndReturnsError(t *testing.T) {
 	process := Process{
-		Run: func() {
+		Run: func() error {
 			panic(errSample)
 		},
 		Interrupt: func() error {
@@ -196,7 +217,7 @@ func runInterruptedProcess(interruptError error) {
 	}()
 
 	process := Process{
-		Run: func() {
+		Run: func() error {
 			ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 			defer cancel()
 			select {
@@ -205,6 +226,7 @@ func runInterruptedProcess(interruptError error) {
 			case <-stop:
 				fmt.Println("stopping process")
 			}
+			return nil
 		},
 		Interrupt: func() error {
 			fmt.Println("interrupt called")

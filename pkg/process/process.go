@@ -1,6 +1,6 @@
 package process
 
-type RunFunc func()
+type RunFunc func() error
 type InterruptFunc func() error
 
 type Process struct {
