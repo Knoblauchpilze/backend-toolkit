@@ -52,7 +52,7 @@ func AsyncStartWithSignalHandler(
 		// https://stackoverflow.com/questions/3398490/checking-if-a-channel-has-a-ready-to-read-value-using-go
 		select {
 		case runErr, ok := <-done:
-			if ok {
+			if ok && runErr != nil {
 				err = runErr
 			}
 		default:
