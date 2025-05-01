@@ -181,6 +181,23 @@ func TestUnit_AsyncStartWithSignalHandler_ExpectInterruptErrorToBeReturned(t *te
 	assert.ElementsMatch(t, expected, actual)
 }
 
+func TestUnit_AsyncStartWithSignalHandler_WhenProcessReturnsError_ExpectWaitStopsAndReturnsError(t *testing.T) {
+	process := Process{
+		Run: func() error {
+			return errSample
+		},
+		Interrupt: func() error {
+			return nil
+		},
+	}
+
+	wait, err := AsyncStartWithSignalHandler(context.Background(), process)
+	assert.Nil(t, err, "Actual err: %v", err)
+
+	err = wait()
+	assert.Equal(t, errSample, err, "Actual err: %v", err)
+}
+
 func TestUnit_AsyncStartWithSignalHandler_WhenProcessPanics_ExpectWaitStopsAndReturnsError(t *testing.T) {
 	process := Process{
 		Run: func() error {
