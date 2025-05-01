@@ -2,8 +2,10 @@ package process
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
+	"syscall"
 	"testing"
 	"time"
 
@@ -119,7 +121,7 @@ func TestUnit_AsyncStartWithSignalHandler_ReturnsProcessError(t *testing.T) {
 func TestUnit_AsyncStartWithSignalHandler_WhenSIGINTReceived_ExpectCloseToBeCalled(t *testing.T) {
 	// Case where we need to wait for a signal
 	if *waitForInterruption {
-		runTestInterruptedProcess(nil)
+		runInterruptedProcess(nil)
 		return
 	}
 
@@ -149,7 +151,7 @@ func TestUnit_AsyncStartWithSignalHandler_WhenSIGINTReceived_ExpectCloseToBeCall
 func TestUnit_AsyncStartWithSignalHandler_ExpectInterruptErrorToBeReturned(t *testing.T) {
 	// Case where we need to wait for a signal
 	if *waitForInterruption {
-		runTestInterruptedProcess(errSample)
+		runInterruptedProcess(errSample)
 		return
 	}
 
@@ -192,4 +194,43 @@ func TestUnit_AsyncStartWithSignalHandler_WhenProcessPanics_ExpectWaitStopsAndRe
 
 	err = wait()
 	assert.Equal(t, errSample, err, "Actual err: %v", err)
+}
+
+func runInterruptedProcess(interruptError error) {
+	stop := make(chan bool, 2)
+
+	process := Process{
+		Run: func() error {
+			ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+			defer cancel()
+			select {
+			case <-ctx.Done():
+				fmt.Println("process reached timeout")
+			case <-stop:
+				fmt.Println("stopping process")
+			}
+			return nil
+		},
+		Interrupt: func() error {
+			fmt.Println("interrupt called")
+			stop <- true
+			return interruptError
+		},
+	}
+
+	go func() {
+		time.AfterFunc(100*time.Millisecond, func() {
+			syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+		})
+	}()
+
+	wait, err := AsyncStartWithSignalHandler(context.Background(), process)
+	if err != nil {
+		fmt.Printf("error starting process: %v\n", err)
+	}
+
+	err = wait()
+	if err != nil {
+		fmt.Printf("error waiting for process: %v\n", err)
+	}
 }
