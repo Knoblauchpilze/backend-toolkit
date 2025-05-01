@@ -6,7 +6,9 @@ import (
 	"os"
 	"os/exec"
 	"sync/atomic"
+	"syscall"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -84,4 +86,22 @@ func (d *dummyRunnable) Stop() error {
 	fmt.Println("stop called")
 	d.done <- true
 	return nil
+}
+
+func runInterruptedRunnable(runnable Runnable) {
+	go func() {
+		time.AfterFunc(100*time.Millisecond, func() {
+			syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+		})
+	}()
+
+	wait, err := StartWithSignalHandler(context.Background(), runnable)
+	if err != nil {
+		fmt.Printf("error starting process: %v\n", err)
+	}
+
+	err = wait()
+	if err != nil {
+		fmt.Printf("error waiting for process: %v\n", err)
+	}
 }
