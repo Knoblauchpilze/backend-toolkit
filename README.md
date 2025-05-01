@@ -32,10 +32,12 @@ import (
 	"context"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/db"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/db/postgresql"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/logger"
+	"github.com/Knoblauchpilze/backend-toolkit/pkg/process"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/server"
 	"github.com/labstack/echo/v4"
@@ -46,7 +48,11 @@ func main() {
 	log := logger.New(logger.NewPrettyWriter(os.Stdout))
 
 	// Create the connection to access the database
-	dbConfig := postgresql.NewConfigForLocalhost("my-database", "my-user", "my-password")
+	dbConfig := postgresql.NewConfigForLocalhost(
+		"my-database",
+		"my-user",
+		"my-password",
+	)
 
 	conn, err := db.New(context.Background(), dbConfig)
 	if err != nil {
@@ -69,7 +75,13 @@ func main() {
 	}
 
 	// Start the server
-	err = s.Start(context.Background())
+	wait, err := process.StartWithSignalHandler(context.Background(), s)
+	if err != nil {
+		log.Errorf("Failed to start the server: %v", err)
+		os.Exit(1)
+	}
+
+	err = wait()
 	if err != nil {
 		log.Errorf("Error while serving: %v", err)
 		os.Exit(1)
@@ -78,7 +90,7 @@ func main() {
 
 func infoHandlerGenerator(conn db.Connection) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		sqlQuery := "SELECT count FROM my-table"
+		sqlQuery := "SELECT count(*) FROM my-table"
 
 		// Use the connection to query the database and unmarshal the result
 		// easily in an integer or a struct or anything you want
@@ -87,7 +99,7 @@ func infoHandlerGenerator(conn db.Connection) echo.HandlerFunc {
 			return c.JSON(http.StatusInternalServerError, "Failed to query database")
 		}
 
-		return c.String(http.StatusOK, value)
+		return c.String(http.StatusOK, strconv.Itoa(value))
 	}
 }
 ```
