@@ -64,7 +64,7 @@ func TestUnit_StartWithSignalHandler_HandlesCorrectlyInterruptSignal(t *testing.
 func TestUnit_StartWithSignalHandler_HandlesCorrectlyRunnableError(t *testing.T) {
 	// Case where we need to wait for a signal
 	if *waitForInterruption {
-		d := newDummyRunnableWithRunError(errSample)
+		d := newDummyRunnableWithRunError(errSample, nil)
 		runInterruptedRunnable(d)
 		return
 	}
@@ -93,6 +93,38 @@ func TestUnit_StartWithSignalHandler_HandlesCorrectlyRunnableError(t *testing.T)
 	assert.ElementsMatch(t, expected, actual)
 }
 
+func TestUnit_StartWithSignalHandler_HandlesCorrectlyInterruptError(t *testing.T) {
+	// Case where we need to wait for a signal
+	if *waitForInterruption {
+		d := newDummyRunnableWithRunError(nil, errSample)
+		runInterruptedRunnable(d)
+		return
+	}
+
+	// Body of the test: we need to start the part above as a subprocess
+	// and send a SIGINT to the corresponding child process
+	args := []string{
+		"-test.v",
+		"-test.run=^TestUnit_StartWithSignalHandler_HandlesCorrectlyInterruptError$",
+		"-wait_for_interruption",
+	}
+
+	cmd := exec.Command(os.Args[0], args...)
+
+	// Voluntarily ignoring errors: the subprocess sometimes does not return
+	// any error and sometimes an error status.
+	output, _ := cmd.Output()
+
+	actual := formatTestOutput(output)
+
+	expected := []string{
+		"start called",
+		"stop called",
+		"error waiting for process: sample error",
+	}
+	assert.ElementsMatch(t, expected, actual)
+}
+
 type dummyRunnable struct {
 	stop chan bool
 	done chan bool
@@ -100,17 +132,19 @@ type dummyRunnable struct {
 	runCalled       atomic.Int32
 	runError        error
 	interruptCalled atomic.Int32
+	interruptError  error
 }
 
 func newDummyRunnable() *dummyRunnable {
-	return newDummyRunnableWithRunError(nil)
+	return newDummyRunnableWithRunError(nil, nil)
 }
 
-func newDummyRunnableWithRunError(runError error) *dummyRunnable {
+func newDummyRunnableWithRunError(runError error, interruptError error) *dummyRunnable {
 	return &dummyRunnable{
-		stop:     make(chan bool, 1),
-		done:     make(chan bool, 1),
-		runError: runError,
+		stop:           make(chan bool, 1),
+		done:           make(chan bool, 1),
+		runError:       runError,
+		interruptError: interruptError,
 	}
 }
 
@@ -130,7 +164,7 @@ func (d *dummyRunnable) Stop() error {
 	fmt.Println("stop called")
 	d.stop <- true
 	<-d.done
-	return nil
+	return d.interruptError
 }
 
 func runInterruptedRunnable(runnable Runnable) {
