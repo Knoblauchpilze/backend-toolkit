@@ -31,15 +31,12 @@ func TestUnit_StartWithSignalHandler_StopsWhenContextIsCancelled(t *testing.T) {
 }
 
 func TestUnit_StartWithSignalHandler_HandlesCorrectlyInterruptSignal(t *testing.T) {
-	// Case where we need to wait for a signal
 	if *waitForInterruption {
 		d := newDummyRunnable()
 		runInterruptedRunnable(d)
 		return
 	}
 
-	// Body of the test: we need to start the part above as a subprocess
-	// and send a SIGINT to the corresponding child process
 	args := []string{
 		"-test.v",
 		"-test.run=^TestUnit_StartWithSignalHandler_HandlesCorrectlyInterruptSignal$",
@@ -48,8 +45,6 @@ func TestUnit_StartWithSignalHandler_HandlesCorrectlyInterruptSignal(t *testing.
 
 	cmd := exec.Command(os.Args[0], args...)
 
-	// Voluntarily ignoring errors: the subprocess sometimes does not return
-	// any error and sometimes an error status.
 	output, _ := cmd.Output()
 
 	actual := formatTestOutput(output)
@@ -62,15 +57,12 @@ func TestUnit_StartWithSignalHandler_HandlesCorrectlyInterruptSignal(t *testing.
 }
 
 func TestUnit_StartWithSignalHandler_HandlesCorrectlyRunnableError(t *testing.T) {
-	// Case where we need to wait for a signal
 	if *waitForInterruption {
 		d := newDummyRunnableWithRunError(errSample, nil)
 		runInterruptedRunnable(d)
 		return
 	}
 
-	// Body of the test: we need to start the part above as a subprocess
-	// and send a SIGINT to the corresponding child process
 	args := []string{
 		"-test.v",
 		"-test.run=^TestUnit_StartWithSignalHandler_HandlesCorrectlyRunnableError$",
@@ -79,8 +71,6 @@ func TestUnit_StartWithSignalHandler_HandlesCorrectlyRunnableError(t *testing.T)
 
 	cmd := exec.Command(os.Args[0], args...)
 
-	// Voluntarily ignoring errors: the subprocess sometimes does not return
-	// any error and sometimes an error status.
 	output, _ := cmd.Output()
 
 	actual := formatTestOutput(output)
@@ -94,15 +84,12 @@ func TestUnit_StartWithSignalHandler_HandlesCorrectlyRunnableError(t *testing.T)
 }
 
 func TestUnit_StartWithSignalHandler_HandlesCorrectlyInterruptError(t *testing.T) {
-	// Case where we need to wait for a signal
 	if *waitForInterruption {
 		d := newDummyRunnableWithRunError(nil, errSample)
 		runInterruptedRunnable(d)
 		return
 	}
 
-	// Body of the test: we need to start the part above as a subprocess
-	// and send a SIGINT to the corresponding child process
 	args := []string{
 		"-test.v",
 		"-test.run=^TestUnit_StartWithSignalHandler_HandlesCorrectlyInterruptError$",
@@ -111,8 +98,6 @@ func TestUnit_StartWithSignalHandler_HandlesCorrectlyInterruptError(t *testing.T
 
 	cmd := exec.Command(os.Args[0], args...)
 
-	// Voluntarily ignoring errors: the subprocess sometimes does not return
-	// any error and sometimes an error status.
 	output, _ := cmd.Output()
 
 	actual := formatTestOutput(output)
