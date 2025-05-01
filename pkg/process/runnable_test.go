@@ -110,6 +110,35 @@ func TestUnit_StartWithSignalHandler_HandlesCorrectlyInterruptError(t *testing.T
 	assert.ElementsMatch(t, expected, actual)
 }
 
+func TestUnit_StartWithSignalHandler_RunErrorOverridesInterruptError(t *testing.T) {
+	if *waitForInterruption {
+		errRun := fmt.Errorf("run error")
+		errInterrupt := fmt.Errorf("interrupt error")
+		d := newDummyRunnableWithRunError(errRun, errInterrupt)
+		runInterruptedRunnable(d)
+		return
+	}
+
+	args := []string{
+		"-test.v",
+		"-test.run=^TestUnit_StartWithSignalHandler_RunErrorOverridesInterruptError$",
+		"-wait_for_interruption",
+	}
+
+	cmd := exec.Command(os.Args[0], args...)
+
+	output, _ := cmd.Output()
+
+	actual := formatTestOutput(output)
+
+	expected := []string{
+		"start called",
+		"stop called",
+		"error waiting for process: run error",
+	}
+	assert.ElementsMatch(t, expected, actual)
+}
+
 type dummyRunnable struct {
 	stop chan bool
 	done chan bool
