@@ -246,11 +246,11 @@ func runInterruptedProcess(interruptError error) {
 
 	wait, err := AsyncStartWithSignalHandler(context.Background(), process)
 	if err != nil {
-		fmt.Printf("error starting process: %v\n", err)
+		fmt.Println("error starting process:", err)
 	}
 
 	err = wait()
 	if err != nil {
-		fmt.Printf("error waiting for process: %v\n", err)
+		fmt.Println("error waiting for process:", err)
 	}
 }

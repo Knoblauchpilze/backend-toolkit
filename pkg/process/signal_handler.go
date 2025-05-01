@@ -44,6 +44,21 @@ func AsyncStartWithSignalHandler(
 		case err = <-done:
 		}
 
+		// It can be that the process was interrupted by sCtx and that
+		// we have an error ready in the done channel. Here we read it
+		// and replace the error.
+		// Note: this overrides a potential error from the interrupt
+		// process.
+		// https://stackoverflow.com/questions/3398490/checking-if-a-channel-has-a-ready-to-read-value-using-go
+		select {
+		case runErr, ok := <-done:
+			if ok {
+				err = runErr
+			}
+		default:
+			// No error in done channel, continuing
+		}
+
 		return err
 	}
 
