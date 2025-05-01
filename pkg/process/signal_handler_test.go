@@ -142,6 +142,7 @@ func TestUnit_AsyncStartWithSignalHandler_WhenSIGINTReceived_ExpectCloseToBeCall
 	actual := formatTestOutput(output)
 
 	expected := []string{
+		"start called",
 		"interrupt called",
 		"stopping process",
 	}
@@ -172,6 +173,7 @@ func TestUnit_AsyncStartWithSignalHandler_ExpectInterruptErrorToBeReturned(t *te
 	actual := formatTestOutput(output)
 
 	expected := []string{
+		"start called",
 		"interrupt called",
 		"stopping process",
 		"error waiting for process: sample error",
@@ -201,6 +203,7 @@ func runInterruptedProcess(interruptError error) {
 
 	process := Process{
 		Run: func() error {
+			fmt.Println("start called")
 			ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 			defer cancel()
 			select {
