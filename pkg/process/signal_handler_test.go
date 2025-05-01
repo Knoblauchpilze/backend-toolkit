@@ -150,14 +150,11 @@ func TestUnit_AsyncStartWithSignalHandler_WhenSIGINTReceived_ExpectCloseToBeCall
 }
 
 func TestUnit_AsyncStartWithSignalHandler_ExpectInterruptErrorToBeReturned(t *testing.T) {
-	// Case where we need to wait for a signal
 	if *waitForInterruption {
 		runInterruptedProcess(errSample)
 		return
 	}
 
-	// Body of the test: we need to start the part above as a subprocess
-	// and send a SIGINT to the corresponding child process
 	args := []string{
 		"-test.v",
 		"-test.run=^TestUnit_AsyncStartWithSignalHandler_ExpectInterruptErrorToBeReturned$",
@@ -166,8 +163,6 @@ func TestUnit_AsyncStartWithSignalHandler_ExpectInterruptErrorToBeReturned(t *te
 
 	cmd := exec.Command(os.Args[0], args...)
 
-	// Voluntarily ignoring errors: the subprocess sometimes does not return
-	// any error and sometimes an error status.
 	output, _ := cmd.Output()
 
 	actual := formatTestOutput(output)
