@@ -9,7 +9,7 @@ import (
 func SafeRunAsync(proc RunFunc) <-chan error {
 	out := make(chan error, 1)
 
-	func() {
+	go func() {
 		var err error
 		defer func() {
 			out <- err
