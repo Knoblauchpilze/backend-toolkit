@@ -2,6 +2,7 @@ package process
 
 import (
 	"testing"
+	"time"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -20,6 +21,21 @@ func TestUnit_SafeRunAsync_CallsProcess(t *testing.T) {
 
 	assert.Nil(t, actual, "Actual err: %v", actual)
 	assert.Equal(t, 1, called)
+}
+
+func TestUnit_SafeRunAsync_RunsAsync(t *testing.T) {
+	proc := func() error {
+		time.Sleep(100 * time.Millisecond)
+		return nil
+	}
+
+	start := time.Now()
+	wait := SafeRunAsync(proc)
+	end := time.Now()
+	actual := <-wait
+
+	assert.Nil(t, actual, "Actual err: %v", actual)
+	assert.LessOrEqual(t, end.Sub(start), 80*time.Millisecond)
 }
 
 func TestUnit_SafeRunAsync_ReturnWithError(t *testing.T) {
