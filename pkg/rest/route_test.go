@@ -56,6 +56,14 @@ func TestUnit_Route_Path(t *testing.T) {
 	}
 }
 
+func TestUnit_Route_UseResponseEnvelope(t *testing.T) {
+	r := NewRoute(http.MethodGet, "/path", testHandler)
+	assert.True(t, r.UseResponseEnvelope())
+
+	r = NewRawRoute(http.MethodGet, "/path", testHandler)
+	assert.False(t, r.UseResponseEnvelope())
+}
+
 func dummyEchoContext() echo.Context {
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
