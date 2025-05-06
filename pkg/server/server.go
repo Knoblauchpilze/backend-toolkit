@@ -44,16 +44,17 @@ func NewWithLogger(config Config, log logger.Logger) Server {
 
 func (s *serverImpl) AddRoute(route rest.Route) error {
 	path := rest.ConcatenateEndpoints(s.basePath, route.Path())
+	middlewares := buildMiddlewaresForRoute(route, s.echo.Logger)
 
 	switch route.Method() {
 	case http.MethodGet:
-		s.router.GET(path, route.Handler())
+		s.router.GET(path, route.Handler(), middlewares...)
 	case http.MethodPost:
-		s.router.POST(path, route.Handler())
+		s.router.POST(path, route.Handler(), middlewares...)
 	case http.MethodDelete:
-		s.router.DELETE(path, route.Handler())
+		s.router.DELETE(path, route.Handler(), middlewares...)
 	case http.MethodPatch:
-		s.router.PATCH(path, route.Handler())
+		s.router.PATCH(path, route.Handler(), middlewares...)
 	default:
 		return errors.NewCode(UnsupportedMethod)
 	}
@@ -92,12 +93,12 @@ func createEchoServer(log echo.Logger) *echo.Echo {
 	e.HidePort = true
 	e.Logger = log
 
-	registerMiddlewares(e)
+	registerBaseMiddlewares(e)
 
 	return e
 }
 
-func registerMiddlewares(e *echo.Echo) {
+func registerBaseMiddlewares(e *echo.Echo) {
 	// https://stackoverflow.com/questions/74020538/cors-preflight-did-not-succeed
 	// https://stackoverflow.com/questions/6660019/restful-api-methods-head-options
 	corsConf := middleware.CORSConfig{
@@ -116,8 +117,4 @@ func registerMiddlewares(e *echo.Echo) {
 	e.Use(middleware.CORSWithConfig(corsConf))
 	e.Use(middleware.Gzip())
 	e.Use(om.RequestLogger())
-	e.Use(om.ResponseEnvelope())
-	e.Use(om.RequestTracer(e.Logger))
-	e.Use(om.ErrorConverter())
-	e.Use(om.Recover())
 }

@@ -58,6 +58,29 @@ func TestUnit_Server_AnswersToRequestsWithResponseEnvelope(t *testing.T) {
 	assertIsOkResponse(t, response)
 }
 
+func TestUnit_Server_WhenRegisteringRawRoute_AnswersToRequestsWithoutResponseEnvelope(t *testing.T) {
+	s := newTestServer(4006)
+	helloHandler := func(c echo.Context) error {
+		return c.String(http.StatusOK, "Hello")
+	}
+	route := rest.NewRawRoute(http.MethodGet, "/", helloHandler)
+	err := s.AddRoute(route)
+	assert.Nil(t, err, "Actual err: %v", err)
+
+	done := asyncRunServerAndAssertStopWithoutError(t, s)
+
+	response := doRequest(t, http.MethodGet, "http://localhost:4006")
+
+	err = s.Stop()
+	<-done
+
+	assert.Nil(t, err, "Actual err: %v", err)
+	assert.Equal(t, http.StatusOK, response.StatusCode)
+	body, err := io.ReadAll(response.Body)
+	assert.Nil(t, err, "Actual err: %v", err)
+	assert.Equal(t, "Hello", string(body))
+}
+
 func TestUnit_Server_WhenConfigDefinesABasePath_ExpectPrefixedToRoutes(t *testing.T) {
 	s := newTestServerWithPath(4002, "prefix")
 	route := rest.NewRoute(http.MethodGet, "/route", testHttpHandler)
