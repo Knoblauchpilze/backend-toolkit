@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestIT_Transaction_Exec_AlreadyCommitted(t *testing.T) {
+func TestIt_Transaction_Exec_AlreadyCommitted(t *testing.T) {
 	_, tx := newTestTransaction(t)
 	tx.Close(context.Background())
 
