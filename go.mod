@@ -3,7 +3,7 @@ module github.com/Knoblauchpilze/backend-toolkit
 go 1.23.2
 
 require (
-	github.com/go-viper/mapstructure/v2 v2.2.1
+	github.com/go-viper/mapstructure/v2 v2.3.0
 	github.com/labstack/echo/v4 v4.13.4
 )
 
