@@ -2,7 +2,6 @@ package process
 
 import (
 	"flag"
-	"fmt"
 	"strings"
 )
 
@@ -39,7 +38,8 @@ func formatTestOutput(output []byte) []string {
 	var out []string
 
 	for _, line := range strings.Split(string(output), "\n") {
-		fmt.Printf("line: \"%s\" -> %t\n", line, shouldBeFiltered(line))
+		// Uncomment for easy debug in the CI or locally.
+		// fmt.Printf("line: \"%s\" -> %t\n", line, shouldBeFiltered(line))
 		if !shouldBeFiltered(line) {
 			out = append(out, line)
 		}
