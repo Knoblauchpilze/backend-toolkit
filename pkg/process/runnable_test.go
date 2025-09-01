@@ -168,14 +168,14 @@ func (d *dummyRunnable) Start() error {
 	}()
 
 	d.runCalled.Add(1)
-	fmt.Println("start called")
+	fmt.Printf("start called\n")
 	<-d.stop
 	return d.runError
 }
 
 func (d *dummyRunnable) Stop() error {
 	d.interruptCalled.Add(1)
-	fmt.Println("stop called")
+	fmt.Printf("stop called\n")
 	d.stop <- true
 	<-d.done
 	return d.interruptError
@@ -190,11 +190,11 @@ func runInterruptedRunnable(runnable Runnable) {
 
 	wait, err := StartWithSignalHandler(context.Background(), runnable)
 	if err != nil {
-		fmt.Println("error starting process:", err)
+		fmt.Printf("error starting process: %v\n", err)
 	}
 
 	err = wait()
 	if err != nil {
-		fmt.Println("error waiting for process:", err)
+		fmt.Printf("error waiting for process: %v\n", err)
 	}
 }
