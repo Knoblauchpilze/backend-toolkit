@@ -1,6 +1,6 @@
 module github.com/Knoblauchpilze/backend-toolkit
 
-go 1.24.0
+go 1.24.1
 
 require (
 	github.com/go-viper/mapstructure/v2 v2.4.0
