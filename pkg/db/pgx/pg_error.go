@@ -19,6 +19,10 @@ func AnalyzeAndWrapPgError(err error) error {
 		return nil
 	}
 
+	if prepErr, ok := err.(*pgconn.PrepareError); ok {
+		return AnalyzeAndWrapPgError(prepErr.Unwrap())
+	}
+
 	if pgErr, ok := err.(*pgconn.PgError); ok {
 		return analyzePgError(pgErr)
 	}
