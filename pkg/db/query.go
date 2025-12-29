@@ -24,12 +24,14 @@ func QueryOne[T any](ctx context.Context, conn Connection, sql string, arguments
 
 	out, err = jpgx.CollectExactlyOneRow(rows, getCollectorForType[T]())
 	if err != nil {
-		if err == jpgx.ErrNoRows {
+		switch err {
+		case jpgx.ErrNoRows:
 			return out, errors.WrapCode(err, NoMatchingRows)
-		} else if err == jpgx.ErrTooManyRows {
+		case jpgx.ErrTooManyRows:
 			return out, errors.WrapCode(err, TooManyMatchingRows)
+		default:
+			return out, pgx.AnalyzeAndWrapPgError(err)
 		}
-		return out, pgx.AnalyzeAndWrapPgError(err)
 	}
 
 	return out, nil
