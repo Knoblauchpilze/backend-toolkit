@@ -1,12 +1,14 @@
 package server
 
 import (
+	"log/slog"
+
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/middleware"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 )
 
-func buildMiddlewaresForRoute(route rest.Route, log echo.Logger) []echo.MiddlewareFunc {
+func buildMiddlewaresForRoute(route rest.Route, log *slog.Logger) []echo.MiddlewareFunc {
 	var out []echo.MiddlewareFunc
 
 	if route.UseResponseEnvelope() {

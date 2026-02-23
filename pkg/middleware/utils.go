@@ -5,7 +5,7 @@ import (
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/logger"
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 )
 
 func formatHttpStatusCode(status int) string {
@@ -27,11 +27,12 @@ func wrapToHttpError(err error) error {
 		code = errorCodeToHttpErrorCode(errorWithCode.Code())
 	}
 
-	return &echo.HTTPError{
-		Code:     code,
-		Message:  err.Error(),
-		Internal: err,
+	httpErr := &echo.HTTPError{
+		Code:    code,
+		Message: err.Error(),
 	}
+
+	return httpErr.Wrap(err)
 }
 
 func errorCodeToHttpErrorCode(code errors.ErrorCode) int {

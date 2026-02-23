@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -54,7 +54,7 @@ func TestUnit_ErrorConverter_WrapsErrorWithCodeIntoHttpError(t *testing.T) {
 }
 
 func createErrorHandler(err error) echo.HandlerFunc {
-	handler := func(c echo.Context) error {
+	handler := func(c *echo.Context) error {
 		return err
 	}
 

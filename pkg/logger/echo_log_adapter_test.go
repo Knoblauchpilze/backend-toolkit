@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -42,7 +42,7 @@ func TestUnit_EchoLogAdapter_Duplicate_WriteToTheSameOutput(t *testing.T) {
 	require.Nil(t, err)
 
 	beforeCall := time.Now()
-	copy.Debugf("sample text")
+	copy.Debug("sample text")
 
 	actual := unmarshalLogOutput(t, out)
 	assert.Equal(t, "debug", actual.Level)
@@ -66,7 +66,7 @@ func TestUnit_EchoLogAdapter_Duplicate_ExpectPrefixToBeSeparate(t *testing.T) {
 	assert.Equal(t, "[prefix-1] log text", actual.Message)
 	out = bytes.Buffer{}
 
-	copy.Infof("copy text")
+	copy.Info("copy text")
 	actual = unmarshalLogOutput(t, out)
 	assert.Equal(t, "[prefix-2] copy text", actual.Message)
 }
@@ -86,7 +86,7 @@ func TestUnit_EchoLogAdapter_Duplicate_ExpectHeaderToBeSeparate(t *testing.T) {
 	assert.Equal(t, "[header-1] log text", actual.Message)
 	out = bytes.Buffer{}
 
-	copy.Infof("copy text")
+	copy.Info("copy text")
 	actual = unmarshalLogOutput(t, out)
 	assert.Equal(t, "[header-2] copy text", actual.Message)
 }

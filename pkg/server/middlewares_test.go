@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -27,4 +27,4 @@ func TestUnit_BuildMiddlewaresForRoute_ForRawRoute(t *testing.T) {
 	assert.Len(t, actual, 3)
 }
 
-var testHandler = func(c echo.Context) error { return nil }
+var testHandler = func(c *echo.Context) error { return nil }
