@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -78,7 +78,7 @@ func TestUnit_Recover_SetsStatusCodeToError(t *testing.T) {
 
 func createPanicHandler() (echo.HandlerFunc, *bool) {
 	var called bool
-	handler := func(c echo.Context) error {
+	handler := func(c *echo.Context) error {
 		called = true
 		panic(fmt.Errorf("some error"))
 	}

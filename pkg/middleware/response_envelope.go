@@ -3,8 +3,8 @@ package middleware
 import (
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
 	"github.com/google/uuid"
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
+	"github.com/labstack/echo/v5"
+	"github.com/labstack/echo/v5/middleware"
 )
 
 const requestIdHeader = "X-Request-Id"
@@ -14,9 +14,9 @@ func ResponseEnvelope() echo.MiddlewareFunc {
 		Generator: func() string {
 			return uuid.New().String()
 		},
-		RequestIDHandler: func(c echo.Context, requestId string) {
-			rw := rest.NewResponseEnvelopeWriter(c.Response().Writer, requestId)
-			c.Response().Writer = rw
+		RequestIDHandler: func(c *echo.Context, requestId string) {
+			rw := rest.NewResponseEnvelopeWriter(c.Response(), requestId)
+			c.SetResponse(rw)
 		},
 		TargetHeader: requestIdHeader,
 	}

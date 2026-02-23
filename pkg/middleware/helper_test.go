@@ -9,13 +9,13 @@ import (
 	"time"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/logger"
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/require"
 )
 
 func createTestEchoHandlerFuncWithCalledBoolean() (echo.HandlerFunc, *bool) {
 	called := false
-	call := func(c echo.Context) error {
+	call := func(c *echo.Context) error {
 		called = true
 		return c.NoContent(http.StatusOK)
 	}
@@ -24,7 +24,7 @@ func createTestEchoHandlerFuncWithCalledBoolean() (echo.HandlerFunc, *bool) {
 
 type middlewareGenerator func() echo.MiddlewareFunc
 
-func createCallableHandler(generator middlewareGenerator) (echo.HandlerFunc, *bool, echo.Context) {
+func createCallableHandler(generator middlewareGenerator) (echo.HandlerFunc, *bool, *echo.Context) {
 	next, called := createTestEchoHandlerFuncWithCalledBoolean()
 	ctx, _ := generateTestEchoContext()
 
@@ -34,12 +34,12 @@ func createCallableHandler(generator middlewareGenerator) (echo.HandlerFunc, *bo
 	return callable, called, ctx
 }
 
-func generateTestEchoContext() (echo.Context, *httptest.ResponseRecorder) {
+func generateTestEchoContext() (*echo.Context, *httptest.ResponseRecorder) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	return generateTestEchoContextFromRequest(req)
 }
 
-func generateTestEchoContextWithLogger() (echo.Context, *bytes.Buffer) {
+func generateTestEchoContextWithLogger() (*echo.Context, *bytes.Buffer) {
 	ctx, _ := generateTestEchoContext()
 
 	var out bytes.Buffer
@@ -49,7 +49,7 @@ func generateTestEchoContextWithLogger() (echo.Context, *bytes.Buffer) {
 	return ctx, &out
 }
 
-func generateTestEchoContextFromRequest(req *http.Request) (echo.Context, *httptest.ResponseRecorder) {
+func generateTestEchoContextFromRequest(req *http.Request) (*echo.Context, *httptest.ResponseRecorder) {
 	e := echo.New()
 	rw := httptest.NewRecorder()
 

@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
+	"github.com/labstack/echo/v5"
+	"github.com/labstack/echo/v5/middleware"
 )
 
 type recoveredErrorData struct {
 	err   error
-	ctx   echo.Context
+	ctx   *echo.Context
 	req   *http.Request
 	stack []byte
 }
@@ -18,18 +18,6 @@ type recoveredErrorData struct {
 func Recover() echo.MiddlewareFunc {
 	config := middleware.RecoverConfig{
 		DisableStackAll: true,
-		LogErrorFunc: func(c echo.Context, err error, stack []byte) error {
-			data := recoveredErrorData{
-				err:   err,
-				ctx:   c,
-				req:   c.Request(),
-				stack: stack,
-			}
-
-			c.Logger().Errorf(createErrorLog(data))
-
-			return wrapToHttpError(err)
-		},
 	}
 
 	return middleware.RecoverWithConfig(config)

@@ -2,12 +2,13 @@ package middleware
 
 import (
 	"bytes"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/logger"
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -60,7 +61,7 @@ func TestUnit_RequestTracer_WhenRequestIdSet_SetsLoggerPrefix(t *testing.T) {
 func TestUnit_RequestTracer_MultipleRequestsWriteToSameOutput(t *testing.T) {
 	log, out := newLogger()
 
-	next := func(c echo.Context) error {
+	next := func(c *echo.Context) error {
 		c.Logger().Printf(c.Request().Host)
 		return nil
 	}
@@ -85,12 +86,12 @@ func TestUnit_RequestTracer_MultipleRequestsWriteToSameOutput(t *testing.T) {
 	assert.Equal(t, expected, out.String())
 }
 
-func newLogger() (echo.Logger, *bytes.Buffer) {
+func newLogger() (*slog.Logger, *bytes.Buffer) {
 	var out bytes.Buffer
 	return logger.Wrap(logger.New(&out)), &out
 }
 
-func createCallableTracerHandler(log echo.Logger) (echo.HandlerFunc, *bool, echo.Context) {
+func createCallableTracerHandler(log *slog.Logger) (echo.HandlerFunc, *bool, *echo.Context) {
 	generator := func() echo.MiddlewareFunc {
 		return RequestTracer(log)
 	}

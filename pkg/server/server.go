@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -10,8 +11,8 @@ import (
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/logger"
 	om "github.com/Knoblauchpilze/backend-toolkit/pkg/middleware"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
+	"github.com/labstack/echo/v5"
+	"github.com/labstack/echo/v5/middleware"
 )
 
 type Server interface {
@@ -59,7 +60,7 @@ func (s *serverImpl) AddRoute(route rest.Route) error {
 		return errors.NewCode(UnsupportedMethod)
 	}
 
-	s.echo.Logger.Debugf("Registered %s %s", route.Method(), path)
+	s.echo.Logger.Debug("Registered %s %s", route.Method(), path)
 
 	return nil
 }
@@ -68,15 +69,22 @@ func (s *serverImpl) Start() error {
 	// https://echo.labstack.com/docs/cookbook/graceful-shutdown
 	address := fmt.Sprintf(":%d", s.port)
 
-	s.echo.Logger.Infof("Starting server at %s", address)
-	err := s.echo.Start(address)
+	sc := echo.StartConfig{
+		Address:    address,
+		HideBanner: true,
+		HidePort:   true,
+	}
+
+	s.echo.Logger.Info("Starting server at %s", address)
+
+	err := sc.Start(context.Background(), s.echo)
 
 	if err == http.ErrServerClosed {
-		s.echo.Logger.Infof("Server at %s gracefully shutdown", address)
+		s.echo.Logger.Info("Server at %s gracefully shutdown", address)
 		return nil
 	}
 
-	s.echo.Logger.Infof("Server at %s failed with error: %v", address, err)
+	s.echo.Logger.Info("Server at %s failed with error: %v", address, err)
 
 	return err
 }
@@ -87,14 +95,12 @@ func (s *serverImpl) Stop() error {
 	return s.echo.Shutdown(ctx)
 }
 
-func createEchoServer(log echo.Logger) *echo.Echo {
-	e := echo.New()
-	e.HideBanner = true
-	e.HidePort = true
-	e.Logger = log
-
+func createEchoServer(log *slog.Logger) *echo.Echo {
+	config := echo.Config{
+		Logger: log,
+	}
+	e := echo.NewWithConfig(config)
 	registerBaseMiddlewares(e)
-
 	return e
 }
 
