@@ -63,7 +63,8 @@ func (la *echoLoggerAdapter) SetHeader(h string) {
 
 func (la *echoLoggerAdapter) Print(i ...interface{}) {
 	// https://github.com/labstack/gommon/blob/2888b9ce44ed86f3cb956f95becc724d255f0a33/log/log.go#L360
-	la.Printf(fmt.Sprint(i...))
+	message := fmt.Sprint(i...)
+	la.Printf("%s", message)
 }
 
 func (la *echoLoggerAdapter) Printf(format string, args ...interface{}) {
@@ -74,7 +75,7 @@ func (la *echoLoggerAdapter) Printj(j log.JSON) {
 	// https://github.com/labstack/gommon/blob/2888b9ce44ed86f3cb956f95becc724d255f0a33/log/log.go#L362
 	// Voluntarily ignore errors
 	data, _ := json.Marshal(j)
-	la.Printf(string(data))
+	la.Printf("json: %s", string(data))
 }
 
 func (la *echoLoggerAdapter) Debug(i ...interface{}) {
