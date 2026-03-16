@@ -8,7 +8,7 @@ import (
 )
 
 func Load[Configuration any](configName string, defaultConf Configuration) (Configuration, error) {
-	loader := viper.New()
+	loader := viper.NewWithOptions(viper.ExperimentalBindStruct())
 
 	// https://github.com/spf13/viper#reading-config-files
 	loader.SetConfigType("yaml")

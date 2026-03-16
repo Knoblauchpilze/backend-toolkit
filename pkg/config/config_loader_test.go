@@ -95,9 +95,8 @@ func TestUnit_Load_WhenEnvironmentVariableExists_ExpectTakesPrecedenceOverConfig
 	assert.Equal(t, uint16(26), actual.Server.Port)
 }
 
-func TestUnit_Load_WhenConfigDoesNotExistInFileButEnvironmentVariableDoes_ExpectValueNotOverridden(t *testing.T) {
-	// https://github.com/spf13/viper/issues/1797
-	// This might change with the next release
+// https://github.com/spf13/viper/issues/1797
+func TestUnit_Load_WhenConfigDoesNotExistInFileButEnvironmentVariableDoes_ExpectValueIsOverridden(t *testing.T) {
 	configName := writeConfigFile(t, nil)
 
 	in := sampleConfig{
@@ -110,7 +109,7 @@ func TestUnit_Load_WhenConfigDoesNotExistInFileButEnvironmentVariableDoes_Expect
 
 	actual, err := Load(configName, in)
 	assert.Nil(t, err)
-	assert.Equal(t, uint16(22), actual.Server.Port)
+	assert.Equal(t, uint16(26), actual.Server.Port)
 }
 
 func TestUnit_Load_WhenUuidInConfig_ExpectSuccess(t *testing.T) {
