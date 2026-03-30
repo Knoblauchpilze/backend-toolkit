@@ -55,7 +55,7 @@ jobs:
         run: go test -run='^TestUnit_.*' ./... -coverpkg=./... -race -covermode=atomic -coverprofile=coverage.out
       - name: Upload coverage to Codecov
         if: ${{ github.actor != 'dependabot[bot]' }}
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           fail_ci_if_error: true
           files: ./coverage.out
@@ -112,7 +112,7 @@ jobs:
         run: go test -run='^TestIT_.*' ./... -coverpkg=./... -race -covermode=atomic -coverprofile=coverage.out
       - name: Upload coverage to Codecov
         if: ${{ github.actor != 'dependabot[bot]' }}
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           fail_ci_if_error: true
           files: ./coverage.out
