@@ -3,10 +3,10 @@ package server
 import (
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/middleware"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 )
 
-func buildMiddlewaresForRoute(route rest.Route, log echo.Logger) []echo.MiddlewareFunc {
+func buildMiddlewaresForRoute(route rest.Route) []echo.MiddlewareFunc {
 	var out []echo.MiddlewareFunc
 
 	if route.UseResponseEnvelope() {
@@ -15,7 +15,7 @@ func buildMiddlewaresForRoute(route rest.Route, log echo.Logger) []echo.Middlewa
 
 	out = append(
 		out,
-		middleware.RequestTracer(log),
+		middleware.RequestTracer(),
 		middleware.ErrorConverter(),
 		middleware.Recover(),
 	)

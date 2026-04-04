@@ -1,11 +1,12 @@
 package middleware
 
 import (
+	stderrors "errors"
 	"net/http"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/logger"
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 )
 
 func formatHttpStatusCode(status int) string {
@@ -22,16 +23,17 @@ func formatHttpStatusCode(status int) string {
 }
 
 func wrapToHttpError(err error) error {
+	var httpErr *echo.HTTPError
+	if stderrors.As(err, &httpErr) {
+		return err
+	}
+
 	code := http.StatusInternalServerError
 	if errorWithCode, ok := err.(errors.ErrorWithCode); ok {
 		code = errorCodeToHttpErrorCode(errorWithCode.Code())
 	}
 
-	return &echo.HTTPError{
-		Code:     code,
-		Message:  err.Error(),
-		Internal: err,
-	}
+	return echo.NewHTTPError(code, err.Error())
 }
 
 func errorCodeToHttpErrorCode(code errors.ErrorCode) int {

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
+	"github.com/labstack/echo/v5"
+	"github.com/labstack/echo/v5/middleware"
 )
 
 func RequestLogger() echo.MiddlewareFunc {
@@ -14,9 +14,8 @@ func RequestLogger() echo.MiddlewareFunc {
 		LogMethod:  true,
 		LogURIPath: true,
 		LogStatus:  true,
-		LogError:   true,
-		LogValuesFunc: func(c echo.Context, values middleware.RequestLoggerValues) error {
-			c.Logger().Infof(createRequestLog(values))
+		LogValuesFunc: func(c *echo.Context, values middleware.RequestLoggerValues) error {
+			c.Logger().Info(createRequestLog(values))
 			return nil
 		},
 	}
