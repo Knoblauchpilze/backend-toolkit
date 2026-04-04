@@ -1,7 +1,7 @@
 package rest
 
 import (
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 )
 
 type Route interface {

@@ -5,11 +5,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/assert"
 )
 
-var testHandler = func(c echo.Context) error { return nil }
+var testHandler = func(c *echo.Context) error { return nil }
 
 func TestUnit_Route_Method(t *testing.T) {
 	r := NewRoute(http.MethodGet, "", testHandler)
@@ -18,7 +18,7 @@ func TestUnit_Route_Method(t *testing.T) {
 
 func TestUnit_Route_Handler(t *testing.T) {
 	handlerCalled := false
-	handler := func(c echo.Context) error {
+	handler := func(c *echo.Context) error {
 		handlerCalled = true
 		return nil
 	}
@@ -64,7 +64,7 @@ func TestUnit_Route_UseResponseEnvelope(t *testing.T) {
 	assert.False(t, r.UseResponseEnvelope())
 }
 
-func dummyEchoContext() echo.Context {
+func dummyEchoContext() *echo.Context {
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rw := httptest.NewRecorder()

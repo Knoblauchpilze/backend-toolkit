@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -158,7 +158,7 @@ func generateRequestWithQueryParams(key string, value string) *http.Request {
 
 func generateTestEchoContextFromRequest(
 	req *http.Request,
-) (echo.Context, *httptest.ResponseRecorder) {
+) (*echo.Context, *httptest.ResponseRecorder) {
 	e := echo.New()
 	rw := httptest.NewRecorder()
 

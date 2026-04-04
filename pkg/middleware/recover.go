@@ -3,36 +3,46 @@ package middleware
 import (
 	"fmt"
 	"net/http"
+	"runtime"
 
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
+	"github.com/labstack/echo/v5"
 )
 
 type recoveredErrorData struct {
 	err   error
-	ctx   echo.Context
+	ctx   *echo.Context
 	req   *http.Request
 	stack []byte
 }
 
 func Recover() echo.MiddlewareFunc {
-	config := middleware.RecoverConfig{
-		DisableStackAll: true,
-		LogErrorFunc: func(c echo.Context, err error, stack []byte) error {
-			data := recoveredErrorData{
-				err:   err,
-				ctx:   c,
-				req:   c.Request(),
-				stack: stack,
-			}
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c *echo.Context) (err error) {
+			defer func() {
+				if r := recover(); r != nil {
+					recoveredErr, ok := r.(error)
+					if !ok {
+						recoveredErr = fmt.Errorf("%v", r)
+					}
 
-			c.Logger().Errorf(createErrorLog(data))
+					stack := make([]byte, 4<<10) // 4 KB
+					length := runtime.Stack(stack, false)
 
-			return wrapToHttpError(err)
-		},
+					data := recoveredErrorData{
+						err:   recoveredErr,
+						ctx:   c,
+						req:   c.Request(),
+						stack: stack[:length],
+					}
+
+					c.Logger().Error(createErrorLog(data))
+
+					err = wrapToHttpError(recoveredErr)
+				}
+			}()
+			return next(c)
+		}
 	}
-
-	return middleware.RecoverWithConfig(config)
 }
 
 func createErrorLog(data recoveredErrorData) string {
@@ -47,7 +57,6 @@ func createErrorLog(data recoveredErrorData) string {
 
 func pathFromRequest(req *http.Request) string {
 	host := req.Host
-	// https://github.com/labstack/echo/blob/5a0b4dd8063575995cbcb746a0fb31266a0de3db/middleware/request_logger.go#L312
 	path := req.URL.Path
 	if path == "" {
 		path = "/"

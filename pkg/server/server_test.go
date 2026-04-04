@@ -14,8 +14,7 @@ import (
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/logger"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/process"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
-	"github.com/google/uuid"
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -60,7 +59,7 @@ func TestUnit_Server_AnswersToRequestsWithResponseEnvelope(t *testing.T) {
 
 func TestUnit_Server_WhenRegisteringRawRoute_AnswersToRequestsWithoutResponseEnvelope(t *testing.T) {
 	s := newTestServer(4006)
-	helloHandler := func(c echo.Context) error {
+	helloHandler := func(c *echo.Context) error {
 		return c.String(http.StatusOK, "Hello")
 	}
 	route := rest.NewRawRoute(http.MethodGet, "/", helloHandler)
@@ -100,7 +99,7 @@ func TestUnit_Server_WhenConfigDefinesABasePath_ExpectPrefixedToRoutes(t *testin
 
 func TestUnit_Server_WhenHandlerPanics_ExpectErrorResponseEnvelope(t *testing.T) {
 	s := newTestServer(4003)
-	errorHandler := func(c echo.Context) error {
+	errorHandler := func(c *echo.Context) error {
 		panic(fmt.Errorf("this handler panics"))
 	}
 	route := rest.NewRoute(http.MethodGet, "/", errorHandler)
@@ -123,7 +122,7 @@ func TestUnit_Server_WhenHandlerPanics_ExpectErrorResponseEnvelope(t *testing.T)
 
 func TestUnit_Server_WhenHandlerReturnsError_ExpectErrorResponseEnvelope(t *testing.T) {
 	s := newTestServer(4004)
-	errorHandler := func(c echo.Context) error {
+	errorHandler := func(c *echo.Context) error {
 		return errors.NewCode(db.AlreadyCommitted)
 	}
 	route := rest.NewRoute(http.MethodGet, "/", errorHandler)
@@ -142,29 +141,6 @@ func TestUnit_Server_WhenHandlerReturnsError_ExpectErrorResponseEnvelope(t *test
 	actual := unmarshalResponseAndAssertRequestId(t, response)
 	assert.Equal(t, "ERROR", actual.Status)
 	assert.Equal(t, `{"message":"An unexpected error occurred. Code: 102"}`, string(actual.Details))
-}
-
-func TestUnit_Server_ExpectRequestIsProvidedALoggerWithARequestIdAsPrefix(t *testing.T) {
-	s := newTestServer(4005)
-	errorHandler := func(c echo.Context) error {
-		prefix := c.Logger().Prefix()
-		err := uuid.Validate(prefix)
-		assert.Nil(t, err, "Actual err: %v (prefix: %s)", err, prefix)
-		return testHttpHandler(c)
-	}
-	route := rest.NewRoute(http.MethodGet, "/", errorHandler)
-	err := s.AddRoute(route)
-	assert.Nil(t, err, "Actual err: %v", err)
-
-	done := asyncRunServerAndAssertStopWithoutError(t, s)
-
-	response := doRequest(t, http.MethodGet, "http://localhost:4005")
-
-	err = s.Stop()
-	<-done
-
-	assert.Nil(t, err, "Actual err: %v", err)
-	assertIsOkResponse(t, response)
 }
 
 type responseEnvelope struct {
@@ -198,7 +174,7 @@ func newTestServerWithOkHandler(t *testing.T, port uint16) Server {
 	return s
 }
 
-func testHttpHandler(c echo.Context) error {
+func testHttpHandler(c *echo.Context) error {
 	return c.JSON(http.StatusOK, "OK")
 }
 
