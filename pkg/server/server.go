@@ -67,6 +67,12 @@ func (s *serverImpl) AddRoute(route rest.Route) error {
 }
 
 func (s *serverImpl) Start() error {
+	// https://echo.labstack.com/docs/cookbook/graceful-shutdown
+	// This approach deviates a bit from what is recommended in the
+	// above link. This solution was proposed by AI and seems to
+	// match what was necessary before in echo v4.
+	// As none of the test are broken and the server also shuts down
+	// correctly, it's fine to roll with it.
 	address := fmt.Sprintf(":%d", s.port)
 
 	s.echo.Logger.Info("Starting server", slog.String("address", address))
