@@ -143,14 +143,10 @@ func (l *loggerImpl) Errorf(format string, v ...interface{}) {
 	l.log(ERROR, format, v...)
 }
 
-func (l *loggerImpl) shouldPrint(level Level) bool {
+func (l *loggerImpl) log(level Level, format string, args ...interface{}) {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 
-	return l.level <= level
-}
-
-func (l *loggerImpl) log(level Level, format string, args ...interface{}) {
 	if !l.shouldPrint(level) {
 		return
 	}
@@ -158,6 +154,10 @@ func (l *loggerImpl) log(level Level, format string, args ...interface{}) {
 	event := l.createEvent(level)
 	out := l.prependPrefixAndHeader(format)
 	event.Timestamp().Msgf(out, args...)
+}
+
+func (l *loggerImpl) shouldPrint(level Level) bool {
+	return l.level <= level
 }
 
 func (l *loggerImpl) createEvent(level Level) *zerolog.Event {
@@ -177,9 +177,6 @@ func (l *loggerImpl) createEvent(level Level) *zerolog.Event {
 
 func (l *loggerImpl) prependPrefixAndHeader(in string) string {
 	out := in
-
-	l.lock.Lock()
-	defer l.lock.Unlock()
 
 	if l.prefix != "" {
 		out = fmt.Sprintf("[%s] %s", l.prefix, out)
