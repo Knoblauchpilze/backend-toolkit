@@ -40,12 +40,12 @@ import (
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/process"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/server"
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 )
 
 func main() {
 	// Create a logger printing to standard output
-	log := logger.New(logger.NewPrettyWriter(os.Stdout))
+	log := logger.New(os.Stdout)
 
 	// Create the connection to access the database
 	dbConfig := postgresql.NewConfigForLocalhost(
@@ -89,7 +89,7 @@ func main() {
 }
 
 func infoHandlerGenerator(conn db.Connection) echo.HandlerFunc {
-	return func(c echo.Context) error {
+	return func(c *echo.Context) error {
 		sqlQuery := "SELECT count(*) FROM my-table"
 
 		// Use the connection to query the database and unmarshal the result
@@ -162,26 +162,24 @@ To this end we used some capabilities provided by `echo` and `zerolog` and tried
 By default a handler using `echo` has the following prototype:
 
 ```go
-type HandlerFunc func(c echo.Context) error
+type HandlerFunc func(c *echo.Context) error
 ```
 
-The `echo.Context` contains a logger which is attached by default to each request. It stems from the general logger configured when instantiating the `echo.Echo` object.
+The `echo.Context` uses `slog` for logging and provides a `Logger()` method which allows to request the logger for each request.
 
 ### Binding zerolog to echo logger
 
-The `zerolog` package and the `echo` package have slightly different interfaces to allow logging. In the future we might want to use a different logging backend. Therefore it does not seem very secure to expose the internals of the logging system we use outside of the package.
-
-In the [logger](pkg/logger) package we defined a general log interface (`logger.Logger`) and provide some adapters to convert to other types. This is a typical way to bind different logging systems (see e.g. [pgx's adapter](https://github.com/jackc/pgx-zerolog) for `zerolog`).
+The `zerolog` package and the `slog` package have slightly different interfaces to allow logging. As `slog` is part of the standard library, it seems safe to rely on it. There's a binding for `slog` provided by zerolog (see [source](https://github.com/rs/zerolog?tab=readme-ov-file#integration-with-logslog)). It's easy enough to configure it: the `logger` package only provides convenience wrappers to instantiate a logger either with a default level or with a custom one.
 
 For this project we have the following function:
 
 ```go
-func Wrap(log Logger) echo.Logger {
+func New(out io.Writer) *slog.Logger {
 	/* ... */
 }
 ```
 
-This allows to create a logger as usual and pass it over to the `echo` object easily.
+This allows to create a logger and forward it to the server.
 
 ## Database interaction
 
