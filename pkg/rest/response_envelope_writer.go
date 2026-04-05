@@ -2,6 +2,7 @@ package rest
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 )
 
@@ -38,6 +39,9 @@ func (erw *envelopeResponseWriter) Write(data []byte) (int, error) {
 
 		return erw.Write(encodedData)
 	}
+
+	// Update Content-Length to reflect the actual wrapped payload size
+	erw.writer.Header().Set("Content-Length", fmt.Sprintf("%d", len(out)))
 
 	return erw.writer.Write(out)
 }

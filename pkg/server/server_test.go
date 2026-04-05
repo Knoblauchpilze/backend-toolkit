@@ -227,6 +227,8 @@ func unmarshalResponseAndAssertRequestId(t *testing.T, resp *http.Response) resp
 }
 
 func assertIsOkResponse(t *testing.T, response *http.Response) {
+	t.Helper()
+
 	assert.Equal(t, http.StatusOK, response.StatusCode)
 	actual := unmarshalResponseAndAssertRequestId(t, response)
 	assert.Equal(t, "SUCCESS", actual.Status)

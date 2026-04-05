@@ -64,6 +64,26 @@ func TestUnit_ResponseEnvelope_WrapsJsonOutputInResponseEnvelope(t *testing.T) {
 	assert.Regexp(t, expected, actual)
 }
 
+func TestUnit_ResponseEnvelope_CorrectlyUpdatesContentLengthToAccountForEnvelope(t *testing.T) {
+	next := createHandlerFuncWithPlainOutput(http.StatusOK, "my-output")
+
+	middleware := ResponseEnvelope()
+	callable := middleware(next)
+
+	ctx, rw := generateTestEchoContext()
+
+	err := callable(ctx)
+	require.Nil(t, err)
+
+	length := rw.Header().Get("Content-Length")
+	// The length accounts for:
+	//  - 50 characters for the request identifier and quotes
+	//  - 18 characters for the status and quotes
+	//  - 10 characters for the details header and quotes
+	//  - 11 character for the plain output
+	assert.Equal(t, "93", length)
+}
+
 func TestUnit_ResponseEnvelope_WhenStatusIsNot200Ok_ExpectStatusReflectsIt(t *testing.T) {
 	next := createHandlerFuncWithPlainOutput(http.StatusBadGateway, "my-output")
 
