@@ -3,15 +3,15 @@ package server
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
-	"github.com/Knoblauchpilze/backend-toolkit/pkg/logger"
 	om "github.com/Knoblauchpilze/backend-toolkit/pkg/middleware"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
+	"github.com/labstack/echo/v5"
+	"github.com/labstack/echo/v5/middleware"
 )
 
 type Server interface {
@@ -26,10 +26,11 @@ type serverImpl struct {
 	port            uint16
 	shutdownTimeout time.Duration
 	router          *echo.Group
+	stopChan        chan struct{}
 }
 
-func NewWithLogger(config Config, log logger.Logger) Server {
-	echoServer := createEchoServer(logger.Wrap(log))
+func NewWithLogger(config Config, log *slog.Logger) Server {
+	echoServer := createEchoServer(log)
 
 	s := &serverImpl{
 		echo:            echoServer,
@@ -37,6 +38,7 @@ func NewWithLogger(config Config, log logger.Logger) Server {
 		port:            config.Port,
 		shutdownTimeout: config.ShutdownTimeout,
 		router:          echoServer.Group(""),
+		stopChan:        make(chan struct{}, 1),
 	}
 
 	return s
@@ -44,7 +46,7 @@ func NewWithLogger(config Config, log logger.Logger) Server {
 
 func (s *serverImpl) AddRoute(route rest.Route) error {
 	path := rest.ConcatenateEndpoints(s.basePath, route.Path())
-	middlewares := buildMiddlewaresForRoute(route, s.echo.Logger)
+	middlewares := buildMiddlewaresForRoute(route)
 
 	switch route.Method() {
 	case http.MethodGet:
@@ -59,38 +61,52 @@ func (s *serverImpl) AddRoute(route rest.Route) error {
 		return errors.NewCode(UnsupportedMethod)
 	}
 
-	s.echo.Logger.Debugf("Registered %s %s", route.Method(), path)
+	s.echo.Logger.Debug("Registered route", slog.String("method", route.Method()), slog.String("path", path))
 
 	return nil
 }
 
 func (s *serverImpl) Start() error {
 	// https://echo.labstack.com/docs/cookbook/graceful-shutdown
+	// This approach deviates a bit from what is recommended in the
+	// above link. This solution was proposed by AI and seems to
+	// match what was necessary before in echo v4.
+	// As none of the test are broken and the server also shuts down
+	// correctly, it's fine to roll with it.
 	address := fmt.Sprintf(":%d", s.port)
 
-	s.echo.Logger.Infof("Starting server at %s", address)
-	err := s.echo.Start(address)
+	s.echo.Logger.Info("Starting server", slog.String("address", address))
 
-	if err == http.ErrServerClosed {
-		s.echo.Logger.Infof("Server at %s gracefully shutdown", address)
-		return nil
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		<-s.stopChan
+		cancel()
+	}()
+
+	sc := echo.StartConfig{
+		Address:         address,
+		HideBanner:      true,
+		HidePort:        true,
+		GracefulTimeout: s.shutdownTimeout,
 	}
 
-	s.echo.Logger.Infof("Server at %s failed with error: %v", address, err)
+	if err := sc.Start(ctx, s.echo); err != nil {
+		s.echo.Logger.Error("Server failed", slog.String("address", address), slog.Any("error", err))
+		return err
+	}
 
-	return err
+	s.echo.Logger.Info("Server gracefully shutdown", slog.String("address", address))
+
+	return nil
 }
 
 func (s *serverImpl) Stop() error {
-	ctx, cancel := context.WithTimeout(context.Background(), s.shutdownTimeout)
-	defer cancel()
-	return s.echo.Shutdown(ctx)
+	s.stopChan <- struct{}{}
+	return nil
 }
 
-func createEchoServer(log echo.Logger) *echo.Echo {
+func createEchoServer(log *slog.Logger) *echo.Echo {
 	e := echo.New()
-	e.HideBanner = true
-	e.HidePort = true
 	e.Logger = log
 
 	registerBaseMiddlewares(e)
@@ -115,6 +131,5 @@ func registerBaseMiddlewares(e *echo.Echo) {
 	}
 
 	e.Use(middleware.CORSWithConfig(corsConf))
-	e.Use(middleware.Gzip())
 	e.Use(om.RequestLogger())
 }

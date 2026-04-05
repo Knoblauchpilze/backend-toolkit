@@ -1,11 +1,13 @@
 package rest
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const sampleRequestId = "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1"
@@ -75,6 +77,25 @@ func TestUnit_EnvelopeResponseWriter_WrapsSuccessResponse(t *testing.T) {
 		}
 	}`
 	assert.JSONEq(t, expectedJson, out.Body.String())
+}
+
+func TestUnit_EnvelopeResponseWriter_SetsContentLengthToMatchOutput(t *testing.T) {
+	out := httptest.NewRecorder()
+
+	rw := NewResponseEnvelopeWriter(out, sampleRequestId)
+
+	rw.WriteHeader(http.StatusCreated)
+	rw.Write(sampleJsonData)
+
+	lengths, ok := rw.Header()["Content-Length"]
+	require.True(t, ok, "Missing Content-Length header")
+	require.Len(t, lengths, 1)
+
+	// The length accounts for the response envelope and the JSON format
+	expectedLength := fmt.Sprintf("%d", len(sampleJsonData)+82)
+	actualLength := lengths[0]
+
+	assert.Equal(t, expectedLength, actualLength)
 }
 
 func TestUnit_EnvelopeResponseWriter_WrapsErrorResponse(t *testing.T) {

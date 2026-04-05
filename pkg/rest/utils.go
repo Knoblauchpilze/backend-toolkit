@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 )
 
 var multiSlashRegex = regexp.MustCompile("[/]+")
@@ -38,7 +38,7 @@ func MarshalNilToEmptySlice[T any](in []T) ([]byte, error) {
 	return json.Marshal(toMarshal)
 }
 
-func FetchIdFromQueryParam(key string, c echo.Context) (exists bool, id uuid.UUID, err error) {
+func FetchIdFromQueryParam(key string, c *echo.Context) (exists bool, id uuid.UUID, err error) {
 	maybeId := c.QueryParam(key)
 	exists = (maybeId != "")
 	if maybeId == "" {

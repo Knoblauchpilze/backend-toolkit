@@ -1,19 +1,17 @@
 package middleware
 
 import (
-	"github.com/Knoblauchpilze/backend-toolkit/pkg/logger"
-	"github.com/labstack/echo/v4"
+	"net/http"
+
+	"github.com/labstack/echo/v5"
 )
 
-func RequestTracer(log echo.Logger) echo.MiddlewareFunc {
+func RequestTracer() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
+		return func(c *echo.Context) error {
 			requestId, exists := tryGetRequestIdHeader(c.Response())
 			if exists {
-				if requestLog, err := logger.Duplicate(log); err == nil {
-					requestLog.SetPrefix(requestId)
-					c.SetLogger(requestLog)
-				}
+				c.SetLogger(c.Logger().With("requestId", requestId))
 			}
 
 			return next(c)
@@ -21,7 +19,7 @@ func RequestTracer(log echo.Logger) echo.MiddlewareFunc {
 	}
 }
 
-func tryGetRequestIdHeader(resp *echo.Response) (string, bool) {
+func tryGetRequestIdHeader(resp http.ResponseWriter) (string, bool) {
 	requestIds, ok := resp.Header()[requestIdHeader]
 	if !ok || len(requestIds) > 1 {
 		return "", false
