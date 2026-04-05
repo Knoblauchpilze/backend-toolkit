@@ -59,9 +59,13 @@ func generateTestEchoContextFromRequest(req *http.Request) (*echo.Context, *http
 }
 
 type message struct {
-	Level   string    `json:"level"`
-	Time    time.Time `json:"time"`
-	Message string    `json:"msg"`
+	Time     time.Time `json:"time"`
+	Level    string    `json:"level"`
+	Message  string    `json:"msg"`
+	Method   string    `json:"method"`
+	Uri      string    `json:"uri"`
+	Duration string    `json:"duration"`
+	Status   int       `json:"status"`
 }
 
 func unmarshalLogOutput(t *testing.T, out bytes.Buffer) message {

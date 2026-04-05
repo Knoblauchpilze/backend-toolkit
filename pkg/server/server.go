@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
-	"github.com/Knoblauchpilze/backend-toolkit/pkg/logger"
 	om "github.com/Knoblauchpilze/backend-toolkit/pkg/middleware"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
 	"github.com/labstack/echo/v5"
@@ -30,9 +29,8 @@ type serverImpl struct {
 	stopChan        chan struct{}
 }
 
-func NewWithLogger(config Config, log logger.Logger) Server {
-	slogLogger := slog.New(slog.NewJSONHandler(log.Output(), &slog.HandlerOptions{Level: slog.LevelDebug}))
-	echoServer := createEchoServer(slogLogger)
+func NewWithLogger(config Config, log *slog.Logger) Server {
+	echoServer := createEchoServer(log)
 
 	s := &serverImpl{
 		echo:            echoServer,
@@ -63,7 +61,7 @@ func (s *serverImpl) AddRoute(route rest.Route) error {
 		return errors.NewCode(UnsupportedMethod)
 	}
 
-	s.echo.Logger.Debug("Registered route", "method", route.Method(), "path", path)
+	s.echo.Logger.Debug("Registered route", slog.String("method", route.Method()), slog.String("path", path))
 
 	return nil
 }
@@ -71,7 +69,7 @@ func (s *serverImpl) AddRoute(route rest.Route) error {
 func (s *serverImpl) Start() error {
 	address := fmt.Sprintf(":%d", s.port)
 
-	s.echo.Logger.Info("Starting server", "address", address)
+	s.echo.Logger.Info("Starting server", slog.String("address", address))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
@@ -87,11 +85,11 @@ func (s *serverImpl) Start() error {
 	}
 
 	if err := sc.Start(ctx, s.echo); err != nil {
-		s.echo.Logger.Error("Server failed", "address", address, "error", err)
+		s.echo.Logger.Error("Server failed", slog.String("address", address), slog.Any("error", err))
 		return err
 	}
 
-	s.echo.Logger.Info("Server gracefully shutdown", "address", address)
+	s.echo.Logger.Info("Server gracefully shutdown", slog.String("address", address))
 
 	return nil
 }

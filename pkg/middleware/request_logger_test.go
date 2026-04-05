@@ -3,6 +3,7 @@ package middleware
 import (
 	"bytes"
 	"log/slog"
+	"net/http"
 	"testing"
 	"time"
 
@@ -32,9 +33,15 @@ func TestUnit_RequestLogger_PrintsRequestTiming(t *testing.T) {
 
 	actual := unmarshalLogOutput(t, out)
 	assert.Equal(t, "INFO", actual.Level)
+
 	safetyMargin := 5 * time.Second
 	assert.True(t, areTimeCloserThan(actual.Time, afterCall, safetyMargin), "%v and %v are not within %v", afterCall, actual.Time, safetyMargin)
-	assert.Regexp(t, `GET example.com/ processed in [0-9]+(\.[0-9]+)?([mµn])?s -> \x1b\[1;32m200\x1b\[0m`, actual.Message)
+
+	assert.Equal(t, "Request processed", actual.Message)
+	assert.Equal(t, "GET", actual.Method)
+	assert.Equal(t, "example.com/", actual.Uri)
+	assert.Regexp(t, "[0-9]+.[0-9][mµn]s", actual.Duration)
+	assert.Equal(t, http.StatusOK, actual.Status)
 }
 
 func areTimeCloserThan(t1 time.Time, t2 time.Time, distance time.Duration) bool {

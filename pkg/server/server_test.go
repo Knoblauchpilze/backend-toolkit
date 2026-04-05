@@ -4,14 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/db"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
-	"github.com/Knoblauchpilze/backend-toolkit/pkg/logger"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/process"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
 	"github.com/labstack/echo/v5"
@@ -159,9 +158,8 @@ func newTestServerWithPath(port uint16, path string) Server {
 		Port:            port,
 		ShutdownTimeout: 2 * time.Second,
 	}
-	log := logger.New(os.Stdout)
 
-	return NewWithLogger(config, log)
+	return NewWithLogger(config, slog.Default())
 }
 
 func newTestServerWithOkHandler(t *testing.T, port uint16) Server {
@@ -201,6 +199,8 @@ func asyncRunServerAndAssertStopWithoutError(
 func doRequest(
 	t *testing.T, method string, url string,
 ) *http.Response {
+	t.Helper()
+
 	req, err := http.NewRequest(method, url, nil)
 	assert.Nil(t, err, "Actual err: %v", err)
 

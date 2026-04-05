@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/labstack/echo/v5"
@@ -15,7 +16,7 @@ func RequestLogger() echo.MiddlewareFunc {
 		LogURIPath: true,
 		LogStatus:  true,
 		LogValuesFunc: func(c *echo.Context, values middleware.RequestLoggerValues) error {
-			c.Logger().Info(createRequestLog(values))
+			createRequestLog(values, c.Logger())
 			return nil
 		},
 	}
@@ -25,15 +26,14 @@ func RequestLogger() echo.MiddlewareFunc {
 	return logging
 }
 
-func createRequestLog(values middleware.RequestLoggerValues) string {
-	var out string
-
+func createRequestLog(values middleware.RequestLoggerValues, log *slog.Logger) {
 	elapsed := time.Since(values.StartTime)
 
-	out += fmt.Sprintf("%v", values.Method)
-	out += fmt.Sprintf(" %v%v", values.Host, values.URIPath)
-	out += fmt.Sprintf(" processed in %v", elapsed)
-	out += fmt.Sprintf(" -> %s", formatHttpStatusCode(values.Status))
-
-	return out
+	log.Info(
+		"Request processed",
+		slog.String("method", values.Method),
+		slog.String("uri", fmt.Sprintf("%s%s", values.Host, values.URIPath)),
+		slog.String("duration", fmt.Sprintf("%v", elapsed)),
+		slog.Int("status", values.Status),
+	)
 }
