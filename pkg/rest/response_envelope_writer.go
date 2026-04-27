@@ -6,18 +6,22 @@ import (
 	"net/http"
 )
 
+type ResponseEnvelopeDecoder[T any] func(data []byte) (T, error)
+
 type envelopeResponseWriter[T any] struct {
 	response ResponseEnvelope[T]
 	writer   http.ResponseWriter
+	decoder  ResponseEnvelopeDecoder[T]
 }
 
-func NewResponseEnvelopeWriter[T any](w http.ResponseWriter, requestId string) *envelopeResponseWriter[T] {
+func NewResponseEnvelopeWriter[T any](w http.ResponseWriter, requestId string, decoder ResponseEnvelopeDecoder[T]) *envelopeResponseWriter[T] {
 	return &envelopeResponseWriter[T]{
 		response: ResponseEnvelope[T]{
 			RequestId: requestId,
 			Status:    "SUCCESS",
 		},
-		writer: w,
+		writer:  w,
+		decoder: decoder,
 	}
 }
 
@@ -25,7 +29,16 @@ func (erw *envelopeResponseWriter[T]) Header() http.Header {
 	return erw.writer.Header()
 }
 
-func (erw *envelopeResponseWriter[T]) Write(data T) (int, error) {
+func (erw *envelopeResponseWriter[T]) Write(data []byte) (int, error) {
+	details, err := erw.decoder(data)
+	if err != nil {
+		return 0, err
+	}
+
+	return erw.WriteTyped(details)
+}
+
+func (erw *envelopeResponseWriter[T]) WriteTyped(data T) (int, error) {
 	erw.response.Details = data
 	out, err := json.Marshal(erw.response)
 	if err != nil {
