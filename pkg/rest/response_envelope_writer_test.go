@@ -12,12 +12,16 @@ import (
 
 const sampleRequestId = "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1"
 
-var sampleJsonData = []byte(`{"value":12}`)
+type details struct {
+	Value int `json:"value"`
+}
+
+var sampleJsonData = details{Value: 12}
 
 func TestUnit_EnvelopeResponseWriter_AutomaticallySetsSuccessStatusWhenNoStatusIsUsed(t *testing.T) {
 	out := httptest.NewRecorder()
 
-	rw := NewResponseEnvelopeWriter(out, sampleRequestId)
+	rw := NewResponseEnvelopeWriter[details](out, sampleRequestId)
 
 	rw.Write(sampleJsonData)
 
@@ -39,7 +43,7 @@ func TestUnit_EnvelopeResponseWriter_ForwardsProvidedWriterHeaders(t *testing.T)
 
 	out.Header().Add("Key2", "other-value")
 
-	rw := NewResponseEnvelopeWriter(out, sampleRequestId)
+	rw := NewResponseEnvelopeWriter[details](out, sampleRequestId)
 	actual := rw.Header()
 
 	expected := http.Header{
@@ -52,7 +56,7 @@ func TestUnit_EnvelopeResponseWriter_ForwardsProvidedWriterHeaders(t *testing.T)
 func TestUnit_EnvelopeResponseWriter_SetsStatusCodeOnCallToWriteHeader(t *testing.T) {
 	out := httptest.NewRecorder()
 
-	rw := NewResponseEnvelopeWriter(out, sampleRequestId)
+	rw := NewResponseEnvelopeWriter[details](out, sampleRequestId)
 
 	rw.WriteHeader(http.StatusUnauthorized)
 
@@ -62,7 +66,7 @@ func TestUnit_EnvelopeResponseWriter_SetsStatusCodeOnCallToWriteHeader(t *testin
 func TestUnit_EnvelopeResponseWriter_WrapsSuccessResponse(t *testing.T) {
 	out := httptest.NewRecorder()
 
-	rw := NewResponseEnvelopeWriter(out, sampleRequestId)
+	rw := NewResponseEnvelopeWriter[details](out, sampleRequestId)
 
 	rw.WriteHeader(http.StatusCreated)
 	rw.Write(sampleJsonData)
@@ -82,7 +86,7 @@ func TestUnit_EnvelopeResponseWriter_WrapsSuccessResponse(t *testing.T) {
 func TestUnit_EnvelopeResponseWriter_SetsContentLengthToMatchOutput(t *testing.T) {
 	out := httptest.NewRecorder()
 
-	rw := NewResponseEnvelopeWriter(out, sampleRequestId)
+	rw := NewResponseEnvelopeWriter[details](out, sampleRequestId)
 
 	rw.WriteHeader(http.StatusCreated)
 	rw.Write(sampleJsonData)
@@ -92,7 +96,9 @@ func TestUnit_EnvelopeResponseWriter_SetsContentLengthToMatchOutput(t *testing.T
 	require.Len(t, lengths, 1)
 
 	// The length accounts for the response envelope and the JSON format
-	expectedLength := fmt.Sprintf("%d", len(sampleJsonData)+82)
+	// 12 is the length of "{"value":12}
+	// 82 is the length of the response envelope wrapper"
+	expectedLength := fmt.Sprintf("%d", 12+82)
 	actualLength := lengths[0]
 
 	assert.Equal(t, expectedLength, actualLength)
@@ -101,7 +107,7 @@ func TestUnit_EnvelopeResponseWriter_SetsContentLengthToMatchOutput(t *testing.T
 func TestUnit_EnvelopeResponseWriter_WrapsErrorResponse(t *testing.T) {
 	out := httptest.NewRecorder()
 
-	rw := NewResponseEnvelopeWriter(out, sampleRequestId)
+	rw := NewResponseEnvelopeWriter[details](out, sampleRequestId)
 
 	rw.WriteHeader(http.StatusUnauthorized)
 	rw.Write(sampleJsonData)
@@ -118,10 +124,27 @@ func TestUnit_EnvelopeResponseWriter_WrapsErrorResponse(t *testing.T) {
 	assert.JSONEq(t, expectedJson, out.Body.String())
 }
 
-func TestUnit_EnvelopeResponseWriter_WrapsPlainDataAsDetailsString(t *testing.T) {
+func TestUnit_EnvelopeResponseWriter_WrapsPlainStringAsDetailsString(t *testing.T) {
 	out := httptest.NewRecorder()
 
-	rw := NewResponseEnvelopeWriter(out, sampleRequestId)
+	rw := NewResponseEnvelopeWriter[string](out, sampleRequestId)
+
+	rw.Write("some-data")
+
+	expectedJson := `
+	{
+		"requestId": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
+		"status": "SUCCESS",
+		"details": "some-data"
+	}`
+	actual := out.Body.String()
+	assert.JSONEq(t, expectedJson, actual)
+}
+
+func TestUnit_EnvelopeResponseWriter_WrapsRawBytesAsBytes(t *testing.T) {
+	out := httptest.NewRecorder()
+
+	rw := NewResponseEnvelopeWriter[[]byte](out, sampleRequestId)
 
 	rw.Write([]byte("some-data"))
 
@@ -129,7 +152,7 @@ func TestUnit_EnvelopeResponseWriter_WrapsPlainDataAsDetailsString(t *testing.T)
 	{
 		"requestId": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
 		"status": "SUCCESS",
-		"details": "some-data"
+		"details": "c29tZS1kYXRh"
 	}`
 	actual := out.Body.String()
 	assert.JSONEq(t, expectedJson, actual)

@@ -1,11 +1,7 @@
 package rest
 
-import (
-	"encoding/json"
-)
-
-type responseEnvelope struct {
-	RequestId string          `json:"requestId"`
-	Status    string          `json:"status"`
-	Details   json.RawMessage `json:"details,omitempty"`
+type ResponseEnvelope[T any] struct {
+	RequestId string `json:"requestId"`
+	Status    string `json:"status"`
+	Details   T      `json:"details"`
 }

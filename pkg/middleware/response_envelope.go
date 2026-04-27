@@ -9,7 +9,7 @@ import (
 
 const requestIdHeader = "X-Request-Id"
 
-func ResponseEnvelope() echo.MiddlewareFunc {
+func ResponseEnvelope[T any]() echo.MiddlewareFunc {
 	config := middleware.RequestIDConfig{
 		Generator: func() string {
 			return uuid.New().String()
@@ -17,7 +17,7 @@ func ResponseEnvelope() echo.MiddlewareFunc {
 		RequestIDHandler: func(c *echo.Context, requestId string) {
 			echoResp, err := echo.UnwrapResponse(c.Response())
 			if err == nil {
-				rw := rest.NewResponseEnvelopeWriter(echoResp.ResponseWriter, requestId)
+				rw := rest.NewResponseEnvelopeWriter[T](echoResp.ResponseWriter, requestId)
 				echoResp.ResponseWriter = rw
 			}
 		},
