@@ -1,8 +1,6 @@
 package middleware
 
 import (
-	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"github.com/labstack/echo/v5"
@@ -49,8 +47,4 @@ func createCallableTracerHandler() (echo.HandlerFunc, *bool, *echo.Context) {
 	middleware, called, ctx := createCallableHandler(generator)
 
 	return middleware, called, ctx
-}
-
-func generateTestEchoContextFromRequestForTracer(req *http.Request) (*echo.Context, *httptest.ResponseRecorder) {
-	return generateTestEchoContextFromRequest(req)
 }
