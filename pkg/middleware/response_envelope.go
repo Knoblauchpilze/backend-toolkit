@@ -17,7 +17,7 @@ func ResponseEnvelope() echo.MiddlewareFunc {
 		RequestIDHandler: func(c *echo.Context, requestId string) {
 			echoResp, err := echo.UnwrapResponse(c.Response())
 			if err == nil {
-				rw := rest.NewResponseEnvelopeWriter(echoResp.ResponseWriter, requestId)
+				rw := rest.NewResponseEnvelopeWriter(echoResp.ResponseWriter, requestId, rest.DecodeJSONOrString)
 				echoResp.ResponseWriter = rw
 			}
 		},
