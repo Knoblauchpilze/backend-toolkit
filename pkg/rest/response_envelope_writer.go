@@ -18,7 +18,7 @@ func NewResponseEnvelopeWriter[T any](w http.ResponseWriter, requestId string, d
 	return &envelopeResponseWriter[T]{
 		response: ResponseEnvelope[T]{
 			RequestId: requestId,
-			Status:    "SUCCESS",
+			Status:    StatusSuccess,
 		},
 		writer:  w,
 		decoder: decoder,
@@ -53,9 +53,9 @@ func (erw *envelopeResponseWriter[T]) WriteTyped(data T) (int, error) {
 
 func (erw *envelopeResponseWriter[T]) WriteHeader(statusCode int) {
 	if statusCode < 200 || statusCode > 299 {
-		erw.response.Status = "ERROR"
+		erw.response.Status = StatusError
 	} else {
-		erw.response.Status = "SUCCESS"
+		erw.response.Status = StatusSuccess
 	}
 	erw.writer.WriteHeader(statusCode)
 }

@@ -14,7 +14,7 @@ func TestUnit_ResponseEnvelope_SuccessfullyMarshalsTypedDetails(t *testing.T) {
 
 	r := ResponseEnvelope[details]{
 		RequestId: "1348f004-7620-4c80-915d-26da0ac144f6",
-		Status:    "SUCCESS",
+		Status:    StatusSuccess,
 		Details:   details{Field: 32},
 	}
 
@@ -35,7 +35,7 @@ func TestUnit_ResponseEnvelope_SuccessfullyMarshalsTypedDetails(t *testing.T) {
 func TestUnit_ResponseEnvelope_SuccessfullyMarshalsSimpleDetails(t *testing.T) {
 	r := ResponseEnvelope[int32]{
 		RequestId: "1348f004-7620-4c80-915d-26da0ac144f6",
-		Status:    "SUCCESS",
+		Status:    StatusSuccess,
 		Details:   int32(16),
 	}
 
