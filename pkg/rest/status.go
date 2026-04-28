@@ -5,26 +5,23 @@ import (
 	"fmt"
 )
 
-type Status int
+type Status string
 
 const (
-	StatusSuccess Status = iota
-	StatusError
+	StatusSuccess Status = "SUCCESS"
+	StatusError   Status = "ERROR"
 )
 
 func (s Status) String() string {
-	switch s {
-	case StatusSuccess:
-		return "SUCCESS"
-	case StatusError:
-		return "ERROR"
-	default:
-		return fmt.Sprintf("Status(%d)", s)
+	if s == StatusSuccess || s == StatusError {
+		return string(s)
 	}
+
+	return fmt.Sprintf("Status(%q)", string(s))
 }
 
 func (s Status) MarshalJSON() ([]byte, error) {
-	return json.Marshal(s.String())
+	return json.Marshal(string(s))
 }
 
 func (s *Status) UnmarshalJSON(data []byte) error {
