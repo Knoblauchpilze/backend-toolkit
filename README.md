@@ -227,7 +227,11 @@ func Query[T any](conn db.Connection, sqlQuery string, arguments ...any) (T, err
 }
 ```
 
-## The rest server
+### Handling of timestamps
+
+Managing time is notoriously complex in most systems. As this project is mainly for hobby usage, it is possible to make some simplifications. Following [this discussion](https://github.com/jackc/pgx/issues/2117) and several headaches with times not being what they should be, this package provides an opinionated way by **always returning the timestamps in UTC**. This allows to predictably return values for the timestamps no matter whether they were saved in UTC or not, and no matter the local settings of the machine running the server/DB. This project leaves the responsibility to convert the time to local time to the caller.
+
+## The REST server
 
 Another common aspect of offering a backend service is to have an HTTP server. In the past we usually used the [echo](https://echo.labstack.com/) framework. Although it's already providing some good abstraction, we noticed that some operations were quite common:
 
