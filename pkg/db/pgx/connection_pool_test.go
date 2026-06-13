@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -38,19 +37,21 @@ func TestIT_New_ConnectsToDatabase(t *testing.T) {
 
 func TestIT_New_ConnectsToDatabase_WrongCredentials(t *testing.T) {
 	type testCase struct {
+		name          string
 		connStr       string
-		expectedError errors.ErrorCode
+		expectedError error
 	}
 
 	testCases := []testCase{
 		{
+			name:          "invalid password",
 			connStr:       "postgres://test_user:comes-from-the-environment@localhost:5432/test_db",
-			expectedError: AuthenticationFailed,
+			expectedError: ErrAuthenticationFailed,
 		},
 	}
 
 	for _, testCase := range testCases {
-		t.Run("", func(t *testing.T) {
+		t.Run(testCase.name, func(t *testing.T) {
 			pool, err := New(context.Background(), testCase.connStr)
 			require.Nil(t, err)
 
@@ -58,7 +59,7 @@ func TestIT_New_ConnectsToDatabase_WrongCredentials(t *testing.T) {
 			require.NotNil(t, err)
 
 			actual := AnalyzeAndWrapPgError(err)
-			assert.True(t, errors.IsErrorWithCode(actual, testCase.expectedError), "Actual err: %v", err)
+			assert.Equal(t, actual, testCase.expectedError, "Actual err: %v", err)
 		})
 	}
 

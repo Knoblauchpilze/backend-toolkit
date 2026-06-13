@@ -3,5 +3,9 @@ package middleware
 import "github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 
 const (
-	UncaughtPanic errors.ErrorCode = 400
+	errUncaughtPanic errors.ErrorCode = 400
+)
+
+var (
+	ErrUncaughtPanic = errors.FromCode(errUncaughtPanic)
 )

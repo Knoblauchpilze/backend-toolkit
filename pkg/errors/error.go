@@ -2,6 +2,7 @@ package errors
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 )
 
@@ -74,6 +75,15 @@ func Unwrap(err error) error {
 	}
 
 	return ie.Cause
+}
+
+func AsErrorWithCode(err error) (*ErrorWithCode, bool) {
+	var errWithCode *ErrorWithCode
+	if errors.As(err, &errWithCode) {
+		return errWithCode, true
+	}
+
+	return nil, false
 }
 
 func (e *ErrorWithCode) Error() string {

@@ -18,7 +18,7 @@ func TestIT_Transaction_Exec_AlreadyCommitted(t *testing.T) {
 	affectedRows, err := tx.Exec(context.Background(), "SELECT COUNT(*) FROM my_table WHERE name = 'test-name'")
 
 	assert.Equal(t, int64(0), affectedRows)
-	assert.True(t, errors.IsErrorWithCode(err, AlreadyCommitted), "Actual err: %v", err)
+	assert.Equal(t, ErrAlreadyCommitted, err, "Actual err: %v", err)
 }
 
 func TestIT_Transaction_Exec_Select(t *testing.T) {
@@ -85,7 +85,9 @@ func TestIT_Transaction_Exec_WrongSyntax(t *testing.T) {
 	affectedRows, err := tx.Exec(context.Background(), "DESELECT COUNT(*) FROM my_table WHERE name = 'test-name'")
 
 	assert.Equal(t, int64(0), affectedRows)
-	assert.True(t, errors.IsErrorWithCode(err, pgx.GenericSqlError), "Actual err: %v", err)
+	actual, ok := errors.AsErrorWithCode(err)
+	require.True(t, ok)
+	assert.Equal(t, pgx.ErrGenericSqlError, actual.Code, "Actual err: %v", err)
 }
 
 func TestIT_Transaction_Exec_WhenError_ExpectRollback(t *testing.T) {

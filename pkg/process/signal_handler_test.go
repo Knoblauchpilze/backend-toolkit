@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -42,16 +41,9 @@ func TestUnit_AsyncStartWithSignalHandler_WhenProcessInvalid_ExpectError(t *test
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-
 			_, err := AsyncStartWithSignalHandler(context.Background(), testCase.process)
 
-			assert.True(
-				t,
-				errors.IsErrorWithCode(err, ErrInvalidProcess),
-				"Actual err: %v",
-				err,
-			)
-
+			assert.Equal(t, ErrInvalidProcess, err, "Actual err: %v", err)
 		})
 	}
 }

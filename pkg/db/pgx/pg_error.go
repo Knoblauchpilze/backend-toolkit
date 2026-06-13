@@ -37,19 +37,19 @@ func AnalyzeAndWrapPgError(err error) error {
 func analyzePgError(err *pgconn.PgError) error {
 	switch err.Code {
 	case foreignKeyViolation:
-		return errors.WrapCode(err, ForeignKeyValidation)
+		return errors.WrapCode(err, ErrForeignKeyValidation)
 	case uniqueValidation:
-		return errors.WrapCode(err, UniqueConstraintViolation)
+		return errors.WrapCode(err, ErrUniqueConstraintViolation)
 	}
 
-	return errors.WrapCode(err, GenericSqlError)
+	return errors.WrapCode(err, ErrGenericSqlError)
 }
 
 func analyzeConnError(err *pgconn.ConnectError) error {
 	msg := err.Unwrap().Error()
 	if strings.Contains(msg, passwordAuthenticationFailed) {
-		return errors.NewCodeWithDetails(AuthenticationFailed, "Failed to connect to database")
+		return ErrAuthenticationFailed
 	}
 
-	return errors.NewCode(GenericSqlError)
+	return errors.FromCode(ErrGenericSqlError)
 }

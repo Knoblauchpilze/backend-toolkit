@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/db/pgx"
-	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 	jpgx "github.com/jackc/pgx/v5"
 )
 
@@ -13,7 +12,7 @@ func QueryOneTx[T any](ctx context.Context, tx Transaction, sql string, argument
 
 	txImpl, ok := tx.(*transactionImpl)
 	if !ok {
-		return out, errors.NewCode(UnsupportedOperation)
+		return out, ErrUnsupportedOperation
 	}
 	rows, err := txImpl.query(ctx, sql, arguments...)
 	if err != nil {
@@ -24,9 +23,9 @@ func QueryOneTx[T any](ctx context.Context, tx Transaction, sql string, argument
 	if err != nil {
 		switch err {
 		case jpgx.ErrNoRows:
-			return out, errors.WrapCode(err, NoMatchingRows)
+			return out, ErrNoMatchingRows
 		case jpgx.ErrTooManyRows:
-			return out, errors.WrapCode(err, TooManyMatchingRows)
+			return out, ErrTooManyMatchingRows
 		default:
 			return out, pgx.AnalyzeAndWrapPgError(err)
 		}
@@ -40,7 +39,7 @@ func QueryAllTx[T any](ctx context.Context, tx Transaction, sql string, argument
 
 	txImpl, ok := tx.(*transactionImpl)
 	if !ok {
-		return out, errors.NewCode(UnsupportedOperation)
+		return out, ErrUnsupportedOperation
 	}
 	rows, err := txImpl.query(ctx, sql, arguments...)
 	if err != nil {
@@ -49,7 +48,7 @@ func QueryAllTx[T any](ctx context.Context, tx Transaction, sql string, argument
 
 	out, err = jpgx.CollectRows(rows, getCollectorForType[T]())
 	if err != nil {
-		return out, errors.WrapCode(err, UnsupportedOperation)
+		return out, ErrUnsupportedOperation
 	}
 
 	return out, nil

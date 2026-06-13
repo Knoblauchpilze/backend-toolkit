@@ -161,6 +161,24 @@ func TestUnit_Error_Unwrap(t *testing.T) {
 	assert.Nil(t, causeOfCause)
 }
 
+func TestUnit_Error_AsErrorWithCode(t *testing.T) {
+	t.Run("does not detect random error", func(t *testing.T) {
+		testErr := errors.New("test error")
+		actual, ok := AsErrorWithCode(testErr)
+
+		assert.False(t, ok)
+		assert.Nil(t, actual)
+	})
+
+	t.Run("does not detect error with code", func(t *testing.T) {
+		testErr := New("test error")
+		actual, ok := AsErrorWithCode(testErr)
+
+		require.True(t, ok)
+		assert.Equal(t, testErr, actual)
+	})
+}
+
 func TestUnit_Error_Error(t *testing.T) {
 	t.Run("error returns correct string for error without cause", func(t *testing.T) {
 		err := Newf("context %d", -44)
@@ -194,8 +212,8 @@ func TestUnit_Error_MarshalJSON(t *testing.T) {
 
 		expected := `
 {
-	"Code": 26,
-	"Message": "An unexpected error occurred"
+	"code": 26,
+	"message": "an unexpected error occurred"
 }`
 		assert.JSONEq(t, expected, string(out))
 	})
@@ -208,8 +226,8 @@ func TestUnit_Error_MarshalJSON(t *testing.T) {
 
 		expected := `
 {
-	"Code": 1,
-	"Message": "foo"
+	"code": 1,
+	"message": "foo"
 }`
 		assert.JSONEq(t, expected, string(out))
 	})
@@ -222,9 +240,9 @@ func TestUnit_Error_MarshalJSON(t *testing.T) {
 
 		expected := `
 {
-	"Code": 1,
-	"Message": "hihi",
-	"Cause": "some error"
+	"code": 1,
+	"message": "hihi",
+	"cause": "some error"
 }`
 		assert.JSONEq(t, expected, string(out))
 	})
@@ -237,11 +255,11 @@ func TestUnit_Error_MarshalJSON(t *testing.T) {
 
 		expected := `
 {
-	"Code": 1,
-	"Message": "bar",
-	"Cause": {
-		"Code": 1,
-		"Message": "foo"
+	"code": 1,
+	"message": "bar",
+	"cause": {
+		"code": 1,
+		"message": "foo"
 	}
 }`
 		assert.JSONEq(t, expected, string(out))

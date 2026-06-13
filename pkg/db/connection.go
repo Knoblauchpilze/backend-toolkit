@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/db/pgx"
-	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 	jpgx "github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -49,14 +48,14 @@ func (ci *connectionImpl) Close(ctx context.Context) {
 
 func (ci *connectionImpl) Ping(ctx context.Context) error {
 	if ci.pool == nil {
-		return errors.NewCode(NotConnected)
+		return ErrNotConnected
 	}
 	return ci.pool.Ping(ctx)
 }
 
 func (ci *connectionImpl) BeginTx(ctx context.Context) (Transaction, error) {
 	if ci.pool == nil {
-		return nil, errors.NewCode(NotConnected)
+		return nil, ErrNotConnected
 	}
 
 	pgxTx, err := ci.pool.Begin(ctx)
@@ -74,7 +73,7 @@ func (ci *connectionImpl) BeginTx(ctx context.Context) (Transaction, error) {
 
 func (ci *connectionImpl) Exec(ctx context.Context, sql string, arguments ...any) (int64, error) {
 	if ci.pool == nil {
-		return 0, errors.NewCode(NotConnected)
+		return 0, ErrNotConnected
 	}
 
 	tag, err := ci.pool.Exec(ctx, sql, arguments...)
@@ -87,7 +86,7 @@ func (ci *connectionImpl) Exec(ctx context.Context, sql string, arguments ...any
 
 func (ci *connectionImpl) query(ctx context.Context, sql string, arguments ...any) (jpgx.Rows, error) {
 	if ci.pool == nil {
-		return nil, errors.NewCode(NotConnected)
+		return nil, ErrNotConnected
 	}
 	rows, err := ci.pool.Query(ctx, sql, arguments...)
 

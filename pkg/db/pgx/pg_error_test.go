@@ -5,8 +5,9 @@ import (
 	"testing"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
-	jpgx "github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestUnit_AnalyzeAndWrapPgError_Nil(t *testing.T) {
@@ -32,29 +33,35 @@ func TestUnit_AnalyzeAndWrapPgError_PgError(t *testing.T) {
 	testCases := []testCase{
 		{
 			code:          "23503",
-			expectedError: ForeignKeyValidation,
+			expectedError: ErrForeignKeyValidation,
 		},
 		{
 			code:          "23505",
-			expectedError: UniqueConstraintViolation,
+			expectedError: ErrUniqueConstraintViolation,
 		},
 		{
 			code:          "not-a-code",
-			expectedError: GenericSqlError,
+			expectedError: ErrGenericSqlError,
 		},
 	}
 
 	for _, testCase := range testCases {
 		t.Run("", func(t *testing.T) {
-			err := &jpgx.PgError{
+			err := &pgconn.PgError{
 				Code: testCase.code,
 			}
 
-			actual := AnalyzeAndWrapPgError(err)
+			rawErr := AnalyzeAndWrapPgError(err)
 
-			assert.True(t, errors.IsErrorWithCode(actual, testCase.expectedError), "Actual err: %v", err)
-			cause := errors.Unwrap(actual)
-			assert.Equal(t, err, cause)
+			actual, ok := errors.AsErrorWithCode(rawErr)
+			require.True(t, ok)
+
+			expected := &errors.ErrorWithCode{
+				Code:    testCase.expectedError,
+				Message: "an unexpected error occurred",
+				Cause:   err,
+			}
+			assert.Equal(t, expected, actual)
 		})
 	}
 }

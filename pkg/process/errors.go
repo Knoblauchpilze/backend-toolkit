@@ -3,5 +3,9 @@ package process
 import "github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 
 const (
-	ErrInvalidProcess errors.ErrorCode = 200
+	errInvalidProcess errors.ErrorCode = 200
+)
+
+var (
+	ErrInvalidProcess = errors.FromCode(errInvalidProcess)
 )

@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 	om "github.com/Knoblauchpilze/backend-toolkit/pkg/middleware"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
 	"github.com/labstack/echo/v5"
@@ -58,7 +57,7 @@ func (s *serverImpl) AddRoute(route rest.Route) error {
 	case http.MethodPatch:
 		s.router.PATCH(path, route.Handler(), middlewares...)
 	default:
-		return errors.NewCode(UnsupportedMethod)
+		return ErrUnsupportedMethod
 	}
 
 	s.echo.Logger.Debug("Registered route", slog.String("method", route.Method()), slog.String("path", path))

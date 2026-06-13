@@ -5,8 +5,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-
-	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 )
 
 var defaultSignals = []os.Signal{
@@ -21,7 +19,7 @@ func AsyncStartWithSignalHandler(
 	process Process,
 ) (WaitFunc, error) {
 	if !process.Valid() {
-		return nil, errors.NewCode(ErrInvalidProcess)
+		return nil, ErrInvalidProcess
 	}
 
 	sCtx, stop := signal.NotifyContext(ctx, defaultSignals...)

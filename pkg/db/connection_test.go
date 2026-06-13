@@ -31,7 +31,7 @@ func TestIT_New_ValidConfiguration_InvalidCredentials(t *testing.T) {
 	conn, err := New(context.Background(), config)
 
 	assert.NotNil(t, conn)
-	assert.True(t, errors.IsErrorWithCode(err, pgx.AuthenticationFailed), "Actual err: %v", err)
+	assert.Equal(t, pgx.ErrAuthenticationFailed, err, "Actual err: %v", err)
 }
 
 func TestIT_New_ValidConfiguration(t *testing.T) {
@@ -56,7 +56,7 @@ func TestIT_Connection_Close(t *testing.T) {
 
 	conn.Close(context.Background())
 	err = conn.Ping(context.Background())
-	assert.True(t, errors.IsErrorWithCode(err, NotConnected), "Actual err: %v", err)
+	assert.Equal(t, ErrNotConnected, err, "Actual err: %v", err)
 }
 
 func TestIT_Connection_BeginTx_TimeStampIsValid(t *testing.T) {
@@ -76,7 +76,7 @@ func TestIT_Connection_BeginTx_ClosedConnection(t *testing.T) {
 	tx, err := conn.BeginTx(context.Background())
 
 	assert.Nil(t, tx)
-	assert.True(t, errors.IsErrorWithCode(err, NotConnected), "Actual err: %v", err)
+	assert.Equal(t, ErrNotConnected, err, "Actual err: %v", err)
 }
 
 func TestIT_Connection_Exec_Select(t *testing.T) {
@@ -111,7 +111,9 @@ func TestIT_Connection_Exec_InsertDuplicate(t *testing.T) {
 	affectedRows, err := conn.Exec(context.Background(), "INSERT INTO my_table VALUES ($1, $2)", id, element.Name)
 
 	assert.Equal(t, int64(0), affectedRows)
-	assert.True(t, errors.IsErrorWithCode(err, pgx.UniqueConstraintViolation), "Actual err: %v", err)
+	actual, ok := errors.AsErrorWithCode(err)
+	require.True(t, ok)
+	assert.Equal(t, pgx.ErrUniqueConstraintViolation, actual.Code, "Actual err: %v", err)
 	assertIdDoesNotExist(t, conn, id)
 }
 
@@ -134,7 +136,9 @@ func TestIT_Connection_Exec_UpdateDuplicate(t *testing.T) {
 
 	affectedRows, err := conn.Exec(context.Background(), "UPDATE my_table SET name = $1 WHERE id = $2", anotherElement.Name, element.Id)
 	assert.Equal(t, int64(0), affectedRows)
-	assert.True(t, errors.IsErrorWithCode(err, pgx.UniqueConstraintViolation), "Actual err: %v", err)
+	actual, ok := errors.AsErrorWithCode(err)
+	require.True(t, ok)
+	assert.Equal(t, pgx.ErrUniqueConstraintViolation, actual.Code, "Actual err: %v", err)
 
 	assertNameForId(t, conn, element.Id, element.Name)
 }
@@ -167,7 +171,9 @@ func TestIT_Connection_Exec_WrongSyntax(t *testing.T) {
 	affectedRows, err := conn.Exec(context.Background(), "DESELECT COUNT(*) FROM my_table WHERE name = $1", element.Name)
 
 	assert.Equal(t, int64(0), affectedRows)
-	assert.True(t, errors.IsErrorWithCode(err, pgx.GenericSqlError), "Actual err: %v", err)
+	actual, ok := errors.AsErrorWithCode(err)
+	require.True(t, ok)
+	assert.Equal(t, pgx.ErrGenericSqlError, actual.Code, "Actual err: %v", err)
 }
 
 func TestIT_Connection_Exec_ReturnsZonedTimeAsUTC(t *testing.T) {

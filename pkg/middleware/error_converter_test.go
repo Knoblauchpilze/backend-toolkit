@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/assert"
 )
@@ -31,14 +30,14 @@ func TestUnit_ErrorConverter_WrapsUnknownErrorIntoHttpError(t *testing.T) {
 }
 
 func TestUnit_ErrorConverter_WrapsErrorWithCodeIntoHttpError(t *testing.T) {
-	next := createErrorHandler(errors.NewCode(UncaughtPanic))
+	next := createErrorHandler(ErrUncaughtPanic)
 	middleware := ErrorConverter()
 	callable := middleware(next)
 	ctx, _ := generateTestEchoContext()
 
 	err := callable(ctx)
 
-	assertIsHttpErrorWithMessageAndCode(t, err, "An unexpected error occurred. Code: 400", http.StatusInternalServerError)
+	assertIsHttpErrorWithMessageAndCode(t, err, "an unexpected error occurred. Code: 400", http.StatusInternalServerError)
 }
 
 func createErrorHandler(err error) echo.HandlerFunc {
