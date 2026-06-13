@@ -5,80 +5,59 @@ import (
 	"fmt"
 )
 
-type ErrorCode int
-
-const (
-	GenericErrorCode   ErrorCode = 1
-	NotImplementedCode ErrorCode = 2
-)
-
-type ErrorWithCode interface {
-	Code() ErrorCode
-}
-
-type errorImpl struct {
-	Value   ErrorCode `json:"Code"`
-	Message string
-	Cause   error `json:",omitempty"`
+type ErrorWithCode struct {
+	Code    ErrorCode `json:"code"`
+	Message string    `json:"message"`
+	Cause   error     `json:"cause,omitempty"`
 }
 
 func New(message string) error {
-	return errorImpl{
-		Value:   GenericErrorCode,
+	return &ErrorWithCode{
+		Code:    GenericErrorCode,
 		Message: message,
 	}
 }
 
-func NewCode(code ErrorCode) error {
-	e := errorImpl{
-		Value:   code,
+func FromCode(code ErrorCode) error {
+	return &ErrorWithCode{
+		Code:    code,
 		Message: determineCommonErrorMessage(code),
 	}
-
-	return e
 }
 
-func NotImplemented() error {
-	return NewCode(NotImplementedCode)
-}
-
-func NewCodeWithDetails(code ErrorCode, details string) error {
-	e := errorImpl{
-		Value:   code,
+func FromCodeAndDetails(code ErrorCode, details string) error {
+	return &ErrorWithCode{
+		Code:    code,
 		Message: details,
 	}
-
-	return e
 }
 
 func Newf(format string, args ...interface{}) error {
-	return errorImpl{
-		Value:   GenericErrorCode,
+	return &ErrorWithCode{
+		Code:    GenericErrorCode,
 		Message: fmt.Sprintf(format, args...),
 	}
 }
 
 func Wrap(cause error, message string) error {
-	return errorImpl{
-		Value:   GenericErrorCode,
+	return &ErrorWithCode{
+		Code:    GenericErrorCode,
 		Message: message,
 		Cause:   cause,
 	}
 }
 
 func WrapCode(cause error, code ErrorCode) error {
-	e := errorImpl{
-		Value:   code,
+	return &ErrorWithCode{
+		Code:    code,
 		Message: determineCommonErrorMessage(code),
 		Cause:   cause,
 	}
-
-	return e
 }
 
 func Wrapf(cause error, format string, args ...interface{}) error {
-	return errorImpl{
-		Value:   GenericErrorCode,
+	return &ErrorWithCode{
+		Code:    GenericErrorCode,
 		Message: fmt.Sprintf(format, args...),
 		Cause:   cause,
 	}
@@ -89,7 +68,7 @@ func Unwrap(err error) error {
 		return nil
 	}
 
-	ie, ok := err.(errorImpl)
+	ie, ok := err.(*ErrorWithCode)
 	if !ok {
 		return nil
 	}
@@ -97,23 +76,11 @@ func Unwrap(err error) error {
 	return ie.Cause
 }
 
-func IsErrorWithCode(err error, code ErrorCode) bool {
-	if err == nil {
-		return false
-	}
-
-	if impl, ok := err.(errorImpl); ok {
-		return impl.Code() == code
-	}
-
-	return false
-}
-
-func (e errorImpl) Error() string {
+func (e *ErrorWithCode) Error() string {
 	var out string
 
 	out += e.Message
-	out += fmt.Sprintf(". Code: %d", e.Value)
+	out += fmt.Sprintf(". Code: %d", e.Code)
 
 	if e.Cause != nil {
 		out += fmt.Sprintf(" (cause: %v)", e.Cause.Error())
@@ -122,23 +89,19 @@ func (e errorImpl) Error() string {
 	return out
 }
 
-func (e errorImpl) Code() ErrorCode {
-	return e.Value
-}
-
-func (e errorImpl) MarshalJSON() ([]byte, error) {
+func (e *ErrorWithCode) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		Code    ErrorCode
-		Message string          `json:",omitempty"`
-		Cause   json.RawMessage `json:",omitempty"`
+		Code    ErrorCode       `json:"code"`
+		Message string          `json:"message,omitempty"`
+		Cause   json.RawMessage `json:"cause,omitempty"`
 	}{
-		Code:    e.Value,
+		Code:    e.Code,
 		Message: e.Message,
 		Cause:   e.marshalCause(),
 	})
 }
 
-func (e errorImpl) marshalCause() json.RawMessage {
+func (e *ErrorWithCode) marshalCause() json.RawMessage {
 	if e.Cause == nil {
 		return nil
 	}
@@ -147,7 +110,7 @@ func (e errorImpl) marshalCause() json.RawMessage {
 
 	// Voluntarily ignoring the marshalling errors as there's nothing we
 	// can do about it.
-	if impl, ok := e.Cause.(errorImpl); ok {
+	if impl, ok := e.Cause.(*ErrorWithCode); ok {
 		out, _ = json.Marshal(impl)
 	} else {
 		out, _ = json.Marshal(e.Cause.Error())
@@ -158,9 +121,9 @@ func (e errorImpl) marshalCause() json.RawMessage {
 
 func determineCommonErrorMessage(code ErrorCode) string {
 	switch code {
-	case NotImplementedCode:
-		return "Not implemented"
+	case errNotImplemented:
+		return "not implemented"
 	default:
-		return "An unexpected error occurred"
+		return "an unexpected error occurred"
 	}
 }
