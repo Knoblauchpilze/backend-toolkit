@@ -170,7 +170,7 @@ func TestUnit_Error_AsErrorWithCode(t *testing.T) {
 		assert.Nil(t, actual)
 	})
 
-	t.Run("does not detect error with code", func(t *testing.T) {
+	t.Run("detects error with code", func(t *testing.T) {
 		testErr := New("test error")
 		actual, ok := AsErrorWithCode(testErr)
 
@@ -299,7 +299,7 @@ func TestUnit_Error_As(t *testing.T) {
 		assert.Nil(t, err)
 	})
 
-	t.Run("does not detect error with code", func(t *testing.T) {
+	t.Run("detects error with code", func(t *testing.T) {
 		var err *ErrorWithCode
 
 		testErr := New("test error")

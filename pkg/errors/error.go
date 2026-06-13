@@ -7,9 +7,9 @@ import (
 )
 
 type ErrorWithCode struct {
-	Code    ErrorCode `json:"code"`
-	Message string    `json:"message"`
-	Cause   error     `json:"cause,omitempty"`
+	Code    ErrorCode
+	Message string
+	Cause   error
 }
 
 func New(message string) error {
