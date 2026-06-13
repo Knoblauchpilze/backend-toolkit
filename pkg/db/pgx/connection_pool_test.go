@@ -34,33 +34,3 @@ func TestIT_New_ConnectsToDatabase(t *testing.T) {
 	err = pool.Ping(context.Background())
 	assert.Nil(t, err)
 }
-
-func TestIT_New_ConnectsToDatabase_WrongCredentials(t *testing.T) {
-	type testCase struct {
-		name          string
-		connStr       string
-		expectedError error
-	}
-
-	testCases := []testCase{
-		{
-			name:          "invalid password",
-			connStr:       "postgres://test_user:comes-from-the-environment@localhost:5432/test_db",
-			expectedError: ErrAuthenticationFailed,
-		},
-	}
-
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			pool, err := New(context.Background(), testCase.connStr)
-			require.Nil(t, err)
-
-			err = pool.Ping(context.Background())
-			require.NotNil(t, err)
-
-			actual := AnalyzeAndWrapPgError(err)
-			assert.Equal(t, actual, testCase.expectedError, "Actual err: %v", err)
-		})
-	}
-
-}

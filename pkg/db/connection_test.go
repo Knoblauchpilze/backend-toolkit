@@ -13,25 +13,28 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestUnit_New_InvalidConfiguration(t *testing.T) {
-	config := postgresql.Config{
-		Host: ":/not-a-host",
-	}
+func TestUnit_New(t *testing.T) {
+	t.Run("fails when configuration is invalid", func(t *testing.T) {
+		config := postgresql.Config{
+			Host: ":/not-a-host",
+		}
 
-	conn, err := New(context.Background(), config)
+		conn, err := New(context.Background(), config)
 
-	assert.Nil(t, conn)
-	assert.NotNil(t, err)
-}
+		assert.Nil(t, conn)
+		assert.Error(t, err)
+	})
 
-func TestIT_New_ValidConfiguration_InvalidCredentials(t *testing.T) {
-	config := dbTestConfig
-	config.Password = "not-the-right-password"
+	t.Run("fails when credentials are invalid", func(t *testing.T) {
+		config := dbTestConfig
+		config.Password = "not-the-right-password"
 
-	conn, err := New(context.Background(), config)
+		conn, err := New(context.Background(), config)
 
-	assert.NotNil(t, conn)
-	assert.Equal(t, pgx.ErrAuthenticationFailed, err, "Actual err: %v", err)
+		assert.NotNil(t, conn)
+		assert.Equal(t, pgx.ErrAuthenticationFailed, err, "Actual err: %v", err)
+
+	})
 }
 
 func TestIT_New_ValidConfiguration(t *testing.T) {
