@@ -24,7 +24,8 @@ func TestUnit_EnvelopeResponseWriter_AutomaticallySetsSuccessStatusWhenNoStatusI
 
 	rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONTo[details])
 
-	rw.WriteTyped(sampleJsonData)
+	_, err := rw.WriteTyped(sampleJsonData)
+	require.NoError(t, err, "Actual err: %v", err)
 
 	expectedJson := `
 	{
@@ -70,7 +71,8 @@ func TestUnit_EnvelopeResponseWriter_WrapsSuccessResponse(t *testing.T) {
 	rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONTo[details])
 
 	rw.WriteHeader(http.StatusCreated)
-	rw.WriteTyped(sampleJsonData)
+	_, err := rw.WriteTyped(sampleJsonData)
+	require.NoError(t, err, "Actual err: %v", err)
 
 	assert.Equal(t, http.StatusCreated, out.Code)
 	expectedJson := `
@@ -90,7 +92,8 @@ func TestUnit_EnvelopeResponseWriter_SetsContentLengthToMatchOutput(t *testing.T
 	rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONTo[details])
 
 	rw.WriteHeader(http.StatusCreated)
-	rw.WriteTyped(sampleJsonData)
+	_, err := rw.WriteTyped(sampleJsonData)
+	require.NoError(t, err, "Actual err: %v", err)
 
 	lengths, ok := rw.Header()["Content-Length"]
 	require.True(t, ok, "Missing Content-Length header")
@@ -111,7 +114,8 @@ func TestUnit_EnvelopeResponseWriter_WrapsErrorResponse(t *testing.T) {
 	rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONTo[details])
 
 	rw.WriteHeader(http.StatusUnauthorized)
-	rw.WriteTyped(sampleJsonData)
+	_, err := rw.WriteTyped(sampleJsonData)
+	require.NoError(t, err, "Actual err: %v", err)
 
 	assert.Equal(t, http.StatusUnauthorized, out.Code)
 	expectedJson := `
@@ -130,7 +134,8 @@ func TestUnit_EnvelopeResponseWriter_WrapsPlainStringAsDetailsString(t *testing.
 
 	rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeString)
 
-	rw.WriteTyped("some-data")
+	_, err := rw.WriteTyped("some-data")
+	require.NoError(t, err, "Actual err: %v", err)
 
 	expectedJson := `
 	{
@@ -147,7 +152,8 @@ func TestUnit_EnvelopeResponseWriter_WrapsRawBytesAsBytes(t *testing.T) {
 
 	rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeRawBytes)
 
-	rw.Write([]byte("some-data"))
+	_, err := rw.Write([]byte("some-data"))
+	require.NoError(t, err, "Actual err: %v", err)
 
 	expectedJson := `
 	{

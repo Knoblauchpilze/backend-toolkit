@@ -14,6 +14,7 @@ import (
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
 	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestUnit_Server_WhenAddingUnSupportedRoutes_ExpectFailure(t *testing.T) {
@@ -46,7 +47,7 @@ func TestUnit_Server_AnswersToRequestsWithResponseEnvelope(t *testing.T) {
 	err := s.Stop()
 	<-done
 
-	assert.Nil(t, err, "Actual err: %v", err)
+	require.NoError(t, err, "Actual err: %v", err)
 	assertIsOkResponse(t, response)
 }
 
@@ -57,7 +58,7 @@ func TestUnit_Server_WhenRegisteringRawRoute_AnswersToRequestsWithoutResponseEnv
 	}
 	route := rest.NewRawRoute(http.MethodGet, "/", helloHandler)
 	err := s.AddRoute(route)
-	assert.Nil(t, err, "Actual err: %v", err)
+	require.NoError(t, err, "Actual err: %v", err)
 
 	done := asyncRunServerAndAssertStopWithoutError(t, s)
 
@@ -66,10 +67,10 @@ func TestUnit_Server_WhenRegisteringRawRoute_AnswersToRequestsWithoutResponseEnv
 	err = s.Stop()
 	<-done
 
-	assert.Nil(t, err, "Actual err: %v", err)
+	require.NoError(t, err, "Actual err: %v", err)
 	assert.Equal(t, http.StatusOK, response.StatusCode)
 	body, err := io.ReadAll(response.Body)
-	assert.Nil(t, err, "Actual err: %v", err)
+	require.NoError(t, err, "Actual err: %v", err)
 	assert.Equal(t, "Hello", string(body))
 }
 
@@ -77,7 +78,7 @@ func TestUnit_Server_WhenConfigDefinesABasePath_ExpectPrefixedToRoutes(t *testin
 	s := newTestServerWithPath(4002, "prefix")
 	route := rest.NewRoute(http.MethodGet, "/route", testHttpHandler)
 	err := s.AddRoute(route)
-	assert.Nil(t, err, "Actual err: %v", err)
+	require.NoError(t, err, "Actual err: %v", err)
 
 	done := asyncRunServerAndAssertStopWithoutError(t, s)
 
@@ -86,7 +87,7 @@ func TestUnit_Server_WhenConfigDefinesABasePath_ExpectPrefixedToRoutes(t *testin
 	err = s.Stop()
 	<-done
 
-	assert.Nil(t, err, "Actual err: %v", err)
+	require.NoError(t, err, "Actual err: %v", err)
 	assertIsOkResponse(t, response)
 }
 
@@ -97,7 +98,7 @@ func TestUnit_Server_WhenHandlerPanics_ExpectErrorResponseEnvelope(t *testing.T)
 	}
 	route := rest.NewRoute(http.MethodGet, "/", errorHandler)
 	err := s.AddRoute(route)
-	assert.Nil(t, err, "Actual err: %v", err)
+	require.NoError(t, err, "Actual err: %v", err)
 
 	done := asyncRunServerAndAssertStopWithoutError(t, s)
 
@@ -106,7 +107,7 @@ func TestUnit_Server_WhenHandlerPanics_ExpectErrorResponseEnvelope(t *testing.T)
 	err = s.Stop()
 	<-done
 
-	assert.Nil(t, err, "Actual err: %v", err)
+	require.NoError(t, err, "Actual err: %v", err)
 	assert.Equal(t, http.StatusInternalServerError, response.StatusCode)
 	actual := unmarshalResponseAndAssertRequestId(t, response)
 	assert.Equal(t, "ERROR", actual.Status)
@@ -120,7 +121,7 @@ func TestUnit_Server_WhenHandlerReturnsError_ExpectErrorResponseEnvelope(t *test
 	}
 	route := rest.NewRoute(http.MethodGet, "/", errorHandler)
 	err := s.AddRoute(route)
-	assert.Nil(t, err, "Actual err: %v", err)
+	require.NoError(t, err, "Actual err: %v", err)
 
 	done := asyncRunServerAndAssertStopWithoutError(t, s)
 
@@ -129,7 +130,7 @@ func TestUnit_Server_WhenHandlerReturnsError_ExpectErrorResponseEnvelope(t *test
 	err = s.Stop()
 	<-done
 
-	assert.Nil(t, err, "Actual err: %v", err)
+	require.NoError(t, err, "Actual err: %v", err)
 	assert.Equal(t, http.StatusInternalServerError, response.StatusCode)
 	actual := unmarshalResponseAndAssertRequestId(t, response)
 	assert.Equal(t, "ERROR", actual.Status)
@@ -157,11 +158,13 @@ func newTestServerWithPath(port uint16, path string) Server {
 }
 
 func newTestServerWithOkHandler(t *testing.T, port uint16) Server {
+	t.Helper()
+
 	s := newTestServer(port)
 
 	route := rest.NewRoute(http.MethodGet, "/", testHttpHandler)
 	err := s.AddRoute(route)
-	assert.Nil(t, err, "Actual err: %v", err)
+	require.NoError(t, err, "Actual err: %v", err)
 
 	return s
 }
@@ -173,6 +176,8 @@ func testHttpHandler(c *echo.Context) error {
 func asyncRunServerAndAssertStopWithoutError(
 	t *testing.T, s Server,
 ) <-chan struct{} {
+	t.Helper()
+
 	done := make(chan struct{}, 1)
 
 	go func() {
@@ -181,7 +186,7 @@ func asyncRunServerAndAssertStopWithoutError(
 		}()
 
 		err := process.SafeRunSync(s.Start)
-		assert.Nil(t, err, "Actual err: %v", err)
+		require.NoError(t, err, "Actual err: %v", err)
 	}()
 
 	const reasonableTimeForServerToBeUp = 50 * time.Millisecond
@@ -196,23 +201,29 @@ func doRequest(
 	t.Helper()
 
 	req, err := http.NewRequest(method, url, nil)
-	assert.Nil(t, err, "Actual err: %v", err)
+	require.NoError(t, err, "Actual err: %v", err)
 
 	client := &http.Client{}
 	rw, err := client.Do(req)
-	assert.Nil(t, err, "Actual err: %v", err)
+	require.NoError(t, err, "Actual err: %v", err)
 
 	return rw
 }
 
 func unmarshalResponseAndAssertRequestId(t *testing.T, resp *http.Response) responseEnvelope {
-	defer resp.Body.Close()
+	t.Helper()
+
+	defer func() {
+		err := resp.Body.Close()
+		require.NoError(t, err, "Actual err: %v", err)
+	}()
+
 	data, err := io.ReadAll(resp.Body)
-	assert.Nil(t, err, "Actual err: %v", err)
+	require.NoError(t, err, "Actual err: %v", err)
 
 	var out responseEnvelope
 	err = json.Unmarshal(data, &out)
-	assert.Nil(t, err, "Actual err: %v", err)
+	require.NoError(t, err, "Actual err: %v", err)
 
 	const idRegex = `[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`
 	assert.Regexp(t, idRegex, out.RequestId)

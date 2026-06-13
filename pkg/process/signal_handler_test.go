@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestUnit_AsyncStartWithSignalHandler_WhenProcessInvalid_ExpectError(t *testing.T) {
@@ -60,10 +61,10 @@ func TestUnit_AsyncStartWithSignalHandler_ContextCancelled(t *testing.T) {
 	defer cancel()
 
 	wait, err := AsyncStartWithSignalHandler(ctx, process)
-	assert.Nil(t, err, "Actual err: %v", err)
+	require.NoError(t, err, "Actual err: %v", err)
 
 	err = wait()
-	assert.Nil(t, err, "Actual err: %v", err)
+	require.NoError(t, err, "Actual err: %v", err)
 
 }
 
@@ -83,11 +84,11 @@ func TestUnit_AsyncStartWithSignalHandler_ProcessCalled(t *testing.T) {
 	defer cancel()
 
 	wait, err := AsyncStartWithSignalHandler(ctx, process)
-	assert.Nil(t, err, "Actual err: %v", err)
+	require.NoError(t, err, "Actual err: %v", err)
 
 	err = wait()
 	assert.Equal(t, 1, called)
-	assert.Nil(t, err, "Actual err: %v", err)
+	require.NoError(t, err, "Actual err: %v", err)
 }
 
 func TestUnit_AsyncStartWithSignalHandler_ReturnsProcessError(t *testing.T) {
@@ -104,7 +105,7 @@ func TestUnit_AsyncStartWithSignalHandler_ReturnsProcessError(t *testing.T) {
 	defer cancel()
 
 	wait, err := AsyncStartWithSignalHandler(ctx, process)
-	assert.Nil(t, err, "Actual err: %v", err)
+	require.NoError(t, err, "Actual err: %v", err)
 
 	err = wait()
 	assert.Equal(t, errSample, err, "Actual err: %v", err)
@@ -179,7 +180,7 @@ func TestUnit_AsyncStartWithSignalHandler_WhenProcessReturnsError_ExpectWaitStop
 	}
 
 	wait, err := AsyncStartWithSignalHandler(context.Background(), process)
-	assert.Nil(t, err, "Actual err: %v", err)
+	require.NoError(t, err, "Actual err: %v", err)
 
 	err = wait()
 	assert.Equal(t, errSample, err, "Actual err: %v", err)
@@ -196,7 +197,7 @@ func TestUnit_AsyncStartWithSignalHandler_WhenProcessPanics_ExpectWaitStopsAndRe
 	}
 
 	wait, err := AsyncStartWithSignalHandler(context.Background(), process)
-	assert.Nil(t, err, "Actual err: %v", err)
+	require.NoError(t, err, "Actual err: %v", err)
 
 	err = wait()
 	assert.Equal(t, errSample, err, "Actual err: %v", err)
@@ -227,7 +228,10 @@ func runInterruptedProcess(interruptError error) {
 
 	go func() {
 		time.AfterFunc(100*time.Millisecond, func() {
-			syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+			err := syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+			if err != nil {
+				panic(err)
+			}
 		})
 	}()
 

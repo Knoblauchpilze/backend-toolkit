@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type sampleServerConfig struct {
@@ -26,7 +27,10 @@ func TestMain(m *testing.M) {
 	}
 
 	defer func() {
-		os.RemoveAll("configs")
+		err := os.RemoveAll("configs")
+		if err != nil {
+			os.Exit(1)
+		}
 	}()
 
 	m.Run()
@@ -174,7 +178,7 @@ func writeConfigFile(t *testing.T, content []byte) string {
 	configName := fmt.Sprintf("config-%s", uuid.New())
 	configFileName := fmt.Sprintf("configs/%s.yml", configName)
 	err := os.WriteFile(configFileName, content, 0666)
-	assert.Nil(t, err, "Actual err: %v", err)
+	require.NoError(t, err, "Actual err: %v", err)
 
 	return configName
 }

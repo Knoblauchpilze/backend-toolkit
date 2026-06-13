@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestUnit_StartWithSignalHandler_StopsWhenContextIsCancelled(t *testing.T) {
@@ -19,12 +20,12 @@ func TestUnit_StartWithSignalHandler_StopsWhenContextIsCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	wait, err := StartWithSignalHandler(ctx, d)
-	assert.Nil(t, err, "Actual err: %v", err)
+	require.NoError(t, err, "Actual err: %v", err)
 
 	cancel()
 
 	err = wait()
-	assert.Nil(t, err, "Actual err: %v", err)
+	require.NoError(t, err, "Actual err: %v", err)
 
 	assert.Equal(t, int32(1), d.runCalled.Load())
 	assert.Equal(t, int32(1), d.interruptCalled.Load())
@@ -184,7 +185,10 @@ func (d *dummyRunnable) Stop() error {
 func runInterruptedRunnable(runnable Runnable) {
 	go func() {
 		time.AfterFunc(100*time.Millisecond, func() {
-			syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+			err := syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+			if err != nil {
+				panic(err)
+			}
 		})
 	}()
 

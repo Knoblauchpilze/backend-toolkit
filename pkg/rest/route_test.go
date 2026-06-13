@@ -7,6 +7,7 @@ import (
 
 	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var testHandler = func(c *echo.Context) error { return nil }
@@ -25,7 +26,8 @@ func TestUnit_Route_Handler(t *testing.T) {
 
 	r := NewRoute(http.MethodGet, "", handler)
 	actual := r.Handler()
-	actual(dummyEchoContext())
+	err := actual(dummyEchoContext())
+	require.NoError(t, err, "Actual err: %v", err)
 
 	assert.True(t, handlerCalled)
 }

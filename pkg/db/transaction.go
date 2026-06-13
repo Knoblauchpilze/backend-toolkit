@@ -23,8 +23,17 @@ type transactionImpl struct {
 
 func (ti *transactionImpl) Close(ctx context.Context) {
 	if ti.err != nil {
+		// The transaction interface does not return an error on Close. This means it
+		// it meaningless to check this error because it is not possible to propagate
+		// it back to the caller. This is an acceptable design choice: the transaction
+		// already failed and rolling it back is the best effort strategy. If this
+		// fails too, there's not much which can be done.
+		// nolint: errcheck
 		ti.tx.Rollback(ctx)
 	} else {
+		// See reasoning above: as nothing is returned from this function it is not
+		// worth it to check the error here
+		// nolint: errcheck
 		ti.tx.Commit(ctx)
 	}
 
