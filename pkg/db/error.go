@@ -9,6 +9,7 @@ import (
 )
 
 type DatabaseError struct {
+	Code       berrors.ErrorCode
 	Message    string
 	SqlCode    string
 	Schema     string
@@ -28,7 +29,7 @@ func AsDatabaseError(err error) (*DatabaseError, bool) {
 }
 
 func (e *DatabaseError) Error() string {
-	out := fmt.Sprintf("%s, code: %s", e.Message, e.SqlCode)
+	out := fmt.Sprintf("%s, code: %d, sql code: %s", e.Message, e.Code, e.SqlCode)
 
 	if e.Cause != nil {
 		out += fmt.Sprintf(" (cause: %v)", e.Cause.Error())
@@ -48,7 +49,7 @@ func (e *DatabaseError) MarshalJSON() ([]byte, error) {
 		Constraint string            `json:"constraint"`
 		Cause      json.RawMessage   `json:"cause,omitempty"`
 	}{
-		Code:       errSqlViolation,
+		Code:       e.Code,
 		SqlCode:    e.SqlCode,
 		Message:    e.Message,
 		Schema:     e.Schema,

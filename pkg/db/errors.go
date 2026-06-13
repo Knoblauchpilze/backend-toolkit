@@ -9,8 +9,6 @@ const (
 
 	errNoMatchingRows      errors.ErrorCode = 110
 	errTooManyMatchingRows errors.ErrorCode = 111
-
-	errSqlViolation errors.ErrorCode = 112
 )
 
 var (

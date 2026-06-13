@@ -34,6 +34,7 @@ func TestUnit_Error_AsDatabaseError(t *testing.T) {
 func TestUnit_Error_Error(t *testing.T) {
 	t.Run("returns correct string for error without cause", func(t *testing.T) {
 		err := DatabaseError{
+			Code:       errAlreadyCommitted,
 			Message:    "context",
 			SqlCode:    "44",
 			Schema:     "schema",
@@ -43,12 +44,13 @@ func TestUnit_Error_Error(t *testing.T) {
 			Cause:      nil,
 		}
 
-		expected := "context, code: 44"
+		expected := "context, code: 102, sql code: 44"
 		assert.Equal(t, expected, err.Error())
 	})
 
 	t.Run("returns correct string for error with cause", func(t *testing.T) {
 		err := DatabaseError{
+			Code:       errUnsupportedOperation,
 			Message:    "context",
 			SqlCode:    "44",
 			Schema:     "schema",
@@ -58,7 +60,7 @@ func TestUnit_Error_Error(t *testing.T) {
 			Cause:      errSomeError,
 		}
 
-		expected := "context, code: 44 (cause: some error)"
+		expected := "context, code: 101, sql code: 44 (cause: some error)"
 		assert.Equal(t, expected, err.Error())
 	})
 
@@ -67,6 +69,7 @@ func TestUnit_Error_Error(t *testing.T) {
 func TestUnit_Error_MarshalJSON(t *testing.T) {
 	t.Run("marshals error with no cause", func(t *testing.T) {
 		err := &DatabaseError{
+			Code:       errTooManyMatchingRows,
 			Message:    "context",
 			SqlCode:    "44",
 			Schema:     "the-schema",
@@ -81,7 +84,7 @@ func TestUnit_Error_MarshalJSON(t *testing.T) {
 
 		expected := `
 {
-	"code": 112,
+	"code": 111,
 	"sql_code": "44",
 	"message": "context",
 	"schema": "the-schema",
@@ -94,6 +97,7 @@ func TestUnit_Error_MarshalJSON(t *testing.T) {
 
 	t.Run("marshals error with cause", func(t *testing.T) {
 		err := &DatabaseError{
+			Code:       errNoMatchingRows,
 			Message:    "context",
 			SqlCode:    "44",
 			Schema:     "the-schema",
@@ -108,7 +112,7 @@ func TestUnit_Error_MarshalJSON(t *testing.T) {
 
 		expected := `
 {
-	"code": 112,
+	"code": 110,
 	"sql_code": "44",
 	"message": "context",
 	"schema": "the-schema",
@@ -122,6 +126,7 @@ func TestUnit_Error_MarshalJSON(t *testing.T) {
 
 	t.Run("marshals error with nested error with code", func(t *testing.T) {
 		err := &DatabaseError{
+			Code:       errNotConnected,
 			Message:    "context",
 			SqlCode:    "44",
 			Schema:     "the-schema",
@@ -136,7 +141,7 @@ func TestUnit_Error_MarshalJSON(t *testing.T) {
 
 		expected := `
 {
-	"code": 112,
+	"code": 100,
 	"sql_code": "44",
 	"message": "context",
 	"schema": "the-schema",
