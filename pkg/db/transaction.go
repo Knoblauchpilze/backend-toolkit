@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/db/pgx"
-	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 	jpgx "github.com/jackc/pgx/v5"
 )
 
@@ -38,7 +37,7 @@ func (ti *transactionImpl) TimeStamp() time.Time {
 
 func (ti *transactionImpl) Exec(ctx context.Context, sql string, arguments ...any) (int64, error) {
 	if ti.tx == nil {
-		return int64(0), errors.NewCode(AlreadyCommitted)
+		return int64(0), ErrAlreadyCommitted
 	}
 
 	tag, err := ti.tx.Exec(ctx, sql, arguments...)
@@ -53,7 +52,7 @@ func (ti *transactionImpl) Exec(ctx context.Context, sql string, arguments ...an
 
 func (ti *transactionImpl) query(ctx context.Context, sql string, arguments ...any) (jpgx.Rows, error) {
 	if ti.tx == nil {
-		return nil, errors.NewCode(AlreadyCommitted)
+		return nil, ErrAlreadyCommitted
 	}
 
 	rows, err := ti.tx.Query(ctx, sql, arguments...)

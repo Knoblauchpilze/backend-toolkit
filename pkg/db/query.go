@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/db/pgx"
-	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 	jpgx "github.com/jackc/pgx/v5"
 )
 
@@ -15,7 +14,7 @@ func QueryOne[T any](ctx context.Context, conn Connection, sql string, arguments
 
 	connImpl, ok := conn.(*connectionImpl)
 	if !ok {
-		return out, errors.NewCode(UnsupportedOperation)
+		return out, ErrUnsupportedOperation
 	}
 	rows, err := connImpl.query(ctx, sql, arguments...)
 	if err != nil {
@@ -26,9 +25,9 @@ func QueryOne[T any](ctx context.Context, conn Connection, sql string, arguments
 	if err != nil {
 		switch err {
 		case jpgx.ErrNoRows:
-			return out, errors.WrapCode(err, NoMatchingRows)
+			return out, ErrNoMatchingRows
 		case jpgx.ErrTooManyRows:
-			return out, errors.WrapCode(err, TooManyMatchingRows)
+			return out, ErrTooManyMatchingRows
 		default:
 			return out, pgx.AnalyzeAndWrapPgError(err)
 		}
@@ -42,7 +41,7 @@ func QueryAll[T any](ctx context.Context, conn Connection, sql string, arguments
 
 	connImpl, ok := conn.(*connectionImpl)
 	if !ok {
-		return out, errors.NewCode(UnsupportedOperation)
+		return out, ErrUnsupportedOperation
 	}
 	rows, err := connImpl.query(ctx, sql, arguments...)
 	if err != nil {
@@ -51,7 +50,7 @@ func QueryAll[T any](ctx context.Context, conn Connection, sql string, arguments
 
 	out, err = jpgx.CollectRows(rows, getCollectorForType[T]())
 	if err != nil {
-		return out, errors.WrapCode(err, UnsupportedOperation)
+		return out, ErrUnsupportedOperation
 	}
 
 	return out, nil

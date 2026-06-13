@@ -13,21 +13,34 @@ func TestUnit_WrapToHttpError(t *testing.T) {
 
 	actual := wrapToHttpError(err)
 
-	assertIsHttpErrorWithMessageAndCode(t, actual, "some error", http.StatusInternalServerError)
+	assertIsHttpErrorWithMessageAndCode(
+		t,
+		actual,
+		"some error",
+		http.StatusInternalServerError,
+	)
 }
 
 func TestUnit_WrapToHttpError_ErrorWithCode(t *testing.T) {
-	err := errors.NewCode(UncaughtPanic)
+	actual := wrapToHttpError(ErrUncaughtPanic)
 
-	actual := wrapToHttpError(err)
-
-	assertIsHttpErrorWithMessageAndCode(t, actual, "An unexpected error occurred. Code: 400", http.StatusInternalServerError)
+	assertIsHttpErrorWithMessageAndCode(
+		t,
+		actual,
+		"an unexpected error occurred. Code: 400",
+		http.StatusInternalServerError,
+	)
 }
 
 func TestUnit_WrapToHttpError_ErrorWithCodeWithCause(t *testing.T) {
-	err := errors.WrapCode(fmt.Errorf("some error"), UncaughtPanic)
+	err := errors.WrapCode(fmt.Errorf("some error"), errUncaughtPanic)
 
 	actual := wrapToHttpError(err)
 
-	assertIsHttpErrorWithMessageAndCode(t, actual, "An unexpected error occurred. Code: 400 (cause: some error)", http.StatusInternalServerError)
+	assertIsHttpErrorWithMessageAndCode(
+		t,
+		actual,
+		"an unexpected error occurred. Code: 400 (cause: some error)",
+		http.StatusInternalServerError,
+	)
 }

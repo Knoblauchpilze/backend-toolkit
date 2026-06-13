@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/db"
-	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/process"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
 	"github.com/labstack/echo/v5"
@@ -32,12 +31,7 @@ func TestUnit_Server_WhenAddingUnSupportedRoutes_ExpectFailure(t *testing.T) {
 		t.Run(method, func(t *testing.T) {
 			sampleRoute := rest.NewRoute(method, "/", testHttpHandler)
 			err := s.AddRoute(sampleRoute)
-			assert.True(
-				t,
-				errors.IsErrorWithCode(err, UnsupportedMethod),
-				"Actual err: %v",
-				err,
-			)
+			assert.Equal(t, ErrUnsupportedMethod, err, "Actual err: %v", err)
 		})
 	}
 }
@@ -122,7 +116,7 @@ func TestUnit_Server_WhenHandlerPanics_ExpectErrorResponseEnvelope(t *testing.T)
 func TestUnit_Server_WhenHandlerReturnsError_ExpectErrorResponseEnvelope(t *testing.T) {
 	s := newTestServer(4004)
 	errorHandler := func(c *echo.Context) error {
-		return errors.NewCode(db.AlreadyCommitted)
+		return db.ErrAlreadyCommitted
 	}
 	route := rest.NewRoute(http.MethodGet, "/", errorHandler)
 	err := s.AddRoute(route)
@@ -139,7 +133,7 @@ func TestUnit_Server_WhenHandlerReturnsError_ExpectErrorResponseEnvelope(t *test
 	assert.Equal(t, http.StatusInternalServerError, response.StatusCode)
 	actual := unmarshalResponseAndAssertRequestId(t, response)
 	assert.Equal(t, "ERROR", actual.Status)
-	assert.Equal(t, `{"message":"An unexpected error occurred. Code: 102"}`, string(actual.Details))
+	assert.Equal(t, `{"message":"an unexpected error occurred. Code: 102"}`, string(actual.Details))
 }
 
 type responseEnvelope struct {

@@ -9,6 +9,7 @@ import (
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type dummyTransaction struct {
@@ -19,7 +20,7 @@ func TestUnit_QueryOneTx_UnsupportedConnection(t *testing.T) {
 	_, err := QueryOneTx[int](context.Background(), &dummyTransaction{}, sampleSqlQuery)
 
 	assert.NotNil(t, err)
-	assert.True(t, errors.IsErrorWithCode(err, UnsupportedOperation), "Actual err: %v", err)
+	assert.Equal(t, ErrUnsupportedOperation, err, "Actual err: %v", err)
 }
 
 func TestIT_QueryOneTx_WhenCommitted_ExpectFailure(t *testing.T) {
@@ -29,7 +30,7 @@ func TestIT_QueryOneTx_WhenCommitted_ExpectFailure(t *testing.T) {
 	_, err := QueryOneTx[int](context.Background(), tx, sampleSqlQuery)
 
 	assert.NotNil(t, err)
-	assert.True(t, errors.IsErrorWithCode(err, AlreadyCommitted), "Actual err: %v", err)
+	assert.Equal(t, ErrAlreadyCommitted, err, "Actual err: %v", err)
 }
 
 func TestIT_QueryOneTx_WhenConnectionFails_ExpectFailure(t *testing.T) {
@@ -39,7 +40,9 @@ func TestIT_QueryOneTx_WhenConnectionFails_ExpectFailure(t *testing.T) {
 	_, err := QueryOneTx[string](context.Background(), tx, sqlQuery)
 
 	assert.NotNil(t, err)
-	assert.True(t, errors.IsErrorWithCode(err, pgx.GenericSqlError), "Actual err: %v", err)
+	actual, ok := errors.AsErrorWithCode(err)
+	require.True(t, ok)
+	assert.Equal(t, pgx.ErrGenericSqlError, actual.Code, "Actual err: %v", err)
 
 	cause := errors.Unwrap(err)
 	assert.NotNil(t, cause)
@@ -52,7 +55,7 @@ func TestIT_QueryOneTx_WhenNoData_ExpectFailure(t *testing.T) {
 	_, err := QueryOneTx[element](context.Background(), tx, sqlQuery, "does-not-exist")
 
 	assert.NotNil(t, err)
-	assert.True(t, errors.IsErrorWithCode(err, NoMatchingRows), "Actual err: %v", err)
+	assert.Equal(t, ErrNoMatchingRows, err, "Actual err: %v", err)
 }
 
 func TestIT_QueryOneTx_WhenTooManyRows_ExpectFailure(t *testing.T) {
@@ -64,7 +67,7 @@ func TestIT_QueryOneTx_WhenTooManyRows_ExpectFailure(t *testing.T) {
 	_, err := QueryOneTx[element](context.Background(), tx, sqlQuery, v1.Id, v2.Id)
 
 	assert.NotNil(t, err)
-	assert.True(t, errors.IsErrorWithCode(err, TooManyMatchingRows), "Actual err: %v", err)
+	assert.Equal(t, ErrTooManyMatchingRows, err, "Actual err: %v", err)
 }
 
 func TestIT_QueryOneTx_WhenUniqueConstraintViolation_ExpectFailure(t *testing.T) {
@@ -79,7 +82,9 @@ func TestIT_QueryOneTx_WhenUniqueConstraintViolation_ExpectFailure(t *testing.T)
 	sqlQuery := "INSERT INTO my_table (id, name) VALUES($1, $2)"
 	_, err := QueryOneTx[element](context.Background(), tx, sqlQuery, duplicate.Id, duplicate.Name)
 
-	assert.True(t, errors.IsErrorWithCode(err, pgx.UniqueConstraintViolation), "Actual err: %v", err)
+	actual, ok := errors.AsErrorWithCode(err)
+	require.True(t, ok)
+	assert.Equal(t, pgx.ErrUniqueConstraintViolation, actual.Code, "Actual err: %v", err)
 }
 
 func TestIT_QueryOneTx_ToStruct(t *testing.T) {
@@ -131,7 +136,7 @@ func TestIT_QueryAllTx_UnsupportedConnection(t *testing.T) {
 	_, err := QueryAllTx[int](context.Background(), &dummyTransaction{}, sampleSqlQuery)
 
 	assert.NotNil(t, err)
-	assert.True(t, errors.IsErrorWithCode(err, UnsupportedOperation), "Actual err: %v", err)
+	assert.Equal(t, ErrUnsupportedOperation, err, "Actual err: %v", err)
 }
 
 func TestIT_QueryAllTx_WhenCommitted_ExpectFailure(t *testing.T) {
@@ -141,7 +146,7 @@ func TestIT_QueryAllTx_WhenCommitted_ExpectFailure(t *testing.T) {
 	_, err := QueryAllTx[int](context.Background(), tx, sampleSqlQuery)
 
 	assert.NotNil(t, err)
-	assert.True(t, errors.IsErrorWithCode(err, AlreadyCommitted), "Actual err: %v", err)
+	assert.Equal(t, ErrAlreadyCommitted, err, "Actual err: %v", err)
 }
 
 func TestIT_QueryAllTx_WhenConnectionFails_ExpectFailure(t *testing.T) {
@@ -151,7 +156,9 @@ func TestIT_QueryAllTx_WhenConnectionFails_ExpectFailure(t *testing.T) {
 	_, err := QueryAllTx[string](context.Background(), tx, sqlQuery)
 
 	assert.NotNil(t, err)
-	assert.True(t, errors.IsErrorWithCode(err, pgx.GenericSqlError), "Actual err: %v", err)
+	actual, ok := errors.AsErrorWithCode(err)
+	require.True(t, ok)
+	assert.Equal(t, pgx.ErrGenericSqlError, actual.Code, "Actual err: %v", err)
 
 	cause := errors.Unwrap(err)
 	assert.NotNil(t, cause)

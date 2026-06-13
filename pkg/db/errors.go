@@ -3,10 +3,19 @@ package db
 import "github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 
 const (
-	NotConnected         errors.ErrorCode = 100
-	UnsupportedOperation errors.ErrorCode = 101
-	AlreadyCommitted     errors.ErrorCode = 102
+	errNotConnected         errors.ErrorCode = 100
+	errUnsupportedOperation errors.ErrorCode = 101
+	errAlreadyCommitted     errors.ErrorCode = 102
 
-	NoMatchingRows      errors.ErrorCode = 110
-	TooManyMatchingRows errors.ErrorCode = 111
+	errNoMatchingRows      errors.ErrorCode = 110
+	errTooManyMatchingRows errors.ErrorCode = 111
+)
+
+var (
+	ErrNotConnected         = errors.FromCode(errNotConnected)
+	ErrUnsupportedOperation = errors.FromCode(errUnsupportedOperation)
+	ErrAlreadyCommitted     = errors.FromCode(errAlreadyCommitted)
+
+	ErrNoMatchingRows      = errors.FromCode(errNoMatchingRows)
+	ErrTooManyMatchingRows = errors.FromCode(errTooManyMatchingRows)
 )

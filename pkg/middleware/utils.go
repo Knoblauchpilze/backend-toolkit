@@ -15,8 +15,8 @@ func wrapToHttpError(err error) error {
 	}
 
 	code := http.StatusInternalServerError
-	if errorWithCode, ok := err.(errors.ErrorWithCode); ok {
-		code = errorCodeToHttpErrorCode(errorWithCode.Code())
+	if errorWithCode, ok := err.(*errors.ErrorWithCode); ok {
+		code = errorCodeToHttpErrorCode(errorWithCode.Code)
 	}
 
 	return echo.NewHTTPError(code, err.Error())
