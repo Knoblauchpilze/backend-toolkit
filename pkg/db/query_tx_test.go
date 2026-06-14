@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Knoblauchpilze/backend-toolkit/pkg/db/pgx"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -42,7 +41,7 @@ func TestIT_QueryOneTx_WhenConnectionFails_ExpectFailure(t *testing.T) {
 	assert.NotNil(t, err)
 	actual, ok := errors.AsErrorWithCode(err)
 	require.True(t, ok)
-	assert.Equal(t, pgx.ErrGenericSqlError, actual.Code, "Actual err: %v", err)
+	assert.Equal(t, ErrGenericSqlError, actual.Code, "Actual err: %v", err)
 
 	cause := errors.Unwrap(err)
 	assert.NotNil(t, cause)
@@ -84,7 +83,7 @@ func TestIT_QueryOneTx_WhenUniqueConstraintViolation_ExpectFailure(t *testing.T)
 
 	actual, ok := errors.AsErrorWithCode(err)
 	require.True(t, ok)
-	assert.Equal(t, pgx.ErrUniqueConstraintViolation, actual.Code, "Actual err: %v", err)
+	assert.Equal(t, ErrUniqueConstraintViolation, actual.Code, "Actual err: %v", err)
 }
 
 func TestIT_QueryOneTx_ToStruct(t *testing.T) {
@@ -158,7 +157,7 @@ func TestIT_QueryAllTx_WhenConnectionFails_ExpectFailure(t *testing.T) {
 	assert.NotNil(t, err)
 	actual, ok := errors.AsErrorWithCode(err)
 	require.True(t, ok)
-	assert.Equal(t, pgx.ErrGenericSqlError, actual.Code, "Actual err: %v", err)
+	assert.Equal(t, ErrGenericSqlError, actual.Code, "Actual err: %v", err)
 
 	cause := errors.Unwrap(err)
 	assert.NotNil(t, cause)

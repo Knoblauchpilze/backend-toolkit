@@ -4,8 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/Knoblauchpilze/backend-toolkit/pkg/db/pgx"
-	jpgx "github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -25,7 +24,7 @@ type connectionImpl struct {
 func New(ctx context.Context, config Config) (Connection, error) {
 	connStr := config.ToConnectionString()
 
-	pool, err := pgx.New(ctx, connStr)
+	pool, err := newPool(ctx, connStr)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +35,7 @@ func New(ctx context.Context, config Config) (Connection, error) {
 
 	err = conn.Ping(ctx)
 
-	return conn, pgx.AnalyzeAndWrapPgError(err)
+	return conn, analyzeAndWrapDatabaseError(err)
 }
 
 func (ci *connectionImpl) Close(ctx context.Context) {
@@ -78,19 +77,19 @@ func (ci *connectionImpl) Exec(ctx context.Context, sql string, arguments ...any
 
 	tag, err := ci.pool.Exec(ctx, sql, arguments...)
 	if err != nil {
-		return tag.RowsAffected(), pgx.AnalyzeAndWrapPgError(err)
+		return tag.RowsAffected(), analyzeAndWrapDatabaseError(err)
 	}
 
 	return tag.RowsAffected(), err
 }
 
-func (ci *connectionImpl) query(ctx context.Context, sql string, arguments ...any) (jpgx.Rows, error) {
+func (ci *connectionImpl) query(ctx context.Context, sql string, arguments ...any) (pgx.Rows, error) {
 	if ci.pool == nil {
 		return nil, ErrNotConnected
 	}
 	rows, err := ci.pool.Query(ctx, sql, arguments...)
 
-	err = pgx.AnalyzeAndWrapPgError(err)
+	err = analyzeAndWrapDatabaseError(err)
 	if err != nil {
 		return nil, err
 	}

@@ -4,8 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/Knoblauchpilze/backend-toolkit/pkg/db/pgx"
-	jpgx "github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5"
 )
 
 type Transaction interface {
@@ -17,7 +16,7 @@ type Transaction interface {
 
 type transactionImpl struct {
 	timeStamp time.Time
-	tx        jpgx.Tx
+	tx        pgx.Tx
 	err       error
 }
 
@@ -53,13 +52,13 @@ func (ti *transactionImpl) Exec(ctx context.Context, sql string, arguments ...an
 	ti.updateErrorStatus(err)
 
 	if err != nil {
-		return tag.RowsAffected(), pgx.AnalyzeAndWrapPgError(err)
+		return tag.RowsAffected(), analyzeAndWrapDatabaseError(err)
 	}
 
 	return tag.RowsAffected(), err
 }
 
-func (ti *transactionImpl) query(ctx context.Context, sql string, arguments ...any) (jpgx.Rows, error) {
+func (ti *transactionImpl) query(ctx context.Context, sql string, arguments ...any) (pgx.Rows, error) {
 	if ti.tx == nil {
 		return nil, ErrAlreadyCommitted
 	}

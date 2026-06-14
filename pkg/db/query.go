@@ -5,8 +5,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/Knoblauchpilze/backend-toolkit/pkg/db/pgx"
-	jpgx "github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5"
 )
 
 func QueryOne[T any](ctx context.Context, conn Connection, sql string, arguments ...any) (T, error) {
@@ -18,18 +17,18 @@ func QueryOne[T any](ctx context.Context, conn Connection, sql string, arguments
 	}
 	rows, err := connImpl.query(ctx, sql, arguments...)
 	if err != nil {
-		return out, pgx.AnalyzeAndWrapPgError(err)
+		return out, analyzeAndWrapDatabaseError(err)
 	}
 
-	out, err = jpgx.CollectExactlyOneRow(rows, getCollectorForType[T]())
+	out, err = pgx.CollectExactlyOneRow(rows, getCollectorForType[T]())
 	if err != nil {
 		switch err {
-		case jpgx.ErrNoRows:
+		case pgx.ErrNoRows:
 			return out, ErrNoMatchingRows
-		case jpgx.ErrTooManyRows:
+		case pgx.ErrTooManyRows:
 			return out, ErrTooManyMatchingRows
 		default:
-			return out, pgx.AnalyzeAndWrapPgError(err)
+			return out, analyzeAndWrapDatabaseError(err)
 		}
 	}
 
@@ -45,10 +44,10 @@ func QueryAll[T any](ctx context.Context, conn Connection, sql string, arguments
 	}
 	rows, err := connImpl.query(ctx, sql, arguments...)
 	if err != nil {
-		return out, pgx.AnalyzeAndWrapPgError(err)
+		return out, analyzeAndWrapDatabaseError(err)
 	}
 
-	out, err = jpgx.CollectRows(rows, getCollectorForType[T]())
+	out, err = pgx.CollectRows(rows, getCollectorForType[T]())
 	if err != nil {
 		return out, ErrUnsupportedOperation
 	}
@@ -58,7 +57,7 @@ func QueryAll[T any](ctx context.Context, conn Connection, sql string, arguments
 
 var timeStructName = reflect.ValueOf(time.Time{}).Type().Name()
 
-func getCollectorForType[T any]() jpgx.RowToFunc[T] {
+func getCollectorForType[T any]() pgx.RowToFunc[T] {
 	var value T
 
 	kind := reflect.ValueOf(value).Kind()
@@ -67,8 +66,8 @@ func getCollectorForType[T any]() jpgx.RowToFunc[T] {
 	// https://pkg.go.dev/github.com/jackc/pgx/v5#RowToStructByName
 	if kind == reflect.Struct &&
 		typeName != timeStructName {
-		return jpgx.RowToStructByName[T]
+		return pgx.RowToStructByName[T]
 	}
 
-	return jpgx.RowTo[T]
+	return pgx.RowTo[T]
 }

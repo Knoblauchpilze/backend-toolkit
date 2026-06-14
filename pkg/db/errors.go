@@ -9,7 +9,14 @@ const (
 
 	errNoMatchingRows      errors.ErrorCode = 110
 	errTooManyMatchingRows errors.ErrorCode = 111
+
+	ErrGenericSqlError           errors.ErrorCode = 150
+	ErrForeignKeyValidation      errors.ErrorCode = 151
+	ErrUniqueConstraintViolation errors.ErrorCode = 152
+	errAuthenticationFailed      errors.ErrorCode = 153
 )
+
+var ()
 
 var (
 	ErrNotConnected         = errors.FromCode(errNotConnected)
@@ -18,4 +25,6 @@ var (
 
 	ErrNoMatchingRows      = errors.FromCode(errNoMatchingRows)
 	ErrTooManyMatchingRows = errors.FromCode(errTooManyMatchingRows)
+
+	ErrAuthenticationFailed = errors.FromCode(errAuthenticationFailed)
 )

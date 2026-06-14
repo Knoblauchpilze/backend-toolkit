@@ -3,8 +3,7 @@ package db
 import (
 	"context"
 
-	"github.com/Knoblauchpilze/backend-toolkit/pkg/db/pgx"
-	jpgx "github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5"
 )
 
 func QueryOneTx[T any](ctx context.Context, tx Transaction, sql string, arguments ...any) (T, error) {
@@ -16,18 +15,18 @@ func QueryOneTx[T any](ctx context.Context, tx Transaction, sql string, argument
 	}
 	rows, err := txImpl.query(ctx, sql, arguments...)
 	if err != nil {
-		return out, pgx.AnalyzeAndWrapPgError(err)
+		return out, analyzeAndWrapDatabaseError(err)
 	}
 
-	out, err = jpgx.CollectExactlyOneRow(rows, getCollectorForType[T]())
+	out, err = pgx.CollectExactlyOneRow(rows, getCollectorForType[T]())
 	if err != nil {
 		switch err {
-		case jpgx.ErrNoRows:
+		case pgx.ErrNoRows:
 			return out, ErrNoMatchingRows
-		case jpgx.ErrTooManyRows:
+		case pgx.ErrTooManyRows:
 			return out, ErrTooManyMatchingRows
 		default:
-			return out, pgx.AnalyzeAndWrapPgError(err)
+			return out, analyzeAndWrapDatabaseError(err)
 		}
 	}
 
@@ -43,10 +42,10 @@ func QueryAllTx[T any](ctx context.Context, tx Transaction, sql string, argument
 	}
 	rows, err := txImpl.query(ctx, sql, arguments...)
 	if err != nil {
-		return out, pgx.AnalyzeAndWrapPgError(err)
+		return out, analyzeAndWrapDatabaseError(err)
 	}
 
-	out, err = jpgx.CollectRows(rows, getCollectorForType[T]())
+	out, err = pgx.CollectRows(rows, getCollectorForType[T]())
 	if err != nil {
 		return out, ErrUnsupportedOperation
 	}

@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Knoblauchpilze/backend-toolkit/pkg/db/pgx"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/db/postgresql"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 	"github.com/google/uuid"
@@ -32,7 +31,7 @@ func TestUnit_New(t *testing.T) {
 		conn, err := New(context.Background(), config)
 
 		assert.NotNil(t, conn)
-		assert.Equal(t, pgx.ErrAuthenticationFailed, err, "Actual err: %v", err)
+		assert.Equal(t, ErrAuthenticationFailed, err, "Actual err: %v", err)
 
 	})
 }
@@ -116,7 +115,7 @@ func TestIT_Connection_Exec_InsertDuplicate(t *testing.T) {
 	assert.Equal(t, int64(0), affectedRows)
 	actual, ok := errors.AsErrorWithCode(err)
 	require.True(t, ok)
-	assert.Equal(t, pgx.ErrUniqueConstraintViolation, actual.Code, "Actual err: %v", err)
+	assert.Equal(t, ErrUniqueConstraintViolation, actual.Code, "Actual err: %v", err)
 	assertIdDoesNotExist(t, conn, id)
 }
 
@@ -141,7 +140,7 @@ func TestIT_Connection_Exec_UpdateDuplicate(t *testing.T) {
 	assert.Equal(t, int64(0), affectedRows)
 	actual, ok := errors.AsErrorWithCode(err)
 	require.True(t, ok)
-	assert.Equal(t, pgx.ErrUniqueConstraintViolation, actual.Code, "Actual err: %v", err)
+	assert.Equal(t, ErrUniqueConstraintViolation, actual.Code, "Actual err: %v", err)
 
 	assertNameForId(t, conn, element.Id, element.Name)
 }
@@ -176,7 +175,7 @@ func TestIT_Connection_Exec_WrongSyntax(t *testing.T) {
 	assert.Equal(t, int64(0), affectedRows)
 	actual, ok := errors.AsErrorWithCode(err)
 	require.True(t, ok)
-	assert.Equal(t, pgx.ErrGenericSqlError, actual.Code, "Actual err: %v", err)
+	assert.Equal(t, ErrGenericSqlError, actual.Code, "Actual err: %v", err)
 }
 
 func TestIT_Connection_Exec_ReturnsZonedTimeAsUTC(t *testing.T) {
