@@ -1,7 +1,6 @@
 package db
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -16,16 +15,16 @@ type dummyTransaction struct {
 
 func TestUnit_QueryOneTx(t *testing.T) {
 	t.Run("returns error when transaction is not supported", func(t *testing.T) {
-		_, err := QueryOneTx[int](context.Background(), &dummyTransaction{}, sampleSqlQuery)
+		_, err := QueryOneTx[int](t.Context(), &dummyTransaction{}, sampleSqlQuery)
 
 		assert.ErrorIs(t, ErrUnsupportedOperation, err, "Actual err: %v", err)
 	})
 
 	t.Run("returns error when already committed", func(t *testing.T) {
 		_, tx := newTestTransaction(t)
-		tx.Close(context.Background())
+		tx.Close(t.Context())
 
-		_, err := QueryOneTx[int](context.Background(), tx, sampleSqlQuery)
+		_, err := QueryOneTx[int](t.Context(), tx, sampleSqlQuery)
 
 		assert.ErrorIs(t, ErrAlreadyCommitted, err, "Actual err: %v", err)
 	})
@@ -34,7 +33,7 @@ func TestUnit_QueryOneTx(t *testing.T) {
 		_, tx := newTestTransaction(t)
 
 		sqlQuery := "SELECT name FROM my_tables"
-		_, err := QueryOneTx[string](context.Background(), tx, sqlQuery)
+		_, err := QueryOneTx[string](t.Context(), tx, sqlQuery)
 
 		actual, ok := AsDatabaseError(err)
 		require.True(t, ok)
@@ -46,7 +45,7 @@ func TestUnit_QueryOneTx(t *testing.T) {
 		_, tx := newTestTransaction(t)
 
 		sqlQuery := "SELECT id, name FROM my_table WHERE name = $1"
-		_, err := QueryOneTx[element](context.Background(), tx, sqlQuery, "does-not-exist")
+		_, err := QueryOneTx[element](t.Context(), tx, sqlQuery, "does-not-exist")
 
 		assert.ErrorIs(t, ErrNoMatchingRows, err, "Actual err: %v", err)
 	})
@@ -57,7 +56,7 @@ func TestUnit_QueryOneTx(t *testing.T) {
 		v2 := insertTestDataTx(t, tx)
 
 		sqlQuery := "SELECT id, name FROM my_table WHERE id IN ($1, $2)"
-		_, err := QueryOneTx[element](context.Background(), tx, sqlQuery, v1.Id, v2.Id)
+		_, err := QueryOneTx[element](t.Context(), tx, sqlQuery, v1.Id, v2.Id)
 
 		assert.ErrorIs(t, ErrTooManyMatchingRows, err, "Actual err: %v", err)
 	})
@@ -72,7 +71,7 @@ func TestUnit_QueryOneTx(t *testing.T) {
 		}
 
 		sqlQuery := "INSERT INTO my_table (id, name) VALUES($1, $2)"
-		_, err := QueryOneTx[element](context.Background(), tx, sqlQuery, duplicate.Id, duplicate.Name)
+		_, err := QueryOneTx[element](t.Context(), tx, sqlQuery, duplicate.Id, duplicate.Name)
 
 		actual, ok := AsDatabaseError(err)
 		require.True(t, ok)
@@ -94,7 +93,7 @@ func TestUnit_QueryOneTx(t *testing.T) {
 		expected := insertTestDataTx(t, tx)
 
 		sqlQuery := "SELECT id, name FROM my_table WHERE name = $1"
-		actual, err := QueryOneTx[element](context.Background(), tx, sqlQuery, expected.Name)
+		actual, err := QueryOneTx[element](t.Context(), tx, sqlQuery, expected.Name)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		assert.Equal(t, expected, actual)
@@ -105,7 +104,7 @@ func TestUnit_QueryOneTx(t *testing.T) {
 		expected := insertTestDataTx(t, tx)
 
 		sqlQuery := "SELECT name FROM my_table WHERE id = $1"
-		actual, err := QueryOneTx[string](context.Background(), tx, sqlQuery, expected.Id)
+		actual, err := QueryOneTx[string](t.Context(), tx, sqlQuery, expected.Id)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		assert.Equal(t, expected.Name, actual)
@@ -116,7 +115,7 @@ func TestUnit_QueryOneTx(t *testing.T) {
 		expected := insertTestDataTx(t, tx)
 
 		sqlQuery := "SELECT id FROM my_table WHERE name = $1"
-		actual, err := QueryOneTx[uuid.UUID](context.Background(), tx, sqlQuery, expected.Name)
+		actual, err := QueryOneTx[uuid.UUID](t.Context(), tx, sqlQuery, expected.Name)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		assert.Equal(t, expected.Id, actual)
@@ -128,7 +127,7 @@ func TestUnit_QueryOneTx(t *testing.T) {
 		expected := insertTestData(t, conn)
 
 		sqlQuery := "SELECT updated_at FROM my_table WHERE name = $1"
-		actual, err := QueryOneTx[time.Time](context.Background(), tx, sqlQuery, expected.Name)
+		actual, err := QueryOneTx[time.Time](t.Context(), tx, sqlQuery, expected.Name)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		assert.True(t, beforeInsert.Before(actual))
@@ -137,25 +136,25 @@ func TestUnit_QueryOneTx(t *testing.T) {
 
 func TestUnit_QueryAllTx(t *testing.T) {
 	t.Run("returns error when transaction is not supported", func(t *testing.T) {
-		_, err := QueryAllTx[int](context.Background(), &dummyTransaction{}, sampleSqlQuery)
+		_, err := QueryAllTx[int](t.Context(), &dummyTransaction{}, sampleSqlQuery)
 
 		assert.ErrorIs(t, ErrUnsupportedOperation, err, "Actual err: %v", err)
 	})
 
 	t.Run("returns error when already committed", func(t *testing.T) {
 		_, tx := newTestTransaction(t)
-		tx.Close(context.Background())
+		tx.Close(t.Context())
 
-		_, err := QueryAllTx[int](context.Background(), tx, sampleSqlQuery)
+		_, err := QueryAllTx[int](t.Context(), tx, sampleSqlQuery)
 
 		assert.ErrorIs(t, ErrAlreadyCommitted, err, "Actual err: %v", err)
 	})
 
 	t.Run("returns error when connection is closed", func(t *testing.T) {
 		conn := newTestConnection(t)
-		conn.Close(context.Background())
+		conn.Close(t.Context())
 
-		_, err := QueryAll[int](context.Background(), conn, sampleSqlQuery)
+		_, err := QueryAll[int](t.Context(), conn, sampleSqlQuery)
 
 		assert.ErrorIs(t, ErrNotConnected, err, "Actual err: %v", err)
 	})
@@ -164,7 +163,7 @@ func TestUnit_QueryAllTx(t *testing.T) {
 		_, tx := newTestTransaction(t)
 
 		sqlQuery := "SELECT name FROM my_tables"
-		_, err := QueryAllTx[string](context.Background(), tx, sqlQuery)
+		_, err := QueryAllTx[string](t.Context(), tx, sqlQuery)
 
 		actual, ok := AsDatabaseError(err)
 		require.True(t, ok)
@@ -176,7 +175,7 @@ func TestUnit_QueryAllTx(t *testing.T) {
 		_, tx := newTestTransaction(t)
 
 		sqlQuery := "SELECT id, name FROM my_table WHERE name = $1"
-		out, err := QueryAllTx[element](context.Background(), tx, sqlQuery, "does-not-exist")
+		out, err := QueryAllTx[element](t.Context(), tx, sqlQuery, "does-not-exist")
 		require.NoError(t, err, "Actual err: %v", err)
 
 		assert.Empty(t, out)
@@ -188,7 +187,7 @@ func TestUnit_QueryAllTx(t *testing.T) {
 		v2 := insertTestDataTx(t, tx)
 
 		sqlQuery := `SELECT id, name FROM my_table WHERE id IN ($1, $2)`
-		actual, err := QueryAllTx[element](context.Background(), tx, sqlQuery, v1.Id, v2.Id)
+		actual, err := QueryAllTx[element](t.Context(), tx, sqlQuery, v1.Id, v2.Id)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		expected := []element{v1, v2}
@@ -201,7 +200,7 @@ func TestUnit_QueryAllTx(t *testing.T) {
 		v2 := insertTestDataTx(t, tx)
 
 		sqlQuery := `SELECT name FROM my_table WHERE id IN ($1, $2)`
-		actual, err := QueryAllTx[string](context.Background(), tx, sqlQuery, v1.Id, v2.Id)
+		actual, err := QueryAllTx[string](t.Context(), tx, sqlQuery, v1.Id, v2.Id)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		expected := []string{v1.Name, v2.Name}
@@ -214,7 +213,7 @@ func TestUnit_QueryAllTx(t *testing.T) {
 		v2 := insertTestDataTx(t, tx)
 
 		sqlQuery := `SELECT id FROM my_table WHERE name IN ($1, $2)`
-		actual, err := QueryAllTx[uuid.UUID](context.Background(), tx, sqlQuery, v1.Name, v2.Name)
+		actual, err := QueryAllTx[uuid.UUID](t.Context(), tx, sqlQuery, v1.Name, v2.Name)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		expected := []uuid.UUID{v1.Id, v2.Id}
@@ -228,7 +227,7 @@ func TestUnit_QueryAllTx(t *testing.T) {
 		v2 := insertTestData(t, conn)
 
 		sqlQuery := "SELECT updated_at FROM my_table WHERE id IN ($1, $2)"
-		actual, err := QueryAllTx[time.Time](context.Background(), tx, sqlQuery, v1.Id, v2.Id)
+		actual, err := QueryAllTx[time.Time](t.Context(), tx, sqlQuery, v1.Id, v2.Id)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		assert.True(t, beforeInsert.Before(actual[0]))
