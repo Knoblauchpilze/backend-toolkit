@@ -9,6 +9,12 @@ CREATE TABLE my_table (
   UNIQUE (name)
 );
 
+CREATE TABLE dependent_table (
+  id UUID NOT NULL,
+  props TEXT NOT NULL,
+  FOREIGN KEY (id) REFERENCES my_table(id)
+);
+
 CREATE TRIGGER trigger_my_table_updated_at
   BEFORE UPDATE OR INSERT ON my_table
   FOR EACH ROW

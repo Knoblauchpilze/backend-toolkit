@@ -92,3 +92,11 @@ func assertIdDoesNotExist(t *testing.T, conn Connection, id uuid.UUID) {
 	require.NoError(t, err, "Actual err: %v", err)
 	require.Equal(t, 0, value)
 }
+
+func assertDependentIdDoesNotExist(t *testing.T, conn Connection, id uuid.UUID) {
+	t.Helper()
+
+	value, err := QueryOne[int](t.Context(), conn, "SELECT COUNT(*) FROM dependent_table WHERE id = $1", id)
+	require.NoError(t, err, "Actual err: %v", err)
+	require.Equal(t, 0, value)
+}

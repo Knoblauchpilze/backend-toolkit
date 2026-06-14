@@ -132,6 +132,28 @@ func TestIT_Connection_Exec(t *testing.T) {
 		assertIdDoesNotExist(t, conn, id)
 	})
 
+	t.Run("returns error when foreign key constraint is violated", func(t *testing.T) {
+		id := uuid.New()
+		affectedRows, err := conn.Exec(t.Context(), "INSERT INTO dependent_table VALUES ($1, $2)", id, "props")
+
+		assert.Equal(t, int64(0), affectedRows)
+		actual, ok := AsDatabaseError(err)
+		require.True(t, ok)
+
+		expected := &DatabaseError{
+			Code:       ErrForeignKeyValidation,
+			Message:    "insert or update on table \"dependent_table\" violates foreign key constraint \"dependent_table_id_fkey\"",
+			SqlCode:    "23503",
+			Schema:     "test_db_schema",
+			Table:      "dependent_table",
+			Column:     "",
+			Constraint: "dependent_table_id_fkey",
+			Cause:      actual.Cause,
+		}
+		assert.Equal(t, expected, actual, "Actual err: %v", err)
+		assertDependentIdDoesNotExist(t, conn, id)
+	})
+
 	t.Run("successfull updates data", func(t *testing.T) {
 		element := insertTestData(t, conn)
 		newName := uuid.New().String()
