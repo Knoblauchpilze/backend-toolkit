@@ -1,7 +1,6 @@
 package db
 
 import (
-	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -18,7 +17,7 @@ func TestUnit_New(t *testing.T) {
 			Host: ":/not-a-host",
 		}
 
-		conn, err := New(context.Background(), config)
+		conn, err := New(t.Context(), config)
 
 		assert.Nil(t, conn)
 		assert.Error(t, err)
@@ -29,7 +28,7 @@ func TestUnit_New(t *testing.T) {
 		config.Password = "not-the-right-password"
 
 		fmt.Printf("config: %+v\n", config)
-		conn, err := New(context.Background(), config)
+		conn, err := New(t.Context(), config)
 
 		assert.NotNil(t, conn)
 		assert.Equal(t, ErrAuthenticationFailed, err, "Actual err: %v", err)
@@ -37,7 +36,7 @@ func TestUnit_New(t *testing.T) {
 }
 
 func TestIT_New_ValidConfiguration(t *testing.T) {
-	conn, err := New(context.Background(), dbTestConfig)
+	conn, err := New(t.Context(), dbTestConfig)
 
 	assert.NotNil(t, conn)
 	assert.Nil(t, err)
@@ -46,18 +45,18 @@ func TestIT_New_ValidConfiguration(t *testing.T) {
 func TestIT_Connection_Ping(t *testing.T) {
 	conn := newTestConnection(t)
 
-	err := conn.Ping(context.Background())
+	err := conn.Ping(t.Context())
 	assert.Nil(t, err)
 }
 
 func TestIT_Connection_Close(t *testing.T) {
 	conn := newTestConnection(t)
 
-	err := conn.Ping(context.Background())
+	err := conn.Ping(t.Context())
 	require.NoError(t, err, "Actual err: %v", err)
 
-	conn.Close(context.Background())
-	err = conn.Ping(context.Background())
+	conn.Close(t.Context())
+	err = conn.Ping(t.Context())
 	assert.Equal(t, ErrNotConnected, err, "Actual err: %v", err)
 }
 
@@ -67,7 +66,7 @@ func TestIT_Connection_BeginTx_TimeStampIsValid(t *testing.T) {
 	t.Run("assigns timestamp when beginning transaction", func(t *testing.T) {
 
 		beforeTx := time.Now()
-		tx, err := conn.BeginTx(context.Background())
+		tx, err := conn.BeginTx(t.Context())
 		require.NoError(t, err, "Actual err: %v", err)
 
 		defer func() {
@@ -79,9 +78,9 @@ func TestIT_Connection_BeginTx_TimeStampIsValid(t *testing.T) {
 	})
 
 	t.Run("returns error when connection is closed", func(t *testing.T) {
-		conn.Close(context.Background())
+		conn.Close(t.Context())
 
-		tx, err := conn.BeginTx(context.Background())
+		tx, err := conn.BeginTx(t.Context())
 
 		assert.Nil(t, tx)
 		assert.ErrorIs(t, ErrNotConnected, err, "Actual err: %v", err)
@@ -94,7 +93,7 @@ func TestIT_Connection_Exec(t *testing.T) {
 	t.Run("successfully selects data", func(t *testing.T) {
 		element := insertTestData(t, conn)
 
-		affectedRows, err := conn.Exec(context.Background(), "SELECT COUNT(*) FROM my_table WHERE id = $1", element.Id)
+		affectedRows, err := conn.Exec(t.Context(), "SELECT COUNT(*) FROM my_table WHERE id = $1", element.Id)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		assert.Equal(t, int64(1), affectedRows)
@@ -104,7 +103,7 @@ func TestIT_Connection_Exec(t *testing.T) {
 		id := uuid.New()
 		// Also using a uuid for the name to easily generate characters
 		name := uuid.New()
-		affectedRows, err := conn.Exec(context.Background(), "INSERT INTO my_table VALUES ($1, $2)", id, name)
+		affectedRows, err := conn.Exec(t.Context(), "INSERT INTO my_table VALUES ($1, $2)", id, name)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		assert.Equal(t, int64(1), affectedRows)
@@ -115,7 +114,7 @@ func TestIT_Connection_Exec(t *testing.T) {
 		element := insertTestData(t, conn)
 		id := uuid.New()
 
-		affectedRows, err := conn.Exec(context.Background(), "INSERT INTO my_table VALUES ($1, $2)", id, element.Name)
+		affectedRows, err := conn.Exec(t.Context(), "INSERT INTO my_table VALUES ($1, $2)", id, element.Name)
 
 		assert.Equal(t, int64(0), affectedRows)
 		actual, ok := AsDatabaseError(err)
@@ -139,7 +138,7 @@ func TestIT_Connection_Exec(t *testing.T) {
 		element := insertTestData(t, conn)
 		newName := uuid.New().String()
 
-		affectedRows, err := conn.Exec(context.Background(), "UPDATE my_table SET name = $1 WHERE id = $2", newName, element.Id)
+		affectedRows, err := conn.Exec(t.Context(), "UPDATE my_table SET name = $1 WHERE id = $2", newName, element.Id)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		assert.Equal(t, int64(1), affectedRows)
@@ -150,7 +149,7 @@ func TestIT_Connection_Exec(t *testing.T) {
 		element := insertTestData(t, conn)
 		anotherElement := insertTestData(t, conn)
 
-		affectedRows, err := conn.Exec(context.Background(), "UPDATE my_table SET name = $1 WHERE id = $2", anotherElement.Name, element.Id)
+		affectedRows, err := conn.Exec(t.Context(), "UPDATE my_table SET name = $1 WHERE id = $2", anotherElement.Name, element.Id)
 
 		assert.Equal(t, int64(0), affectedRows)
 		actual, ok := AsDatabaseError(err)
@@ -173,7 +172,7 @@ func TestIT_Connection_Exec(t *testing.T) {
 	t.Run("successfully deletes data", func(t *testing.T) {
 		element := insertTestData(t, conn)
 
-		affectedRows, err := conn.Exec(context.Background(), "DELETE FROM my_table WHERE id = $1", element.Id)
+		affectedRows, err := conn.Exec(t.Context(), "DELETE FROM my_table WHERE id = $1", element.Id)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		assert.Equal(t, int64(1), affectedRows)
@@ -183,7 +182,7 @@ func TestIT_Connection_Exec(t *testing.T) {
 	t.Run("successfully propagates provided arguments", func(t *testing.T) {
 		element := insertTestData(t, conn)
 
-		affectedRows, err := conn.Exec(context.Background(), "SELECT COUNT(*) FROM my_table WHERE name = $1", element.Name)
+		affectedRows, err := conn.Exec(t.Context(), "SELECT COUNT(*) FROM my_table WHERE name = $1", element.Name)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		assert.Equal(t, int64(1), affectedRows)
@@ -192,7 +191,7 @@ func TestIT_Connection_Exec(t *testing.T) {
 	t.Run("returns error when SQL query is invalid", func(t *testing.T) {
 		element := insertTestData(t, conn)
 
-		affectedRows, err := conn.Exec(context.Background(), "DESELECT COUNT(*) FROM my_table WHERE name = $1", element.Name)
+		affectedRows, err := conn.Exec(t.Context(), "DESELECT COUNT(*) FROM my_table WHERE name = $1", element.Name)
 
 		assert.Equal(t, int64(0), affectedRows)
 		actual, ok := AsDatabaseError(err)
@@ -222,14 +221,14 @@ func TestIT_Connection_Exec(t *testing.T) {
 			Name: uuid.NewString(),
 		}
 		_, err = conn.Exec(
-			context.Background(),
+			t.Context(),
 			"INSERT INTO my_table VALUES ($1, $2, $3)",
 			element.Id, element.Name, zonedTime,
 		)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		actual, err := QueryOne[time.Time](
-			context.Background(),
+			t.Context(),
 			conn,
 			"SELECT created_at FROM my_table WHERE id = $1",
 			element.Id,
@@ -247,14 +246,14 @@ func TestIT_Connection_Exec(t *testing.T) {
 			Name: uuid.NewString(),
 		}
 		_, err := conn.Exec(
-			context.Background(),
+			t.Context(),
 			"INSERT INTO my_table VALUES ($1, $2, $3)",
 			element.Id, element.Name, utcTime,
 		)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		actual, err := QueryOne[time.Time](
-			context.Background(),
+			t.Context(),
 			conn,
 			"SELECT created_at FROM my_table WHERE id = $1",
 			element.Id,
