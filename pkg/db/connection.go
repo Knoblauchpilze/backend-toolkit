@@ -2,7 +2,6 @@ package db
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -35,10 +34,6 @@ func New(ctx context.Context, config Config) (Connection, error) {
 	}
 
 	err = conn.Ping(ctx)
-	if err != nil {
-		fmt.Printf("err: %+v\n", err)
-		fmt.Printf("err str: %s\n", err.Error())
-	}
 
 	return conn, analyzeAndWrapDatabaseError(err)
 }

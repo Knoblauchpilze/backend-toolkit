@@ -1,7 +1,6 @@
 package db
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
@@ -28,11 +27,6 @@ func analyzeAndWrapDatabaseError(err error) error {
 		return analyzePgError(pgErr)
 	}
 
-	if true {
-		fmt.Printf("trying out connect error for error: %s\n", err.Error())
-		_, ok := err.(*pgconn.ConnectError)
-		fmt.Printf("conversion result: %t\n", ok)
-	}
 	if connErr, ok := err.(*pgconn.ConnectError); ok {
 		return analyzeConnError(connErr)
 	}
@@ -55,8 +49,6 @@ func analyzePgError(err *pgconn.PgError) error {
 
 func analyzeConnError(err *pgconn.ConnectError) error {
 	msg := err.Unwrap().Error()
-
-	fmt.Printf("conn error has wrapped message: %s\n", msg)
 
 	if strings.Contains(msg, passwordAuthenticationFailed) {
 		return ErrAuthenticationFailed

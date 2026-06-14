@@ -1,7 +1,6 @@
 package db
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -27,7 +26,6 @@ func TestIT_New(t *testing.T) {
 		config := dbTestConfig
 		config.Password = "not-the-right-password"
 
-		fmt.Printf("config: %+v\n", config)
 		conn, err := New(t.Context(), config)
 
 		assert.NotNil(t, conn)
