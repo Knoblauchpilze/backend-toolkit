@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -28,11 +29,11 @@ func TestUnit_New(t *testing.T) {
 		config := dbTestConfig
 		config.Password = "not-the-right-password"
 
+		fmt.Printf("config: %+v\n", config)
 		conn, err := New(context.Background(), config)
 
 		assert.NotNil(t, conn)
 		assert.Equal(t, ErrAuthenticationFailed, err, "Actual err: %v", err)
-
 	})
 }
 
