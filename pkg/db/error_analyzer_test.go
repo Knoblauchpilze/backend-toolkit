@@ -27,39 +27,43 @@ func TestUnit_AnalyzeAndWrapDatabaseError(t *testing.T) {
 
 func TestUnit_AnalyzeAndWrapDatabaseError_PgError(t *testing.T) {
 	type testCase struct {
+		name          string
 		code          string
 		expectedError berrors.ErrorCode
 	}
 
 	testCases := []testCase{
 		{
+			name:          "foreign key validation",
 			code:          "23503",
 			expectedError: ErrForeignKeyValidation,
 		},
 		{
+			name:          "unique constraint violation",
 			code:          "23505",
 			expectedError: ErrUniqueConstraintViolation,
 		},
 		{
+			name:          "generic error",
 			code:          "not-a-code",
 			expectedError: ErrGenericSqlError,
 		},
 	}
 
 	for _, testCase := range testCases {
-		t.Run("", func(t *testing.T) {
+		t.Run(testCase.name, func(t *testing.T) {
 			err := &pgconn.PgError{
 				Code: testCase.code,
 			}
 
 			rawErr := analyzeAndWrapDatabaseError(err)
 
-			actual, ok := berrors.AsErrorWithCode(rawErr)
+			actual, ok := AsDatabaseError(rawErr)
 			require.True(t, ok)
 
-			expected := &berrors.ErrorWithCode{
+			expected := &DatabaseError{
 				Code:    testCase.expectedError,
-				Message: "an unexpected error occurred",
+				SqlCode: testCase.code,
 				Cause:   err,
 			}
 			assert.Equal(t, expected, actual)
