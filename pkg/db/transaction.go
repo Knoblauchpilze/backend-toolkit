@@ -21,6 +21,10 @@ type transactionImpl struct {
 }
 
 func (ti *transactionImpl) Close(ctx context.Context) {
+	if ti.tx == nil {
+		return
+	}
+
 	if ti.err != nil {
 		// The transaction interface does not return an error on Close. This means it
 		// it meaningless to check this error because it is not possible to propagate

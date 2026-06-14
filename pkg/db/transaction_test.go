@@ -1,102 +1,123 @@
 package db
 
 import (
-	"context"
 	"testing"
 
-	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestIT_Transaction_Exec_AlreadyCommitted(t *testing.T) {
-	_, tx := newTestTransaction(t)
-	tx.Close(context.Background())
+func TestIT_Transaction_Close(t *testing.T) {
+	t.Run("calling close is idempotent", func(t *testing.T) {
+		_, tx := newTestTransaction(t)
+		tx.Close(t.Context())
 
-	affectedRows, err := tx.Exec(context.Background(), "SELECT COUNT(*) FROM my_table WHERE name = 'test-name'")
-
-	assert.Equal(t, int64(0), affectedRows)
-	assert.Equal(t, ErrAlreadyCommitted, err, "Actual err: %v", err)
+		tx.Close(t.Context())
+	})
 }
 
-func TestIT_Transaction_Exec_Select(t *testing.T) {
-	_, tx := newTestTransaction(t)
-	defer tx.Close(context.Background())
+func TestIT_Transaction_Exec(t *testing.T) {
+	t.Run("successfully selects data", func(t *testing.T) {
+		_, tx := newTestTransaction(t)
 
-	affectedRows, err := tx.Exec(context.Background(), "SELECT COUNT(*) FROM my_table WHERE name = 'test-name'")
-	assert.Equal(t, int64(1), affectedRows)
-	assert.Nil(t, err)
-}
+		affectedRows, err := tx.Exec(t.Context(), "SELECT COUNT(*) FROM my_table WHERE name = 'test-name'")
+		require.NoError(t, err, "Actual err: %v", err)
 
-func TestIT_Transaction_Exec_Insert(t *testing.T) {
-	conn, tx := newTestTransaction(t)
+		assert.Equal(t, int64(1), affectedRows)
+	})
 
-	id := uuid.New()
-	// Also using a uuid for the name to easily generate characters
-	name := uuid.New()
-	_, err := tx.Exec(context.Background(), "INSERT INTO my_table VALUES ($1, $2)", id, name)
-	require.Nil(t, err)
+	t.Run("returns error when already committed", func(t *testing.T) {
+		_, tx := newTestTransaction(t)
+		tx.Close(t.Context())
 
-	tx.Close(context.Background())
+		affectedRows, err := tx.Exec(t.Context(), "SELECT COUNT(*) FROM my_table WHERE name = 'test-name'")
 
-	assertNameForId(t, conn, id, name.String())
-}
+		assert.Equal(t, int64(0), affectedRows)
+		assert.ErrorIs(t, ErrAlreadyCommitted, err, "Actual err: %v", err)
+	})
 
-func TestIT_Transaction_Exec_Update(t *testing.T) {
-	conn, tx := newTestTransaction(t)
-	element := insertTestDataTx(t, tx)
+	t.Run("successfully inserts data", func(t *testing.T) {
+		conn, tx := newTestTransaction(t)
 
-	newName := uuid.New().String()
-	_, err := tx.Exec(context.Background(), "UPDATE my_table SET name = $1 WHERE id = $2", newName, element.Id)
-	require.Nil(t, err)
+		id := uuid.New()
+		// Also using a uuid for the name to easily generate characters
+		name := uuid.New()
 
-	tx.Close(context.Background())
+		_, err := tx.Exec(t.Context(), "INSERT INTO my_table VALUES ($1, $2)", id, name)
+		require.NoError(t, err, "Actual err: %v", err)
 
-	assertNameForId(t, conn, element.Id, newName)
-}
+		tx.Close(t.Context())
 
-func TestIT_Transaction_Exec_Delete(t *testing.T) {
-	conn, tx := newTestTransaction(t)
-	element := insertTestDataTx(t, tx)
+		assertNameForId(t, conn, id, name.String())
+	})
 
-	_, err := tx.Exec(context.Background(), "DELETE FROM my_table WHERE id = $1", element.Id)
-	require.Nil(t, err)
+	t.Run("successfull updates data", func(t *testing.T) {
+		conn, tx := newTestTransaction(t)
+		element := insertTestDataTx(t, tx)
 
-	tx.Close(context.Background())
-	assertIdDoesNotExist(t, conn, element.Id)
-}
+		newName := uuid.New().String()
+		_, err := tx.Exec(t.Context(), "UPDATE my_table SET name = $1 WHERE id = $2", newName, element.Id)
+		require.NoError(t, err, "Actual err: %v", err)
 
-func TestIT_Transaction_Exec_WithArguments(t *testing.T) {
-	_, tx := newTestTransaction(t)
-	defer tx.Close(context.Background())
+		tx.Close(t.Context())
 
-	affectedRows, err := tx.Exec(context.Background(), "SELECT COUNT(*) FROM my_table WHERE name = $1", "test-name")
+		assertNameForId(t, conn, element.Id, newName)
+	})
 
-	assert.Equal(t, int64(1), affectedRows)
-	assert.Nil(t, err)
-}
+	t.Run("successfully deletes data", func(t *testing.T) {
+		conn, tx := newTestTransaction(t)
+		element := insertTestDataTx(t, tx)
 
-func TestIT_Transaction_Exec_WrongSyntax(t *testing.T) {
-	_, tx := newTestTransaction(t)
-	defer tx.Close(context.Background())
+		_, err := tx.Exec(t.Context(), "DELETE FROM my_table WHERE id = $1", element.Id)
+		require.NoError(t, err, "Actual err: %v", err)
 
-	affectedRows, err := tx.Exec(context.Background(), "DESELECT COUNT(*) FROM my_table WHERE name = 'test-name'")
+		tx.Close(t.Context())
+		assertIdDoesNotExist(t, conn, element.Id)
+	})
 
-	assert.Equal(t, int64(0), affectedRows)
-	actual, ok := errors.AsErrorWithCode(err)
-	require.True(t, ok)
-	assert.Equal(t, ErrGenericSqlError, actual.Code, "Actual err: %v", err)
-}
+	t.Run("successfully propagates provided arguments", func(t *testing.T) {
+		_, tx := newTestTransaction(t)
+		defer tx.Close(t.Context())
 
-func TestIT_Transaction_Exec_WhenError_ExpectRollback(t *testing.T) {
-	conn, tx := newTestTransaction(t)
+		affectedRows, err := tx.Exec(t.Context(), "SELECT COUNT(*) FROM my_table WHERE name = $1", "test-name")
+		require.NoError(t, err, "Actual err: %v", err)
 
-	element := insertTestDataTx(t, tx)
-	_, err := tx.Exec(context.Background(), "DESELECT COUNT(*) FROM my_table WHERE name = $1", element.Name)
-	require.NotNil(t, err)
+		assert.Equal(t, int64(1), affectedRows)
+	})
 
-	tx.Close(context.Background())
+	t.Run("returns error when SQL query is invalid", func(t *testing.T) {
+		_, tx := newTestTransaction(t)
+		defer tx.Close(t.Context())
 
-	assertIdDoesNotExist(t, conn, element.Id)
+		affectedRows, err := tx.Exec(t.Context(), "DESELECT COUNT(*) FROM my_table WHERE name = 'test-name'")
+
+		assert.Equal(t, int64(0), affectedRows)
+		actual, ok := AsDatabaseError(err)
+		require.True(t, ok)
+
+		expected := &DatabaseError{
+			Code:       ErrGenericSqlError,
+			Message:    "syntax error at or near \"DESELECT\"",
+			SqlCode:    "42601",
+			Schema:     "",
+			Table:      "",
+			Column:     "",
+			Constraint: "",
+			Cause:      actual.Cause,
+		}
+		assert.Equal(t, expected, actual, "Actual err: %v", err)
+	})
+
+	t.Run("rollbacks when error is detected", func(t *testing.T) {
+		conn, tx := newTestTransaction(t)
+
+		element := insertTestDataTx(t, tx)
+		_, err := tx.Exec(t.Context(), "DESELECT COUNT(*) FROM my_table WHERE name = $1", element.Name)
+		require.NotNil(t, err)
+
+		tx.Close(t.Context())
+
+		assertIdDoesNotExist(t, conn, element.Id)
+	})
 }
