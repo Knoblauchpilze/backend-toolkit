@@ -17,6 +17,8 @@ type element struct {
 }
 
 func newTestConnection(t *testing.T) Connection {
+	t.Helper()
+
 	conn, err := New(context.Background(), dbTestConfig)
 	require.NoError(t, err, "Actual err: %v", err)
 
@@ -28,49 +30,66 @@ func newTestConnection(t *testing.T) Connection {
 }
 
 func newTestTransaction(t *testing.T) (Connection, Transaction) {
-	conn, err := New(context.Background(), dbTestConfig)
-	require.Nil(t, err)
+	t.Helper()
+
+	conn := newTestConnection(t)
+
 	tx, err := conn.BeginTx(context.Background())
-	require.Nil(t, err)
+	require.NoError(t, err, "Actual err: %v", err)
+
+	t.Cleanup(func() {
+		tx.Close(t.Context())
+	})
+
 	return conn, tx
 }
 
 func insertTestData(t *testing.T, conn Connection) element {
+	t.Helper()
+
 	element := element{
 		Id:   uuid.New(),
 		Name: uuid.NewString(),
 	}
 	_, err := conn.Exec(context.Background(), "INSERT INTO my_table VALUES ($1, $2)", element.Id, element.Name)
-	require.Nil(t, err)
+	require.NoError(t, err, "Actual err: %v", err)
 
 	return element
 }
 
 func insertTestDataTx(t *testing.T, tx Transaction) element {
+	t.Helper()
+
 	element := element{
 		Id:   uuid.New(),
 		Name: uuid.NewString(),
 	}
 	_, err := tx.Exec(context.Background(), "INSERT INTO my_table VALUES ($1, $2)", element.Id, element.Name)
-	require.Nil(t, err)
+	require.NoError(t, err, "Actual err: %v", err)
 
 	return element
 }
 
 func assertNameForId(t *testing.T, conn Connection, id uuid.UUID, expectedName string) {
+	t.Helper()
+
 	value, err := QueryOne[string](context.Background(), conn, "SELECT name FROM my_table WHERE id = $1", id)
-	require.Nil(t, err)
+	require.NoError(t, err, "Actual err: %v", err)
 	require.Equal(t, expectedName, value)
 }
 
 func assertIdExists(t *testing.T, conn Connection, id uuid.UUID) {
+	t.Helper()
+
 	value, err := QueryOne[int](context.Background(), conn, "SELECT COUNT(*) FROM my_table WHERE id = $1", id)
-	require.Nil(t, err)
+	require.NoError(t, err, "Actual err: %v", err)
 	require.Equal(t, 1, value)
 }
 
 func assertIdDoesNotExist(t *testing.T, conn Connection, id uuid.UUID) {
+	t.Helper()
+
 	value, err := QueryOne[int](context.Background(), conn, "SELECT COUNT(*) FROM my_table WHERE id = $1", id)
-	require.Nil(t, err)
+	require.NoError(t, err, "Actual err: %v", err)
 	require.Equal(t, 0, value)
 }
