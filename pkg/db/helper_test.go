@@ -18,7 +18,12 @@ type element struct {
 
 func newTestConnection(t *testing.T) Connection {
 	conn, err := New(context.Background(), dbTestConfig)
-	require.Nil(t, err)
+	require.NoError(t, err, "Actual err: %v", err)
+
+	t.Cleanup(func() {
+		conn.Close(t.Context())
+	})
+
 	return conn
 }
 
