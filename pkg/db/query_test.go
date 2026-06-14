@@ -1,7 +1,6 @@
 package db
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -18,16 +17,16 @@ const sampleSqlQuery = "SELECT name FROM my_table"
 
 func TestUnit_QueryOne(t *testing.T) {
 	t.Run("returns error when connection is not supported", func(t *testing.T) {
-		_, err := QueryOne[int](context.Background(), &dummyConnection{}, sampleSqlQuery)
+		_, err := QueryOne[int](t.Context(), &dummyConnection{}, sampleSqlQuery)
 
 		assert.ErrorIs(t, ErrUnsupportedOperation, err, "Actual err: %v", err)
 	})
 
 	t.Run("returns error when connection is closed", func(t *testing.T) {
 		conn := newTestConnection(t)
-		conn.Close(context.Background())
+		conn.Close(t.Context())
 
-		_, err := QueryOne[int](context.Background(), conn, sampleSqlQuery)
+		_, err := QueryOne[int](t.Context(), conn, sampleSqlQuery)
 
 		assert.ErrorIs(t, ErrNotConnected, err, "Actual err: %v", err)
 	})
@@ -36,7 +35,7 @@ func TestUnit_QueryOne(t *testing.T) {
 		conn := newTestConnection(t)
 
 		sqlQuery := "SELECT name FROM my_tables"
-		_, err := QueryOne[string](context.Background(), conn, sqlQuery)
+		_, err := QueryOne[string](t.Context(), conn, sqlQuery)
 
 		actual, ok := AsDatabaseError(err)
 		require.True(t, ok)
@@ -48,7 +47,7 @@ func TestUnit_QueryOne(t *testing.T) {
 		conn := newTestConnection(t)
 
 		sqlQuery := "SELECT id, name FROM my_table WHERE name = $1"
-		_, err := QueryOne[element](context.Background(), conn, sqlQuery, "does-not-exist")
+		_, err := QueryOne[element](t.Context(), conn, sqlQuery, "does-not-exist")
 
 		assert.ErrorIs(t, ErrNoMatchingRows, err, "Actual err: %v", err)
 
@@ -60,7 +59,7 @@ func TestUnit_QueryOne(t *testing.T) {
 		v2 := insertTestData(t, conn)
 
 		sqlQuery := "SELECT id, name FROM my_table WHERE id IN ($1, $2)"
-		_, err := QueryOne[element](context.Background(), conn, sqlQuery, v1.Id, v2.Id)
+		_, err := QueryOne[element](t.Context(), conn, sqlQuery, v1.Id, v2.Id)
 
 		assert.ErrorIs(t, ErrTooManyMatchingRows, err, "Actual err: %v", err)
 	})
@@ -75,7 +74,7 @@ func TestUnit_QueryOne(t *testing.T) {
 		}
 
 		sqlQuery := "INSERT INTO my_table (id, name) VALUES($1, $2)"
-		_, err := QueryOne[element](context.Background(), conn, sqlQuery, duplicate.Id, duplicate.Name)
+		_, err := QueryOne[element](t.Context(), conn, sqlQuery, duplicate.Id, duplicate.Name)
 
 		actual, ok := AsDatabaseError(err)
 		require.True(t, ok)
@@ -97,7 +96,7 @@ func TestUnit_QueryOne(t *testing.T) {
 		expected := insertTestData(t, conn)
 
 		sqlQuery := "SELECT id, name FROM my_table WHERE name = $1"
-		actual, err := QueryOne[element](context.Background(), conn, sqlQuery, expected.Name)
+		actual, err := QueryOne[element](t.Context(), conn, sqlQuery, expected.Name)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		assert.Equal(t, expected, actual)
@@ -108,7 +107,7 @@ func TestUnit_QueryOne(t *testing.T) {
 		expected := insertTestData(t, conn)
 
 		sqlQuery := "SELECT name FROM my_table WHERE id = $1"
-		actual, err := QueryOne[string](context.Background(), conn, sqlQuery, expected.Id)
+		actual, err := QueryOne[string](t.Context(), conn, sqlQuery, expected.Id)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		assert.Equal(t, expected.Name, actual)
@@ -119,7 +118,7 @@ func TestUnit_QueryOne(t *testing.T) {
 		expected := insertTestData(t, conn)
 
 		sqlQuery := "SELECT id FROM my_table WHERE name = $1"
-		actual, err := QueryOne[uuid.UUID](context.Background(), conn, sqlQuery, expected.Name)
+		actual, err := QueryOne[uuid.UUID](t.Context(), conn, sqlQuery, expected.Name)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		assert.Equal(t, expected.Id, actual)
@@ -131,7 +130,7 @@ func TestUnit_QueryOne(t *testing.T) {
 		expected := insertTestData(t, conn)
 
 		sqlQuery := "SELECT updated_at FROM my_table WHERE name = $1"
-		actual, err := QueryOne[time.Time](context.Background(), conn, sqlQuery, expected.Name)
+		actual, err := QueryOne[time.Time](t.Context(), conn, sqlQuery, expected.Name)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		assert.True(t, beforeInsert.Before(actual))
@@ -140,16 +139,16 @@ func TestUnit_QueryOne(t *testing.T) {
 
 func TestUnit_QueryAll(t *testing.T) {
 	t.Run("returns error when connection is not supported", func(t *testing.T) {
-		_, err := QueryAll[int](context.Background(), &dummyConnection{}, sampleSqlQuery)
+		_, err := QueryAll[int](t.Context(), &dummyConnection{}, sampleSqlQuery)
 
 		assert.ErrorIs(t, ErrUnsupportedOperation, err, "Actual err: %v", err)
 	})
 
 	t.Run("returns error when connection is closed", func(t *testing.T) {
 		conn := newTestConnection(t)
-		conn.Close(context.Background())
+		conn.Close(t.Context())
 
-		_, err := QueryAll[int](context.Background(), conn, sampleSqlQuery)
+		_, err := QueryAll[int](t.Context(), conn, sampleSqlQuery)
 
 		assert.ErrorIs(t, ErrNotConnected, err, "Actual err: %v", err)
 	})
@@ -158,7 +157,7 @@ func TestUnit_QueryAll(t *testing.T) {
 		conn := newTestConnection(t)
 
 		sqlQuery := "SELECT name FROM my_tables"
-		_, err := QueryAll[string](context.Background(), conn, sqlQuery)
+		_, err := QueryAll[string](t.Context(), conn, sqlQuery)
 
 		actual, ok := AsDatabaseError(err)
 		require.True(t, ok)
@@ -170,7 +169,7 @@ func TestUnit_QueryAll(t *testing.T) {
 		conn := newTestConnection(t)
 
 		sqlQuery := "SELECT id, name FROM my_table WHERE name = $1"
-		out, err := QueryAll[element](context.Background(), conn, sqlQuery, "does-not-exist")
+		out, err := QueryAll[element](t.Context(), conn, sqlQuery, "does-not-exist")
 		require.NoError(t, err, "Actual err: %v", err)
 
 		assert.Empty(t, out)
@@ -182,7 +181,7 @@ func TestUnit_QueryAll(t *testing.T) {
 		v2 := insertTestData(t, conn)
 
 		sqlQuery := `SELECT id, name FROM my_table WHERE id IN ($1, $2)`
-		actual, err := QueryAll[element](context.Background(), conn, sqlQuery, v1.Id, v2.Id)
+		actual, err := QueryAll[element](t.Context(), conn, sqlQuery, v1.Id, v2.Id)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		expected := []element{v1, v2}
@@ -195,7 +194,7 @@ func TestUnit_QueryAll(t *testing.T) {
 		v2 := insertTestData(t, conn)
 
 		sqlQuery := `SELECT name FROM my_table WHERE id IN ($1, $2)`
-		actual, err := QueryAll[string](context.Background(), conn, sqlQuery, v1.Id, v2.Id)
+		actual, err := QueryAll[string](t.Context(), conn, sqlQuery, v1.Id, v2.Id)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		expected := []string{v1.Name, v2.Name}
@@ -208,7 +207,7 @@ func TestUnit_QueryAll(t *testing.T) {
 		v2 := insertTestData(t, conn)
 
 		sqlQuery := `SELECT id FROM my_table WHERE name IN ($1, $2)`
-		actual, err := QueryAll[uuid.UUID](context.Background(), conn, sqlQuery, v1.Name, v2.Name)
+		actual, err := QueryAll[uuid.UUID](t.Context(), conn, sqlQuery, v1.Name, v2.Name)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		expected := []uuid.UUID{v1.Id, v2.Id}
@@ -222,7 +221,7 @@ func TestUnit_QueryAll(t *testing.T) {
 		v2 := insertTestData(t, conn)
 
 		sqlQuery := "SELECT updated_at FROM my_table WHERE id IN ($1, $2)"
-		actual, err := QueryAll[time.Time](context.Background(), conn, sqlQuery, v1.Id, v2.Id)
+		actual, err := QueryAll[time.Time](t.Context(), conn, sqlQuery, v1.Id, v2.Id)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		assert.True(t, beforeInsert.Before(actual[0]))
