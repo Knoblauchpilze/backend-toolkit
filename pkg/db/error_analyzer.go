@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
@@ -27,6 +28,11 @@ func analyzeAndWrapDatabaseError(err error) error {
 		return analyzePgError(pgErr)
 	}
 
+	if true {
+		fmt.Printf("trying out connect error for error: %s\n", err.Error())
+		_, ok := err.(*pgconn.ConnectError)
+		fmt.Printf("conversion result: %t\n", ok)
+	}
 	if connErr, ok := err.(*pgconn.ConnectError); ok {
 		return analyzeConnError(connErr)
 	}
@@ -35,33 +41,37 @@ func analyzeAndWrapDatabaseError(err error) error {
 }
 
 func analyzePgError(err *pgconn.PgError) error {
-	// out := &DatabaseError{
-	// 	Message:    err.Message,
-	// 	SqlCode:    err.Code,
-	// 	Schema:     err.SchemaName,
-	// 	Table:      err.TableName,
-	// 	Column:     err.ColumnName,
-	// 	Constraint: err.ConstraintName,
-	// 	Cause:      err,
-	// }
-
-	// return out
-
-	switch err.Code {
-	case foreignKeyViolation:
-		return errors.WrapCode(err, ErrForeignKeyValidation)
-	case uniqueValidation:
-		return errors.WrapCode(err, ErrUniqueConstraintViolation)
+	return &DatabaseError{
+		Code:       mapPostgreCodeToErrorCode(err.Code),
+		Message:    err.Message,
+		SqlCode:    err.Code,
+		Schema:     err.SchemaName,
+		Table:      err.TableName,
+		Column:     err.ColumnName,
+		Constraint: err.ConstraintName,
+		Cause:      err,
 	}
-
-	return errors.WrapCode(err, ErrGenericSqlError)
 }
 
 func analyzeConnError(err *pgconn.ConnectError) error {
 	msg := err.Unwrap().Error()
+
+	fmt.Printf("conn error has wrapped message: %s\n", msg)
+
 	if strings.Contains(msg, passwordAuthenticationFailed) {
 		return ErrAuthenticationFailed
 	}
 
 	return errors.FromCode(ErrGenericSqlError)
+}
+
+func mapPostgreCodeToErrorCode(postgreCode string) errors.ErrorCode {
+	switch postgreCode {
+	case foreignKeyViolation:
+		return ErrForeignKeyValidation
+	case uniqueValidation:
+		return ErrUniqueConstraintViolation
+	}
+
+	return ErrGenericSqlError
 }
