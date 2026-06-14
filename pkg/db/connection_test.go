@@ -54,7 +54,7 @@ func TestIT_Connection_Close(t *testing.T) {
 	conn := newTestConnection(t)
 
 	err := conn.Ping(context.Background())
-	require.Nil(t, err)
+	require.NoError(t, err, "Actual err: %v", err)
 
 	conn.Close(context.Background())
 	err = conn.Ping(context.Background())
@@ -263,30 +263,4 @@ func TestIT_Connection_Exec(t *testing.T) {
 
 		assert.Equal(t, utcTime, actual)
 	})
-}
-
-func TestIT_Connection_Exec_ReturnsUTCTimeAsUTC(t *testing.T) {
-	conn := newTestConnection(t)
-
-	utcTime := time.Date(2026, 05, 30, 13, 57, 29, 0, time.UTC)
-
-	element := element{
-		Id:   uuid.New(),
-		Name: uuid.NewString(),
-	}
-	_, err := conn.Exec(
-		context.Background(),
-		"INSERT INTO my_table VALUES ($1, $2, $3)",
-		element.Id, element.Name, utcTime,
-	)
-	require.NoError(t, err)
-
-	actual, err := QueryOne[time.Time](
-		context.Background(),
-		conn,
-		"SELECT created_at FROM my_table WHERE id = $1",
-		element.Id,
-	)
-	require.Nil(t, err, "Actual err: %v", err)
-	assert.Equal(t, utcTime, actual)
 }
