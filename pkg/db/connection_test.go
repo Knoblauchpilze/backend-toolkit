@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/db/postgresql"
-	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -65,147 +64,205 @@ func TestIT_Connection_Close(t *testing.T) {
 func TestIT_Connection_BeginTx_TimeStampIsValid(t *testing.T) {
 	conn := newTestConnection(t)
 
-	beforeTx := time.Now()
-	tx, err := conn.BeginTx(context.Background())
+	t.Run("assigns timestamp when beginning transaction", func(t *testing.T) {
 
-	assert.Nil(t, err)
-	assert.True(t, beforeTx.Before(tx.TimeStamp()))
+		beforeTx := time.Now()
+		tx, err := conn.BeginTx(context.Background())
+		require.NoError(t, err, "Actual err: %v", err)
+
+		defer func() {
+			// nolint: errcheck
+			tx.Close(t.Context())
+		}()
+
+		assert.True(t, beforeTx.Before(tx.TimeStamp()))
+	})
+
+	t.Run("returns error when connection is closed", func(t *testing.T) {
+		conn.Close(context.Background())
+
+		tx, err := conn.BeginTx(context.Background())
+
+		assert.Nil(t, tx)
+		assert.ErrorIs(t, ErrNotConnected, err, "Actual err: %v", err)
+	})
 }
 
-func TestIT_Connection_BeginTx_ClosedConnection(t *testing.T) {
-	conn := newTestConnection(t)
-	conn.Close(context.Background())
-
-	tx, err := conn.BeginTx(context.Background())
-
-	assert.Nil(t, tx)
-	assert.Equal(t, ErrNotConnected, err, "Actual err: %v", err)
-}
-
-func TestIT_Connection_Exec_Select(t *testing.T) {
-	conn := newTestConnection(t)
-	element := insertTestData(t, conn)
-
-	affectedRows, err := conn.Exec(context.Background(), "SELECT COUNT(*) FROM my_table WHERE id = $1", element.Id)
-
-	assert.Equal(t, int64(1), affectedRows)
-	assert.Nil(t, err)
-}
-
-func TestIT_Connection_Exec_Insert(t *testing.T) {
+func TestIT_Connection_Exec(t *testing.T) {
 	conn := newTestConnection(t)
 
-	id := uuid.New()
-	// Also using a uuid for the name to easily generate characters
-	name := uuid.New()
-	affectedRows, err := conn.Exec(context.Background(), "INSERT INTO my_table VALUES ($1, $2)", id, name)
+	t.Run("successfully selects data", func(t *testing.T) {
+		element := insertTestData(t, conn)
 
-	assert.Equal(t, int64(1), affectedRows)
-	assert.Nil(t, err)
+		affectedRows, err := conn.Exec(context.Background(), "SELECT COUNT(*) FROM my_table WHERE id = $1", element.Id)
+		require.NoError(t, err, "Actual err: %v", err)
 
-	assertIdExists(t, conn, id)
-}
+		assert.Equal(t, int64(1), affectedRows)
+	})
 
-func TestIT_Connection_Exec_InsertDuplicate(t *testing.T) {
-	conn := newTestConnection(t)
-	element := insertTestData(t, conn)
-	id := uuid.New()
+	t.Run("successfully inserts data", func(t *testing.T) {
+		id := uuid.New()
+		// Also using a uuid for the name to easily generate characters
+		name := uuid.New()
+		affectedRows, err := conn.Exec(context.Background(), "INSERT INTO my_table VALUES ($1, $2)", id, name)
+		require.NoError(t, err, "Actual err: %v", err)
 
-	affectedRows, err := conn.Exec(context.Background(), "INSERT INTO my_table VALUES ($1, $2)", id, element.Name)
+		assert.Equal(t, int64(1), affectedRows)
+		assertIdExists(t, conn, id)
+	})
 
-	assert.Equal(t, int64(0), affectedRows)
-	actual, ok := errors.AsErrorWithCode(err)
-	require.True(t, ok)
-	assert.Equal(t, ErrUniqueConstraintViolation, actual.Code, "Actual err: %v", err)
-	assertIdDoesNotExist(t, conn, id)
-}
+	t.Run("returns error when unique constraint is violated", func(t *testing.T) {
+		element := insertTestData(t, conn)
+		id := uuid.New()
 
-func TestIT_Connection_Exec_Update(t *testing.T) {
-	conn := newTestConnection(t)
-	element := insertTestData(t, conn)
-	newName := uuid.New().String()
+		affectedRows, err := conn.Exec(context.Background(), "INSERT INTO my_table VALUES ($1, $2)", id, element.Name)
 
-	affectedRows, err := conn.Exec(context.Background(), "UPDATE my_table SET name = $1 WHERE id = $2", newName, element.Id)
-	assert.Equal(t, int64(1), affectedRows)
-	assert.Nil(t, err)
+		assert.Equal(t, int64(0), affectedRows)
+		actual, ok := AsDatabaseError(err)
+		require.True(t, ok)
 
-	assertNameForId(t, conn, element.Id, newName)
-}
+		expected := &DatabaseError{
+			Code:       ErrUniqueConstraintViolation,
+			Message:    "duplicate key value violates unique constraint \"my_table_name_key\"",
+			SqlCode:    "23505",
+			Schema:     "test_db_schema",
+			Table:      "my_table",
+			Column:     "",
+			Constraint: "my_table_name_key",
+			Cause:      actual.Cause,
+		}
+		assert.Equal(t, expected, actual, "Actual err: %v", err)
+		assertIdDoesNotExist(t, conn, id)
+	})
 
-func TestIT_Connection_Exec_UpdateDuplicate(t *testing.T) {
-	conn := newTestConnection(t)
-	element := insertTestData(t, conn)
-	anotherElement := insertTestData(t, conn)
+	t.Run("successfull updates data", func(t *testing.T) {
+		element := insertTestData(t, conn)
+		newName := uuid.New().String()
 
-	affectedRows, err := conn.Exec(context.Background(), "UPDATE my_table SET name = $1 WHERE id = $2", anotherElement.Name, element.Id)
-	assert.Equal(t, int64(0), affectedRows)
-	actual, ok := errors.AsErrorWithCode(err)
-	require.True(t, ok)
-	assert.Equal(t, ErrUniqueConstraintViolation, actual.Code, "Actual err: %v", err)
+		affectedRows, err := conn.Exec(context.Background(), "UPDATE my_table SET name = $1 WHERE id = $2", newName, element.Id)
+		require.NoError(t, err, "Actual err: %v", err)
 
-	assertNameForId(t, conn, element.Id, element.Name)
-}
+		assert.Equal(t, int64(1), affectedRows)
+		assertNameForId(t, conn, element.Id, newName)
+	})
 
-func TestIT_Connection_Exec_Delete(t *testing.T) {
-	conn := newTestConnection(t)
-	element := insertTestData(t, conn)
+	t.Run("returns error when update leads to unique constraint being violated", func(t *testing.T) {
+		element := insertTestData(t, conn)
+		anotherElement := insertTestData(t, conn)
 
-	affectedRows, err := conn.Exec(context.Background(), "DELETE FROM my_table WHERE id = $1", element.Id)
-	assert.Equal(t, int64(1), affectedRows)
-	assert.Nil(t, err)
+		affectedRows, err := conn.Exec(context.Background(), "UPDATE my_table SET name = $1 WHERE id = $2", anotherElement.Name, element.Id)
 
-	assertIdDoesNotExist(t, conn, element.Id)
-}
+		assert.Equal(t, int64(0), affectedRows)
+		actual, ok := AsDatabaseError(err)
+		require.True(t, ok)
 
-func TestIT_Connection_Exec_WithArguments(t *testing.T) {
-	conn := newTestConnection(t)
-	element := insertTestData(t, conn)
+		expected := &DatabaseError{
+			Code:       ErrUniqueConstraintViolation,
+			Message:    "duplicate key value violates unique constraint \"my_table_name_key\"",
+			SqlCode:    "23505",
+			Schema:     "test_db_schema",
+			Table:      "my_table",
+			Column:     "",
+			Constraint: "my_table_name_key",
+			Cause:      actual.Cause,
+		}
+		assert.Equal(t, expected, actual, "Actual err: %v", err)
+		assertNameForId(t, conn, element.Id, element.Name)
+	})
 
-	affectedRows, err := conn.Exec(context.Background(), "SELECT COUNT(*) FROM my_table WHERE name = $1", element.Name)
+	t.Run("successfully deletes data", func(t *testing.T) {
+		element := insertTestData(t, conn)
 
-	assert.Equal(t, int64(1), affectedRows)
-	assert.Nil(t, err)
-}
+		affectedRows, err := conn.Exec(context.Background(), "DELETE FROM my_table WHERE id = $1", element.Id)
+		require.NoError(t, err, "Actual err: %v", err)
 
-func TestIT_Connection_Exec_WrongSyntax(t *testing.T) {
-	conn := newTestConnection(t)
-	element := insertTestData(t, conn)
+		assert.Equal(t, int64(1), affectedRows)
+		assertIdDoesNotExist(t, conn, element.Id)
+	})
 
-	affectedRows, err := conn.Exec(context.Background(), "DESELECT COUNT(*) FROM my_table WHERE name = $1", element.Name)
+	t.Run("successfully propagates provided arguments", func(t *testing.T) {
+		element := insertTestData(t, conn)
 
-	assert.Equal(t, int64(0), affectedRows)
-	actual, ok := errors.AsErrorWithCode(err)
-	require.True(t, ok)
-	assert.Equal(t, ErrGenericSqlError, actual.Code, "Actual err: %v", err)
-}
+		affectedRows, err := conn.Exec(context.Background(), "SELECT COUNT(*) FROM my_table WHERE name = $1", element.Name)
+		require.NoError(t, err, "Actual err: %v", err)
 
-func TestIT_Connection_Exec_ReturnsZonedTimeAsUTC(t *testing.T) {
-	conn := newTestConnection(t)
+		assert.Equal(t, int64(1), affectedRows)
+	})
 
-	berlinTz, err := time.LoadLocation("Europe/Berlin")
-	require.NoError(t, err)
+	t.Run("returns error when SQL query is invalid", func(t *testing.T) {
+		element := insertTestData(t, conn)
 
-	zonedTime := time.Date(2026, 05, 30, 13, 57, 29, 0, berlinTz)
+		affectedRows, err := conn.Exec(context.Background(), "DESELECT COUNT(*) FROM my_table WHERE name = $1", element.Name)
 
-	element := element{
-		Id:   uuid.New(),
-		Name: uuid.NewString(),
-	}
-	_, err = conn.Exec(
-		context.Background(),
-		"INSERT INTO my_table VALUES ($1, $2, $3)",
-		element.Id, element.Name, zonedTime,
-	)
-	require.NoError(t, err)
+		assert.Equal(t, int64(0), affectedRows)
+		actual, ok := AsDatabaseError(err)
+		require.True(t, ok)
 
-	actual, err := QueryOne[time.Time](
-		context.Background(),
-		conn,
-		"SELECT created_at FROM my_table WHERE id = $1",
-		element.Id,
-	)
-	require.Nil(t, err, "Actual err: %v", err)
-	assert.Equal(t, zonedTime.UTC(), actual)
+		expected := &DatabaseError{
+			Code:       ErrGenericSqlError,
+			Message:    "syntax error at or near \"DESELECT\"",
+			SqlCode:    "42601",
+			Schema:     "",
+			Table:      "",
+			Column:     "",
+			Constraint: "",
+			Cause:      actual.Cause,
+		}
+		assert.Equal(t, expected, actual, "Actual err: %v", err)
+	})
+
+	t.Run("returns zoned time as UTC", func(t *testing.T) {
+		berlinTz, err := time.LoadLocation("Europe/Berlin")
+		require.NoError(t, err, "Actual err: %v", err)
+
+		zonedTime := time.Date(2026, 05, 30, 13, 57, 29, 0, berlinTz)
+
+		element := element{
+			Id:   uuid.New(),
+			Name: uuid.NewString(),
+		}
+		_, err = conn.Exec(
+			context.Background(),
+			"INSERT INTO my_table VALUES ($1, $2, $3)",
+			element.Id, element.Name, zonedTime,
+		)
+		require.NoError(t, err, "Actual err: %v", err)
+
+		actual, err := QueryOne[time.Time](
+			context.Background(),
+			conn,
+			"SELECT created_at FROM my_table WHERE id = $1",
+			element.Id,
+		)
+		require.NoError(t, err, "Actual err: %v", err)
+
+		assert.Equal(t, zonedTime.UTC(), actual)
+	})
+
+	t.Run("returns UTC time as UTC", func(t *testing.T) {
+		utcTime := time.Date(2026, 05, 30, 13, 57, 29, 0, time.UTC)
+
+		element := element{
+			Id:   uuid.New(),
+			Name: uuid.NewString(),
+		}
+		_, err := conn.Exec(
+			context.Background(),
+			"INSERT INTO my_table VALUES ($1, $2, $3)",
+			element.Id, element.Name, utcTime,
+		)
+		require.NoError(t, err, "Actual err: %v", err)
+
+		actual, err := QueryOne[time.Time](
+			context.Background(),
+			conn,
+			"SELECT created_at FROM my_table WHERE id = $1",
+			element.Id,
+		)
+		require.NoError(t, err, "Actual err: %v", err)
+
+		assert.Equal(t, utcTime, actual)
+	})
 }
 
 func TestIT_Connection_Exec_ReturnsUTCTimeAsUTC(t *testing.T) {
