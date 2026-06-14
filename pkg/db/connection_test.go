@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestUnit_New(t *testing.T) {
+func TestIT_New(t *testing.T) {
 	t.Run("fails when configuration is invalid", func(t *testing.T) {
 		config := postgresql.Config{
 			Host: ":/not-a-host",

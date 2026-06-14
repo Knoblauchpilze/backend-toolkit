@@ -13,7 +13,7 @@ type dummyTransaction struct {
 	Transaction
 }
 
-func TestUnit_QueryOneTx(t *testing.T) {
+func TestIT_QueryOneTx(t *testing.T) {
 	t.Run("returns error when transaction is not supported", func(t *testing.T) {
 		_, err := QueryOneTx[int](t.Context(), &dummyTransaction{}, sampleSqlQuery)
 
@@ -134,7 +134,7 @@ func TestUnit_QueryOneTx(t *testing.T) {
 	})
 }
 
-func TestUnit_QueryAllTx(t *testing.T) {
+func TestIT_QueryAllTx(t *testing.T) {
 	t.Run("returns error when transaction is not supported", func(t *testing.T) {
 		_, err := QueryAllTx[int](t.Context(), &dummyTransaction{}, sampleSqlQuery)
 

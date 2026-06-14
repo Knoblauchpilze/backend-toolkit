@@ -15,7 +15,7 @@ type dummyConnection struct {
 
 const sampleSqlQuery = "SELECT name FROM my_table"
 
-func TestUnit_QueryOne(t *testing.T) {
+func TestIT_QueryOne(t *testing.T) {
 	t.Run("returns error when connection is not supported", func(t *testing.T) {
 		_, err := QueryOne[int](t.Context(), &dummyConnection{}, sampleSqlQuery)
 
@@ -137,7 +137,7 @@ func TestUnit_QueryOne(t *testing.T) {
 	})
 }
 
-func TestUnit_QueryAll(t *testing.T) {
+func TestIT_QueryAll(t *testing.T) {
 	t.Run("returns error when connection is not supported", func(t *testing.T) {
 		_, err := QueryAll[int](t.Context(), &dummyConnection{}, sampleSqlQuery)
 
