@@ -1,7 +1,6 @@
 package db
 
 import (
-	"context"
 	"testing"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/db/postgresql"
@@ -19,7 +18,7 @@ type element struct {
 func newTestConnection(t *testing.T) Connection {
 	t.Helper()
 
-	conn, err := New(context.Background(), dbTestConfig)
+	conn, err := New(t.Context(), dbTestConfig)
 	require.NoError(t, err, "Actual err: %v", err)
 
 	t.Cleanup(func() {
@@ -34,7 +33,7 @@ func newTestTransaction(t *testing.T) (Connection, Transaction) {
 
 	conn := newTestConnection(t)
 
-	tx, err := conn.BeginTx(context.Background())
+	tx, err := conn.BeginTx(t.Context())
 	require.NoError(t, err, "Actual err: %v", err)
 
 	t.Cleanup(func() {
@@ -51,7 +50,7 @@ func insertTestData(t *testing.T, conn Connection) element {
 		Id:   uuid.New(),
 		Name: uuid.NewString(),
 	}
-	_, err := conn.Exec(context.Background(), "INSERT INTO my_table VALUES ($1, $2)", element.Id, element.Name)
+	_, err := conn.Exec(t.Context(), "INSERT INTO my_table VALUES ($1, $2)", element.Id, element.Name)
 	require.NoError(t, err, "Actual err: %v", err)
 
 	return element
@@ -64,7 +63,7 @@ func insertTestDataTx(t *testing.T, tx Transaction) element {
 		Id:   uuid.New(),
 		Name: uuid.NewString(),
 	}
-	_, err := tx.Exec(context.Background(), "INSERT INTO my_table VALUES ($1, $2)", element.Id, element.Name)
+	_, err := tx.Exec(t.Context(), "INSERT INTO my_table VALUES ($1, $2)", element.Id, element.Name)
 	require.NoError(t, err, "Actual err: %v", err)
 
 	return element
@@ -73,7 +72,7 @@ func insertTestDataTx(t *testing.T, tx Transaction) element {
 func assertNameForId(t *testing.T, conn Connection, id uuid.UUID, expectedName string) {
 	t.Helper()
 
-	value, err := QueryOne[string](context.Background(), conn, "SELECT name FROM my_table WHERE id = $1", id)
+	value, err := QueryOne[string](t.Context(), conn, "SELECT name FROM my_table WHERE id = $1", id)
 	require.NoError(t, err, "Actual err: %v", err)
 	require.Equal(t, expectedName, value)
 }
@@ -81,7 +80,7 @@ func assertNameForId(t *testing.T, conn Connection, id uuid.UUID, expectedName s
 func assertIdExists(t *testing.T, conn Connection, id uuid.UUID) {
 	t.Helper()
 
-	value, err := QueryOne[int](context.Background(), conn, "SELECT COUNT(*) FROM my_table WHERE id = $1", id)
+	value, err := QueryOne[int](t.Context(), conn, "SELECT COUNT(*) FROM my_table WHERE id = $1", id)
 	require.NoError(t, err, "Actual err: %v", err)
 	require.Equal(t, 1, value)
 }
@@ -89,7 +88,7 @@ func assertIdExists(t *testing.T, conn Connection, id uuid.UUID) {
 func assertIdDoesNotExist(t *testing.T, conn Connection, id uuid.UUID) {
 	t.Helper()
 
-	value, err := QueryOne[int](context.Background(), conn, "SELECT COUNT(*) FROM my_table WHERE id = $1", id)
+	value, err := QueryOne[int](t.Context(), conn, "SELECT COUNT(*) FROM my_table WHERE id = $1", id)
 	require.NoError(t, err, "Actual err: %v", err)
 	require.Equal(t, 0, value)
 }
