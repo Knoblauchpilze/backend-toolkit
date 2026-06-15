@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/go-viper/mapstructure/v2 v2.5.0
-	github.com/labstack/echo/v5 v5.1.1
+	github.com/labstack/echo/v5 v5.2.0
 )
 
 require (
