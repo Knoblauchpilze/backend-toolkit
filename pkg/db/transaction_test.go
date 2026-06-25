@@ -42,21 +42,21 @@ func TestIT_Transaction_Exec(t *testing.T) {
 
 		id := uuid.New()
 		// Also using a uuid for the name to easily generate characters
-		name := uuid.New()
+		name := uuid.NewString()
 
 		_, err := tx.Exec(t.Context(), "INSERT INTO my_table VALUES ($1, $2)", id, name)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		tx.Close(t.Context())
 
-		assertNameForId(t, conn, id, name.String())
+		assertNameForId(t, conn, id, name)
 	})
 
 	t.Run("successfull updates data", func(t *testing.T) {
 		conn, tx := newTestTransaction(t)
 		element := insertTestDataTx(t, tx)
 
-		newName := uuid.New().String()
+		newName := uuid.NewString()
 		_, err := tx.Exec(t.Context(), "UPDATE my_table SET name = $1 WHERE id = $2", newName, element.Id)
 		require.NoError(t, err, "Actual err: %v", err)
 
@@ -119,5 +119,33 @@ func TestIT_Transaction_Exec(t *testing.T) {
 		tx.Close(t.Context())
 
 		assertIdDoesNotExist(t, conn, element.Id)
+	})
+}
+
+func TestIT_Transaction_Rollback(t *testing.T) {
+	t.Run("returns error when transaction already committed", func(t *testing.T) {
+		_, tx := newTestTransaction(t)
+		tx.Close(t.Context())
+
+		err := tx.Rollback()
+
+		assert.ErrorIs(t, ErrAlreadyCommitted, err, "Actual err: %v", err)
+	})
+
+	t.Run("successfully rollbacks transaction", func(t *testing.T) {
+		conn, tx := newTestTransaction(t)
+
+		id := uuid.New()
+		name := uuid.NewString()
+
+		_, err := tx.Exec(t.Context(), "INSERT INTO my_table VALUES ($1, $2)", id, name)
+		require.NoError(t, err, "Actual err: %v", err)
+
+		err = tx.Rollback()
+		require.NoError(t, err, "Actual err: %v", err)
+
+		tx.Close(t.Context())
+
+		assertIdDoesNotExist(t, conn, id)
 	})
 }

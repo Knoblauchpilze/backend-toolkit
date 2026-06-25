@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -12,6 +13,11 @@ type Transaction interface {
 	TimeStamp() time.Time
 
 	Exec(ctx context.Context, sql string, arguments ...any) (int64, error)
+
+	// Rollback allows to mark the transaction for rollback, independently of any
+	// error which might or might not have occurred during the execution.
+	// This function can only be called if the transaction was not already committed.
+	Rollback() error
 }
 
 type transactionImpl struct {
@@ -60,6 +66,16 @@ func (ti *transactionImpl) Exec(ctx context.Context, sql string, arguments ...an
 	}
 
 	return tag.RowsAffected(), err
+}
+
+func (ti *transactionImpl) Rollback() error {
+	if ti.tx == nil {
+		return ErrAlreadyCommitted
+	}
+
+	ti.err = errors.FromCode(errForcedRollback)
+
+	return nil
 }
 
 func (ti *transactionImpl) query(ctx context.Context, sql string, arguments ...any) (pgx.Rows, error) {

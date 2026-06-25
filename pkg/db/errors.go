@@ -6,6 +6,7 @@ const (
 	errNotConnected         errors.ErrorCode = 100
 	errUnsupportedOperation errors.ErrorCode = 101
 	errAlreadyCommitted     errors.ErrorCode = 102
+	errForcedRollback       errors.ErrorCode = 103
 
 	errNoMatchingRows      errors.ErrorCode = 110
 	errTooManyMatchingRows errors.ErrorCode = 111
