@@ -265,6 +265,7 @@ In order to provide consistent response format across an APIs, the [response_env
 {
   "requestId": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
   "status": "SUCCESS",
+  "statusCode": 200,
   "details": {
     "value": 12
   }
@@ -275,6 +276,7 @@ This clearly indicates:
 
 - the request identifier
 - whether it succeeded or not
+- the HTTP status code
 - potential details about the success or failure
 
 Having something like this in place for an API allows consumers to easily know whether a request was successful or not. Additionally we can rely on HTTP status codes to provided information about what went wrong.

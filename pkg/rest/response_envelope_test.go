@@ -13,9 +13,10 @@ func TestUnit_ResponseEnvelope_SuccessfullyMarshalsTypedDetails(t *testing.T) {
 	}
 
 	r := ResponseEnvelope[details]{
-		RequestId: "1348f004-7620-4c80-915d-26da0ac144f6",
-		Status:    StatusSuccess,
-		Details:   details{Field: 32},
+		RequestId:  "1348f004-7620-4c80-915d-26da0ac144f6",
+		Status:     StatusSuccess,
+		StatusCode: 200,
+		Details:    details{Field: 32},
 	}
 
 	out, err := json.Marshal(r)
@@ -25,6 +26,7 @@ func TestUnit_ResponseEnvelope_SuccessfullyMarshalsTypedDetails(t *testing.T) {
 	{
 		"requestId": "1348f004-7620-4c80-915d-26da0ac144f6",
 		"status": "SUCCESS",
+		"statusCode": 200,
 		"details": {
 			"field": 32
 		}
@@ -34,9 +36,10 @@ func TestUnit_ResponseEnvelope_SuccessfullyMarshalsTypedDetails(t *testing.T) {
 
 func TestUnit_ResponseEnvelope_SuccessfullyMarshalsSimpleDetails(t *testing.T) {
 	r := ResponseEnvelope[int32]{
-		RequestId: "1348f004-7620-4c80-915d-26da0ac144f6",
-		Status:    StatusSuccess,
-		Details:   int32(16),
+		RequestId:  "1348f004-7620-4c80-915d-26da0ac144f6",
+		Status:     StatusSuccess,
+		StatusCode: 200,
+		Details:    int32(16),
 	}
 
 	out, err := json.Marshal(r)
@@ -46,6 +49,7 @@ func TestUnit_ResponseEnvelope_SuccessfullyMarshalsSimpleDetails(t *testing.T) {
 	{
 		"requestId": "1348f004-7620-4c80-915d-26da0ac144f6",
 		"status": "SUCCESS",
+		"statusCode": 200,
 		"details": 16
 	}`
 	assert.JSONEq(t, expectedJson, string(out))

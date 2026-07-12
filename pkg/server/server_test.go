@@ -111,6 +111,7 @@ func TestUnit_Server_WhenHandlerPanics_ExpectErrorResponseEnvelope(t *testing.T)
 	assert.Equal(t, http.StatusInternalServerError, response.StatusCode)
 	actual := unmarshalResponseAndAssertRequestId(t, response)
 	assert.Equal(t, "ERROR", actual.Status)
+	assert.Equal(t, http.StatusInternalServerError, actual.StatusCode)
 	assert.Equal(t, `{"message":"this handler panics"}`, string(actual.Details))
 }
 
@@ -134,13 +135,15 @@ func TestUnit_Server_WhenHandlerReturnsError_ExpectErrorResponseEnvelope(t *test
 	assert.Equal(t, http.StatusInternalServerError, response.StatusCode)
 	actual := unmarshalResponseAndAssertRequestId(t, response)
 	assert.Equal(t, "ERROR", actual.Status)
+	assert.Equal(t, http.StatusInternalServerError, actual.StatusCode)
 	assert.Equal(t, `{"message":"an unexpected error occurred. Code: 102"}`, string(actual.Details))
 }
 
 type responseEnvelope struct {
-	RequestId string          `json:"requestId"`
-	Status    string          `json:"status"`
-	Details   json.RawMessage `json:"details"`
+	RequestId  string          `json:"requestId"`
+	Status     string          `json:"status"`
+	StatusCode int             `json:"statusCode"`
+	Details    json.RawMessage `json:"details"`
 }
 
 func newTestServer(port uint16) Server {
@@ -237,5 +240,6 @@ func assertIsOkResponse(t *testing.T, response *http.Response) {
 	assert.Equal(t, http.StatusOK, response.StatusCode)
 	actual := unmarshalResponseAndAssertRequestId(t, response)
 	assert.Equal(t, "SUCCESS", actual.Status)
+	assert.Equal(t, http.StatusOK, actual.StatusCode)
 	assert.Equal(t, `"OK"`, string(actual.Details))
 }

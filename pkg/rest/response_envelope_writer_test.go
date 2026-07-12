@@ -31,6 +31,7 @@ func TestUnit_EnvelopeResponseWriter_AutomaticallySetsSuccessStatusWhenNoStatusI
 	{
 		"requestId": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
 		"status": "SUCCESS",
+		"statusCode": 200,
 		"details": {
 			"value": 12
 		}
@@ -63,6 +64,34 @@ func TestUnit_EnvelopeResponseWriter_SetsStatusCodeOnCallToWriteHeader(t *testin
 	rw.WriteHeader(http.StatusUnauthorized)
 
 	assert.Equal(t, http.StatusUnauthorized, out.Code)
+	assert.Equal(t, http.StatusUnauthorized, rw.response.StatusCode)
+	assert.Equal(t, StatusError, rw.response.Status)
+}
+
+func TestUnit_EnvelopeResponseWriter_UsesFirstStatusCodeWhenWriteHeaderIsCalledMultipleTimes(t *testing.T) {
+	out := httptest.NewRecorder()
+
+	rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONTo[details])
+
+	rw.WriteHeader(http.StatusAccepted)
+	rw.WriteHeader(http.StatusUnauthorized)
+	_, err := rw.WriteTyped(sampleJsonData)
+	require.NoError(t, err, "Actual err: %v", err)
+
+	assert.Equal(t, http.StatusAccepted, out.Code)
+	assert.Equal(t, http.StatusAccepted, rw.response.StatusCode)
+	assert.Equal(t, StatusSuccess, rw.response.Status)
+
+	expectedJson := `
+	{
+		"requestId": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
+		"status": "SUCCESS",
+		"statusCode": 202,
+		"details": {
+			"value": 12
+		}
+	}`
+	assert.JSONEq(t, expectedJson, out.Body.String())
 }
 
 func TestUnit_EnvelopeResponseWriter_WrapsSuccessResponse(t *testing.T) {
@@ -79,6 +108,7 @@ func TestUnit_EnvelopeResponseWriter_WrapsSuccessResponse(t *testing.T) {
 	{
 		"requestId": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
 		"status": "SUCCESS",
+		"statusCode": 201,
 		"details": {
 			"value": 12
 		}
@@ -101,8 +131,8 @@ func TestUnit_EnvelopeResponseWriter_SetsContentLengthToMatchOutput(t *testing.T
 
 	// The length accounts for the response envelope and the JSON format
 	// 12 is the length of "{"value":12}
-	// 82 is the length of the response envelope wrapper"
-	expectedLength := fmt.Sprintf("%d", 12+82)
+	// 99 is the length of the response envelope wrapper"
+	expectedLength := fmt.Sprintf("%d", 12+99)
 	actualLength := lengths[0]
 
 	assert.Equal(t, expectedLength, actualLength)
@@ -122,6 +152,32 @@ func TestUnit_EnvelopeResponseWriter_WrapsErrorResponse(t *testing.T) {
 	{
 		"requestId": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
 		"status": "ERROR",
+		"statusCode": 401,
+		"details": {
+			"value": 12
+		}
+	}`
+	assert.JSONEq(t, expectedJson, out.Body.String())
+}
+
+func TestUnit_EnvelopeResponseWriter_DecodesBytesAfterWriteHeaderUsingCommittedStatus(t *testing.T) {
+	out := httptest.NewRecorder()
+
+	rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONOrString)
+
+	rw.WriteHeader(http.StatusAccepted)
+	_, err := rw.Write([]byte(`{"value":12}`))
+	require.NoError(t, err, "Actual err: %v", err)
+
+	assert.Equal(t, http.StatusAccepted, out.Code)
+	assert.Equal(t, http.StatusAccepted, rw.response.StatusCode)
+	assert.Equal(t, StatusSuccess, rw.response.Status)
+
+	expectedJson := `
+	{
+		"requestId": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
+		"status": "SUCCESS",
+		"statusCode": 202,
 		"details": {
 			"value": 12
 		}
@@ -141,6 +197,7 @@ func TestUnit_EnvelopeResponseWriter_WrapsPlainStringAsDetailsString(t *testing.
 	{
 		"requestId": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
 		"status": "SUCCESS",
+		"statusCode": 200,
 		"details": "some-data"
 	}`
 	actual := out.Body.String()
@@ -159,6 +216,7 @@ func TestUnit_EnvelopeResponseWriter_WrapsRawBytesAsBytes(t *testing.T) {
 	{
 		"requestId": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
 		"status": "SUCCESS",
+		"statusCode": 200,
 		"details": "c29tZS1kYXRh"
 	}`
 	actual := out.Body.String()
@@ -177,6 +235,7 @@ func TestUnit_EnvelopeResponseWriter_DecodesJsonOrStringWhenWritingBytes(t *test
 	{
 		"requestId": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
 		"status": "SUCCESS",
+		"statusCode": 200,
 		"details": {
 			"value": 12
 		}
@@ -201,6 +260,7 @@ func TestUnit_EnvelopeResponseWriter_DecodesJsonWhenWritingBytes(t *testing.T) {
 	{
 		"requestId": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
 		"status": "SUCCESS",
+		"statusCode": 200,
 		"details": {
 			"value": 45
 		}
@@ -221,8 +281,35 @@ func TestUnit_EnvelopeResponseWriter_DecodesStringWhenWritingBytes(t *testing.T)
 	{
 		"requestId": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
 		"status": "SUCCESS",
+		"statusCode": 200,
 		"details": "An error occurred"
 	}`
 	actual := out.Body.String()
 	assert.JSONEq(t, expectedJson, actual)
+}
+
+func TestUnit_EnvelopeResponseWriter_IgnoresLateWriteHeaderAfterBodyWrite(t *testing.T) {
+	out := httptest.NewRecorder()
+
+	rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONTo[details])
+
+	_, err := rw.WriteTyped(sampleJsonData)
+	require.NoError(t, err, "Actual err: %v", err)
+
+	rw.WriteHeader(http.StatusUnauthorized)
+
+	assert.Equal(t, http.StatusOK, out.Code)
+	assert.Equal(t, http.StatusOK, rw.response.StatusCode)
+	assert.Equal(t, StatusSuccess, rw.response.Status)
+
+	expectedJson := `
+	{
+		"requestId": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
+		"status": "SUCCESS",
+		"statusCode": 200,
+		"details": {
+			"value": 12
+		}
+	}`
+	assert.JSONEq(t, expectedJson, out.Body.String())
 }
