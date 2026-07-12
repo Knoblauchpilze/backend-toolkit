@@ -140,9 +140,9 @@ func TestUnit_Server_WhenHandlerReturnsError_ExpectErrorResponseEnvelope(t *test
 }
 
 type responseEnvelope struct {
-	RequestId  string          `json:"requestId"`
+	RequestId  string          `json:"request_id"`
 	Status     string          `json:"status"`
-	StatusCode int             `json:"statusCode"`
+	StatusCode int             `json:"status_code"`
 	Details    json.RawMessage `json:"details"`
 }
 

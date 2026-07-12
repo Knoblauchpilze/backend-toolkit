@@ -136,12 +136,12 @@ The errors are also defining a message that can explain the code. An error can a
 
 ```json
 {
-  "Code": 1,
-  "Message": "foo",
-  "Cause": {
-    "Code": 1,
-    "Message": "bar"
-  }
+	"Code": 1,
+	"Message": "foo",
+	"Cause": {
+		"Code": 1,
+		"Message": "bar"
+	}
 }
 ```
 
@@ -263,12 +263,12 @@ In order to provide consistent response format across an APIs, the [response_env
 
 ```json
 {
-  "requestId": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
-  "status": "SUCCESS",
-  "statusCode": 200,
-  "details": {
-    "value": 12
-  }
+	"request_id": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
+	"status": "SUCCESS",
+	"status_code": 200,
+	"details": {
+		"value": 12
+	}
 }
 ```
 

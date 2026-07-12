@@ -29,9 +29,9 @@ func TestUnit_EnvelopeResponseWriter_AutomaticallySetsSuccessStatusWhenNoStatusI
 
 	expectedJson := `
 	{
-		"requestId": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
+		"request_id": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
 		"status": "SUCCESS",
-		"statusCode": 200,
+		"status_code": 200,
 		"details": {
 			"value": 12
 		}
@@ -84,9 +84,9 @@ func TestUnit_EnvelopeResponseWriter_UsesFirstStatusCodeWhenWriteHeaderIsCalledM
 
 	expectedJson := `
 	{
-		"requestId": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
+		"request_id": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
 		"status": "SUCCESS",
-		"statusCode": 202,
+		"status_code": 202,
 		"details": {
 			"value": 12
 		}
@@ -106,9 +106,9 @@ func TestUnit_EnvelopeResponseWriter_WrapsSuccessResponse(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, out.Code)
 	expectedJson := `
 	{
-		"requestId": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
+		"request_id": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
 		"status": "SUCCESS",
-		"statusCode": 201,
+		"status_code": 201,
 		"details": {
 			"value": 12
 		}
@@ -131,8 +131,8 @@ func TestUnit_EnvelopeResponseWriter_SetsContentLengthToMatchOutput(t *testing.T
 
 	// The length accounts for the response envelope and the JSON format
 	// 12 is the length of "{"value":12}
-	// 99 is the length of the response envelope wrapper"
-	expectedLength := fmt.Sprintf("%d", 12+99)
+	// 101 is the length of the response envelope wrapper"
+	expectedLength := fmt.Sprintf("%d", 12+101)
 	actualLength := lengths[0]
 
 	assert.Equal(t, expectedLength, actualLength)
@@ -150,9 +150,9 @@ func TestUnit_EnvelopeResponseWriter_WrapsErrorResponse(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, out.Code)
 	expectedJson := `
 	{
-		"requestId": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
+		"request_id": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
 		"status": "ERROR",
-		"statusCode": 401,
+		"status_code": 401,
 		"details": {
 			"value": 12
 		}
@@ -175,9 +175,9 @@ func TestUnit_EnvelopeResponseWriter_DecodesBytesAfterWriteHeaderUsingCommittedS
 
 	expectedJson := `
 	{
-		"requestId": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
+		"request_id": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
 		"status": "SUCCESS",
-		"statusCode": 202,
+		"status_code": 202,
 		"details": {
 			"value": 12
 		}
@@ -195,9 +195,9 @@ func TestUnit_EnvelopeResponseWriter_WrapsPlainStringAsDetailsString(t *testing.
 
 	expectedJson := `
 	{
-		"requestId": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
+		"request_id": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
 		"status": "SUCCESS",
-		"statusCode": 200,
+		"status_code": 200,
 		"details": "some-data"
 	}`
 	actual := out.Body.String()
@@ -214,9 +214,9 @@ func TestUnit_EnvelopeResponseWriter_WrapsRawBytesAsBytes(t *testing.T) {
 
 	expectedJson := `
 	{
-		"requestId": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
+		"request_id": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
 		"status": "SUCCESS",
-		"statusCode": 200,
+		"status_code": 200,
 		"details": "c29tZS1kYXRh"
 	}`
 	actual := out.Body.String()
@@ -233,9 +233,9 @@ func TestUnit_EnvelopeResponseWriter_DecodesJsonOrStringWhenWritingBytes(t *test
 
 	expectedJson := `
 	{
-		"requestId": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
+		"request_id": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
 		"status": "SUCCESS",
-		"statusCode": 200,
+		"status_code": 200,
 		"details": {
 			"value": 12
 		}
@@ -258,9 +258,9 @@ func TestUnit_EnvelopeResponseWriter_DecodesJsonWhenWritingBytes(t *testing.T) {
 
 	expectedJson := `
 	{
-		"requestId": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
+		"request_id": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
 		"status": "SUCCESS",
-		"statusCode": 200,
+		"status_code": 200,
 		"details": {
 			"value": 45
 		}
@@ -279,9 +279,9 @@ func TestUnit_EnvelopeResponseWriter_DecodesStringWhenWritingBytes(t *testing.T)
 
 	expectedJson := `
 	{
-		"requestId": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
+		"request_id": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
 		"status": "SUCCESS",
-		"statusCode": 200,
+		"status_code": 200,
 		"details": "An error occurred"
 	}`
 	actual := out.Body.String()
@@ -304,9 +304,9 @@ func TestUnit_EnvelopeResponseWriter_IgnoresLateWriteHeaderAfterBodyWrite(t *tes
 
 	expectedJson := `
 	{
-		"requestId": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
+		"request_id": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
 		"status": "SUCCESS",
-		"statusCode": 200,
+		"status_code": 200,
 		"details": {
 			"value": 12
 		}

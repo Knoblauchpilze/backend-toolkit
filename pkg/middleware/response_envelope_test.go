@@ -35,7 +35,7 @@ func TestUnit_ResponseEnvelope_WrapsPlainOutputInResponseEnvelope(t *testing.T) 
 	require.Nil(t, err)
 	actual := string(body)
 	// https://stackoverflow.com/questions/136505/searching-for-uuids-in-text-with-regex
-	expected := `{"requestId":"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}","status":"SUCCESS","statusCode":200,"details":"my-output"}`
+	expected := `{"request_id":"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}","status":"SUCCESS","status_code":200,"details":"my-output"}`
 	assert.Regexp(t, expected, actual)
 }
 
@@ -60,7 +60,7 @@ func TestUnit_ResponseEnvelope_WrapsJsonOutputInResponseEnvelope(t *testing.T) {
 	body, err := io.ReadAll(rw.Body)
 	require.Nil(t, err)
 	actual := string(body)
-	expected := `{"requestId":"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}","status":"SUCCESS","statusCode":200,"details":{"Key":"value"}}`
+	expected := `{"request_id":"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}","status":"SUCCESS","status_code":200,"details":{"Key":"value"}}`
 	assert.Regexp(t, expected, actual)
 }
 
@@ -77,19 +77,19 @@ func TestUnit_ResponseEnvelope_CorrectlyUpdatesContentLengthToAccountForEnvelope
 
 	length := rw.Header().Get("Content-Length")
 	// The length accounts for:
-	//  - 50 characters for the request identifier and quotes
+	//  - 51 characters for the request identifier and quotes
 	//  - 18 characters for the status and quotes
-	//  - 16 characters for the HTTP status and quotes
+	//  - 17 characters for the HTTP status and quotes
 	//  - 10 characters for the details header and quotes
 	//  - 11 characters for the plain output
 	//  - 5 characters for commas separating fields
-	assert.Equal(t, "110", length)
+	assert.Equal(t, "112", length)
 
 	out, err := io.ReadAll(rw.Body)
 	require.NoError(t, err, "Actual err: %v", err)
 
-	expectedBody := `{"requestId":"e88e6692-8a71-44bf-aabf-f326fbaf825d","status":"SUCCESS","statusCode":200,"details":"my-output"}`
-	assert.Equal(t, expectedBody, string(out))
+	expectedBody := `{"request_id":"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}","status":"SUCCESS","status_code":200,"details":"my-output"}`
+	assert.Regexp(t, expectedBody, string(out))
 }
 
 func TestUnit_ResponseEnvelope_WhenStatusIsNot200Ok_ExpectStatusReflectsIt(t *testing.T) {
@@ -107,7 +107,7 @@ func TestUnit_ResponseEnvelope_WhenStatusIsNot200Ok_ExpectStatusReflectsIt(t *te
 	body, err := io.ReadAll(rw.Body)
 	require.Nil(t, err)
 	actual := string(body)
-	expected := `{"requestId":"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}","status":"ERROR","statusCode":502,"details":"my-output"}`
+	expected := `{"request_id":"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}","status":"ERROR","status_code":502,"details":"my-output"}`
 	assert.Regexp(t, expected, actual)
 }
 

@@ -24,9 +24,9 @@ func TestUnit_ResponseEnvelope_SuccessfullyMarshalsTypedDetails(t *testing.T) {
 	assert.Nil(t, err)
 	expectedJson := `
 	{
-		"requestId": "1348f004-7620-4c80-915d-26da0ac144f6",
+		"request_id": "1348f004-7620-4c80-915d-26da0ac144f6",
 		"status": "SUCCESS",
-		"statusCode": 200,
+		"status_code": 200,
 		"details": {
 			"field": 32
 		}
@@ -47,9 +47,9 @@ func TestUnit_ResponseEnvelope_SuccessfullyMarshalsSimpleDetails(t *testing.T) {
 	assert.Nil(t, err)
 	expectedJson := `
 	{
-		"requestId": "1348f004-7620-4c80-915d-26da0ac144f6",
+		"request_id": "1348f004-7620-4c80-915d-26da0ac144f6",
 		"status": "SUCCESS",
-		"statusCode": 200,
+		"status_code": 200,
 		"details": 16
 	}`
 	assert.JSONEq(t, expectedJson, string(out))
