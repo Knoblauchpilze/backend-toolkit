@@ -6,44 +6,46 @@ import (
 	"testing"
 	"time"
 
-	"github.com/labstack/echo/v5"
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestUnit_Recover_CallsNextMiddleware(t *testing.T) {
-	callable, called, ctx := createCallableHandler(Recover)
+	callable, called, _ := createCallableHandler(Recover)
 
-	err := callable(ctx)
+	callable()
 
-	assert.Nil(t, err)
 	assert.True(t, *called)
 }
 
 func TestUnit_Recover_PreventsPanic(t *testing.T) {
-	next, called := createPanicHandler()
+	panicHandler, called := createPanicHandler()
 
-	middleware := Recover()
-	callable := middleware(next)
+	w, r := newTestRouter(Recover())
+	r.GET("/", panicHandler)
 
-	ctx, _ := generateTestEchoContext()
+	r.ServeHTTP(w, newGetRequest("/"))
 
-	err := callable(ctx)
-
-	assert.NotNil(t, err)
 	assert.True(t, *called)
+	// No crash: test passes if we reach here
 }
 
 func TestUnit_Recover_LogsError(t *testing.T) {
-	next, _ := createPanicHandler()
+	ctx, out := generateTestGinContextWithLogger()
 
-	middleware := Recover()
-	callable := middleware(next)
+	w, r := newTestRouter(
+		func(c *gin.Context) {
+			SetContextLogger(c, GetContextLogger(ctx))
+			c.Next()
+		},
+		Recover(),
+	)
+	r.GET("/", func(c *gin.Context) {
+		panic(fmt.Errorf("some error"))
+	})
 
-	ctx, out := generateTestEchoContextWithLogger()
-
-	err := callable(ctx)
-	require.NotNil(t, err)
+	r.ServeHTTP(w, newGetRequest("http://example.com/"))
 	afterCall := time.Now()
 
 	actual := unmarshalLogOutput(t, *out)
@@ -55,25 +57,27 @@ func TestUnit_Recover_LogsError(t *testing.T) {
 }
 
 func TestUnit_Recover_SetsStatusCodeToError(t *testing.T) {
-	next, _ := createPanicHandler()
+	w, r := newTestRouter(ErrorConverter(), Recover())
+	r.GET("/", func(c *gin.Context) {
+		panic(fmt.Errorf("some error"))
+	})
 
-	middleware := Recover()
-	callable := middleware(next)
+	r.ServeHTTP(w, newGetRequest("/"))
 
-	ctx, _ := generateTestEchoContext()
-
-	err := callable(ctx)
-	require.NotNil(t, err)
-
-	assertIsHttpErrorWithMessageAndCode(t, err, "some error", http.StatusInternalServerError)
+	require.Equal(t, http.StatusInternalServerError, w.Code)
+	assertJsonBody(t, w, `{"message":"some error"}`)
 }
 
-func createPanicHandler() (echo.HandlerFunc, *bool) {
-	var called bool
-	handler := func(c *echo.Context) error {
+func areTimeCloserThan(t1 time.Time, t2 time.Time, distance time.Duration) bool {
+	diff := t1.Sub(t2).Abs()
+	return diff <= distance
+}
+
+func createPanicHandler() (gin.HandlerFunc, *bool) {
+	called := false
+	handler := func(c *gin.Context) {
 		called = true
 		panic(fmt.Errorf("some error"))
 	}
-
 	return handler, &called
 }

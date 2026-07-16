@@ -3,11 +3,11 @@ package server
 import (
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/middleware"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
-	"github.com/labstack/echo/v5"
+	"github.com/gin-gonic/gin"
 )
 
-func buildMiddlewaresForRoute(route rest.Route) []echo.MiddlewareFunc {
-	var out []echo.MiddlewareFunc
+func buildMiddlewaresForRoute(route rest.Route) []gin.HandlerFunc {
+	var out []gin.HandlerFunc
 
 	if route.UseResponseEnvelope() {
 		out = append(out, middleware.ResponseEnvelope())

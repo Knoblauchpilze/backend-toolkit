@@ -5,52 +5,40 @@ import (
 	"net/http"
 	"runtime"
 
-	"github.com/labstack/echo/v5"
+	"github.com/gin-gonic/gin"
 )
 
-type recoveredErrorData struct {
-	err   error
-	ctx   *echo.Context
-	req   *http.Request
-	stack []byte
-}
-
-func Recover() echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c *echo.Context) (err error) {
-			defer func() {
-				if r := recover(); r != nil {
-					recoveredErr, ok := r.(error)
-					if !ok {
-						recoveredErr = fmt.Errorf("%v", r)
-					}
-
-					stack := make([]byte, 4<<10) // 4 KB
-					length := runtime.Stack(stack, false)
-
-					data := recoveredErrorData{
-						err:   recoveredErr,
-						ctx:   c,
-						req:   c.Request(),
-						stack: stack[:length],
-					}
-
-					c.Logger().Error(createErrorLog(data))
-
-					err = wrapToHttpError(recoveredErr)
+// Recover catches panics that occur inside handlers and converts them into
+// HTTP 500 errors stored in the Gin context for ErrorConverter to handle.
+func Recover() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		defer func() {
+			if r := recover(); r != nil {
+				recoveredErr, ok := r.(error)
+				if !ok {
+					recoveredErr = fmt.Errorf("%v", r)
 				}
-			}()
-			return next(c)
-		}
+
+				stack := make([]byte, 4<<10) // 4 KB
+				length := runtime.Stack(stack, false)
+
+				log := GetContextLogger(c)
+				log.Error(createErrorLog(c.Request, recoveredErr, stack[:length]))
+
+				_ = c.Error(recoveredErr)
+				c.Abort()
+			}
+		}()
+		c.Next()
 	}
 }
 
-func createErrorLog(data recoveredErrorData) string {
+func createErrorLog(req *http.Request, err error, stack []byte) string {
 	var out string
 
-	out += fmt.Sprintf("%v", data.req.Method)
-	out += fmt.Sprintf(" %v", pathFromRequest(data.req))
-	out += fmt.Sprintf(" generated panic: %v. Stack: %v", data.err, string(data.stack))
+	out += fmt.Sprintf("%v", req.Method)
+	out += fmt.Sprintf(" %v", pathFromRequest(req))
+	out += fmt.Sprintf(" generated panic: %v. Stack: %v", err, string(stack))
 
 	return out
 }

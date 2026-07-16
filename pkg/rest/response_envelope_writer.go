@@ -8,7 +8,9 @@ import (
 
 type ResponseEnvelopeDecoder[T any] func(data []byte) (T, error)
 
-type envelopeResponseWriter[T any] struct {
+// EnvelopeResponseWriter wraps an http.ResponseWriter and automatically
+// wraps any written content inside a ResponseEnvelope JSON structure.
+type EnvelopeResponseWriter[T any] struct {
 	response ResponseEnvelope[T]
 	writer   http.ResponseWriter
 	decoder  ResponseEnvelopeDecoder[T]
@@ -22,8 +24,8 @@ type envelopeResponseWriter[T any] struct {
 	wroteHeader bool
 }
 
-func NewResponseEnvelopeWriter[T any](w http.ResponseWriter, requestId string, decoder ResponseEnvelopeDecoder[T]) *envelopeResponseWriter[T] {
-	return &envelopeResponseWriter[T]{
+func NewResponseEnvelopeWriter[T any](w http.ResponseWriter, requestId string, decoder ResponseEnvelopeDecoder[T]) *EnvelopeResponseWriter[T] {
+	return &EnvelopeResponseWriter[T]{
 		response: ResponseEnvelope[T]{
 			RequestId:  requestId,
 			Status:     StatusSuccess,
@@ -34,11 +36,11 @@ func NewResponseEnvelopeWriter[T any](w http.ResponseWriter, requestId string, d
 	}
 }
 
-func (erw *envelopeResponseWriter[T]) Header() http.Header {
+func (erw *EnvelopeResponseWriter[T]) Header() http.Header {
 	return erw.writer.Header()
 }
 
-func (erw *envelopeResponseWriter[T]) Write(data []byte) (int, error) {
+func (erw *EnvelopeResponseWriter[T]) Write(data []byte) (int, error) {
 	details, err := erw.decoder(data)
 	if err != nil {
 		return 0, err
@@ -47,7 +49,7 @@ func (erw *envelopeResponseWriter[T]) Write(data []byte) (int, error) {
 	return erw.WriteTyped(details)
 }
 
-func (erw *envelopeResponseWriter[T]) WriteTyped(data T) (int, error) {
+func (erw *EnvelopeResponseWriter[T]) WriteTyped(data T) (int, error) {
 	erw.response.Details = data
 	out, err := json.Marshal(erw.response)
 	if err != nil {
@@ -62,7 +64,7 @@ func (erw *envelopeResponseWriter[T]) WriteTyped(data T) (int, error) {
 	return erw.writer.Write(out)
 }
 
-func (erw *envelopeResponseWriter[T]) WriteHeader(statusCode int) {
+func (erw *EnvelopeResponseWriter[T]) WriteHeader(statusCode int) {
 	if erw.wroteHeader {
 		return
 	}

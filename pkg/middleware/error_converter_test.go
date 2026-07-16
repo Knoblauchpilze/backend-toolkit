@@ -5,45 +5,47 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestUnit_ErrorConverter_CallsNextMiddleware(t *testing.T) {
-	callable, called, ctx := createCallableHandler(ErrorConverter)
+	callable, called, _ := createCallableHandler(ErrorConverter)
 
-	err := callable(ctx)
+	callable()
 
-	assert.Nil(t, err)
 	assert.True(t, *called)
 }
 
 func TestUnit_ErrorConverter_WrapsUnknownErrorIntoHttpError(t *testing.T) {
-	next := createErrorHandler(fmt.Errorf("some error"))
-	middleware := ErrorConverter()
-	callable := middleware(next)
-	ctx, _ := generateTestEchoContext()
+	w, r := newTestRouter(ErrorConverter())
+	r.GET("/", func(c *ginCtx) {
+		_ = c.Error(fmt.Errorf("some error"))
+	})
 
-	err := callable(ctx)
+	req := newGetRequest("/")
+	r.ServeHTTP(w, req)
 
-	assertIsHttpErrorWithMessageAndCode(t, err, "some error", http.StatusInternalServerError)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assertJsonBody(t, w, `{"message":"some error"}`)
 }
 
 func TestUnit_ErrorConverter_WrapsErrorWithCodeIntoHttpError(t *testing.T) {
-	next := createErrorHandler(ErrUncaughtPanic)
-	middleware := ErrorConverter()
-	callable := middleware(next)
-	ctx, _ := generateTestEchoContext()
+	w, r := newTestRouter(ErrorConverter())
+	r.GET("/", func(c *ginCtx) {
+		_ = c.Error(ErrUncaughtPanic)
+	})
 
-	err := callable(ctx)
+	req := newGetRequest("/")
+	r.ServeHTTP(w, req)
 
-	assertIsHttpErrorWithMessageAndCode(t, err, "an unexpected error occurred. Code: 400", http.StatusInternalServerError)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assertJsonBody(t, w, `{"message":"an unexpected error occurred. Code: 400"}`)
 }
 
-func createErrorHandler(err error) echo.HandlerFunc {
-	handler := func(c *echo.Context) error {
-		return err
-	}
-
-	return handler
+func TestUnit_ErrorConverter_NoError_DoesNotWriteBody(t *testing.T) {
+	callable, _, w := createCallableHandler(ErrorConverter)
+	callable()
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Empty(t, w.Body.String())
 }

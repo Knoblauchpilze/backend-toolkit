@@ -2,16 +2,26 @@ package middleware
 
 import (
 	stderrors "errors"
+	"fmt"
 	"net/http"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
-	"github.com/labstack/echo/v5"
 )
 
-func wrapToHttpError(err error) error {
-	var httpErr *echo.HTTPError
-	if stderrors.As(err, &httpErr) {
-		return err
+// httpError represents an HTTP error with a status code and message.
+type httpError struct {
+	Code    int
+	Message string
+}
+
+func (e *httpError) Error() string {
+	return fmt.Sprintf("HTTP %d: %s", e.Code, e.Message)
+}
+
+func wrapToHttpError(err error) *httpError {
+	var existing *httpError
+	if stderrors.As(err, &existing) {
+		return existing
 	}
 
 	code := http.StatusInternalServerError
@@ -19,7 +29,10 @@ func wrapToHttpError(err error) error {
 		code = errorCodeToHttpErrorCode(errorWithCode.Code)
 	}
 
-	return echo.NewHTTPError(code, err.Error())
+	return &httpError{
+		Code:    code,
+		Message: err.Error(),
+	}
 }
 
 func errorCodeToHttpErrorCode(code errors.ErrorCode) int {

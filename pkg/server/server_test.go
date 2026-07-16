@@ -12,7 +12,7 @@ import (
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/db"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/process"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
-	"github.com/labstack/echo/v5"
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -53,8 +53,9 @@ func TestUnit_Server_AnswersToRequestsWithResponseEnvelope(t *testing.T) {
 
 func TestUnit_Server_WhenRegisteringRawRoute_AnswersToRequestsWithoutResponseEnvelope(t *testing.T) {
 	s := newTestServer(4006)
-	helloHandler := func(c *echo.Context) error {
-		return c.String(http.StatusOK, "Hello")
+	helloHandler := func(c *gin.Context) error {
+		c.String(http.StatusOK, "Hello")
+		return nil
 	}
 	route := rest.NewRawRoute(http.MethodGet, "/", helloHandler)
 	err := s.AddRoute(route)
@@ -93,7 +94,7 @@ func TestUnit_Server_WhenConfigDefinesABasePath_ExpectPrefixedToRoutes(t *testin
 
 func TestUnit_Server_WhenHandlerPanics_ExpectErrorResponseEnvelope(t *testing.T) {
 	s := newTestServer(4003)
-	errorHandler := func(c *echo.Context) error {
+	errorHandler := func(c *gin.Context) error {
 		panic(fmt.Errorf("this handler panics"))
 	}
 	route := rest.NewRoute(http.MethodGet, "/", errorHandler)
@@ -117,7 +118,7 @@ func TestUnit_Server_WhenHandlerPanics_ExpectErrorResponseEnvelope(t *testing.T)
 
 func TestUnit_Server_WhenHandlerReturnsError_ExpectErrorResponseEnvelope(t *testing.T) {
 	s := newTestServer(4004)
-	errorHandler := func(c *echo.Context) error {
+	errorHandler := func(c *gin.Context) error {
 		return db.ErrAlreadyCommitted
 	}
 	route := rest.NewRoute(http.MethodGet, "/", errorHandler)
@@ -172,8 +173,9 @@ func newTestServerWithOkHandler(t *testing.T, port uint16) Server {
 	return s
 }
 
-func testHttpHandler(c *echo.Context) error {
-	return c.JSON(http.StatusOK, "OK")
+func testHttpHandler(c *gin.Context) error {
+	c.JSON(http.StatusOK, "OK")
+	return nil
 }
 
 func asyncRunServerAndAssertStopWithoutError(

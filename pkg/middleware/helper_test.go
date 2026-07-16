@@ -9,53 +9,81 @@ import (
 	"testing"
 	"time"
 
-	"github.com/labstack/echo/v5"
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func createTestEchoHandlerFuncWithCalledBoolean() (echo.HandlerFunc, *bool) {
+// ginCtx is a convenient alias used in test handler closures.
+type ginCtx = gin.Context
+
+func init() {
+	gin.SetMode(gin.TestMode)
+}
+
+func createTestGinHandlerWithCalledBoolean() (gin.HandlerFunc, *bool) {
 	called := false
-	call := func(c *echo.Context) error {
+	handler := func(c *gin.Context) {
 		called = true
-		return c.NoContent(http.StatusOK)
+		c.Status(http.StatusOK)
 	}
-	return call, &called
+	return handler, &called
 }
 
-type middlewareGenerator func() echo.MiddlewareFunc
+type middlewareGenerator func() gin.HandlerFunc
 
-func createCallableHandler(generator middlewareGenerator) (echo.HandlerFunc, *bool, *echo.Context) {
-	next, called := createTestEchoHandlerFuncWithCalledBoolean()
-	ctx, _ := generateTestEchoContext()
+// createCallableHandler builds a small Gin router with the middleware under
+// test followed by a no-op handler. It returns a function that executes one
+// GET / request against that router, plus a "called" flag and the recorder.
+func createCallableHandler(generator middlewareGenerator) (func(), *bool, *httptest.ResponseRecorder) {
+	next, called := createTestGinHandlerWithCalledBoolean()
 
-	middlewareFunc := generator()
-	callable := middlewareFunc(next)
+	w := httptest.NewRecorder()
+	r := gin.New()
+	r.Use(generator())
+	r.GET("/", next)
 
-	return callable, called, ctx
-}
-
-func generateTestEchoContext() (*echo.Context, *httptest.ResponseRecorder) {
 	req := httptest.NewRequest(http.MethodGet, "http://example.com/", nil)
-	return generateTestEchoContextFromRequest(req)
+
+	callable := func() {
+		r.ServeHTTP(w, req)
+	}
+
+	return callable, called, w
 }
 
-func generateTestEchoContextWithLogger() (*echo.Context, *bytes.Buffer) {
-	ctx, _ := generateTestEchoContext()
+// newTestRouter creates a test Gin engine with the provided middlewares.
+func newTestRouter(middlewares ...gin.HandlerFunc) (*httptest.ResponseRecorder, *gin.Engine) {
+	w := httptest.NewRecorder()
+	r := gin.New()
+	r.Use(middlewares...)
+	return w, r
+}
+
+func newGetRequest(path string) *http.Request {
+	return httptest.NewRequest(http.MethodGet, path, nil)
+}
+
+func assertJsonBody(t *testing.T, w *httptest.ResponseRecorder, expected string) {
+	t.Helper()
+	assert.JSONEq(t, expected, w.Body.String())
+}
+
+func generateTestGinContext() (*gin.Context, *httptest.ResponseRecorder) {
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "http://example.com/", nil)
+	return c, w
+}
+
+func generateTestGinContextWithLogger() (*gin.Context, *bytes.Buffer) {
+	c, _ := generateTestGinContext()
 
 	var out bytes.Buffer
 	slogLogger := slog.New(slog.NewJSONHandler(&out, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	ctx.SetLogger(slogLogger)
+	SetContextLogger(c, slogLogger)
 
-	return ctx, &out
-}
-
-func generateTestEchoContextFromRequest(req *http.Request) (*echo.Context, *httptest.ResponseRecorder) {
-	e := echo.New()
-	rw := httptest.NewRecorder()
-
-	ctx := e.NewContext(req, rw)
-
-	return ctx, rw
+	return c, &out
 }
 
 type message struct {
@@ -77,10 +105,11 @@ func unmarshalLogOutput(t *testing.T, out bytes.Buffer) message {
 	return actual
 }
 
-func assertIsHttpErrorWithMessageAndCode(t *testing.T, err error, message string, httpCode int) {
-	httpErr, ok := err.(*echo.HTTPError)
-	require.True(t, ok)
+func assertIsHttpError(t *testing.T, err error, message string, httpCode int) {
+	t.Helper()
 
+	httpErr, ok := err.(*httpError)
+	require.True(t, ok, "Expected *httpError, got %T: %v", err, err)
 	require.Equal(t, httpCode, httpErr.Code)
 	require.Equal(t, message, httpErr.Message)
 }

@@ -40,7 +40,7 @@ import (
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/process"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/server"
-	"github.com/labstack/echo/v5"
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
@@ -88,18 +88,20 @@ func main() {
 	}
 }
 
-func infoHandlerGenerator(conn db.Connection) echo.HandlerFunc {
-	return func(c *echo.Context) error {
+func infoHandlerGenerator(conn db.Connection) rest.HandlerFunc {
+	return func(c *gin.Context) error {
 		sqlQuery := "SELECT count(*) FROM my-table"
 
 		// Use the connection to query the database and unmarshal the result
 		// easily in an integer or a struct or anything you want
-		value, err := db.QueryOne[int](c.Request().Context(), conn, sqlQuery)
+		value, err := db.QueryOne[int](c.Request.Context(), conn, sqlQuery)
 		if err != nil {
-			return c.JSON(http.StatusInternalServerError, "Failed to query database")
+			c.JSON(http.StatusInternalServerError, "Failed to query database")
+			return nil
 		}
 
-		return c.String(http.StatusOK, strconv.Itoa(value))
+		c.String(http.StatusOK, strconv.Itoa(value))
+		return nil
 	}
 }
 ```
@@ -109,8 +111,8 @@ By using only packges provided in this repository we are able to setup a server 
 The key features of the project are:
 
 - a simple way to configure a connection to a `postgre` database using [pgx](https://github.com/jackc/pgx).
-- an easy to use server using [echo](https://echo.labstack.com/) as a base.
-- a powerful logging system that leverages [zerolog](https://github.com/rs/zerolog) and integrates it with `echo`.
+- an easy to use server using [Gin](https://gin-gonic.com/) as a base.
+- a powerful logging system that leverages [zerolog](https://github.com/rs/zerolog) with `slog`.
 
 We define multiple tags and versions in this repository to make it easy to pinpoint a specific behavior and upgrade when needed.
 
@@ -155,19 +157,19 @@ As a transverse concern, logging is usually quite important in a backend service
 - easily customizable to allow display of headers and prefixes (typically modules or services).
 - ability to correlate logs for a request with one another.
 
-To this end we used some capabilities provided by `echo` and `zerolog` and tried to make them work in combination.
+To this end we used some capabilities provided by `Gin` and `zerolog` and tried to make them work in combination.
 
-### Echo context
+### Gin context
 
-By default a handler using `echo` has the following prototype:
+By default a handler using this toolkit has the following prototype:
 
 ```go
-type HandlerFunc func(c *echo.Context) error
+type HandlerFunc func(c *gin.Context) error
 ```
 
-The `echo.Context` uses `slog` for logging and provides a `Logger()` method which allows to request the logger for each request.
+The `gin.Context` provides access to the request, the response writer, and any values stored per-request. Logging is managed separately via the toolkit's `GetContextLogger`/`SetContextLogger` helpers in the `middleware` package, which store a `*slog.Logger` in the context.
 
-### Binding zerolog to echo logger
+### Binding zerolog to the request logger
 
 The `zerolog` package and the `slog` package have slightly different interfaces to allow logging. As `slog` is part of the standard library, it seems safe to rely on it. There's a binding for `slog` provided by zerolog (see [source](https://github.com/rs/zerolog?tab=readme-ov-file#integration-with-logslog)). It's easy enough to configure it: the `logger` package only provides convenience wrappers to instantiate a logger either with a default level or with a custom one.
 

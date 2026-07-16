@@ -5,12 +5,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/labstack/echo/v5"
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-var testHandler = func(c *echo.Context) error { return nil }
+var testHandler = func(c *gin.Context) error { return nil }
 
 func TestUnit_Route_Method(t *testing.T) {
 	r := NewRoute(http.MethodGet, "", testHandler)
@@ -19,14 +19,14 @@ func TestUnit_Route_Method(t *testing.T) {
 
 func TestUnit_Route_Handler(t *testing.T) {
 	handlerCalled := false
-	handler := func(c *echo.Context) error {
+	handler := func(c *gin.Context) error {
 		handlerCalled = true
 		return nil
 	}
 
 	r := NewRoute(http.MethodGet, "", handler)
 	actual := r.Handler()
-	err := actual(dummyEchoContext())
+	err := actual(dummyGinContext())
 	require.NoError(t, err, "Actual err: %v", err)
 
 	assert.True(t, handlerCalled)
@@ -66,10 +66,10 @@ func TestUnit_Route_UseResponseEnvelope(t *testing.T) {
 	assert.False(t, r.UseResponseEnvelope())
 }
 
-func dummyEchoContext() *echo.Context {
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	rw := httptest.NewRecorder()
-
-	return e.NewContext(req, rw)
+func dummyGinContext() *gin.Context {
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/", nil)
+	return c
 }
