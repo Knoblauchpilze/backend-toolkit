@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -19,7 +20,7 @@ func TestUnit_ErrorConverter_CallsNextMiddleware(t *testing.T) {
 
 func TestUnit_ErrorConverter_WrapsUnknownErrorIntoHttpError(t *testing.T) {
 	w, r := newTestRouter(ErrorConverter())
-	r.GET("/", func(c *ginCtx) {
+	r.GET("/", func(c *gin.Context) {
 		_ = c.Error(fmt.Errorf("some error"))
 	})
 
@@ -32,7 +33,7 @@ func TestUnit_ErrorConverter_WrapsUnknownErrorIntoHttpError(t *testing.T) {
 
 func TestUnit_ErrorConverter_WrapsErrorWithCodeIntoHttpError(t *testing.T) {
 	w, r := newTestRouter(ErrorConverter())
-	r.GET("/", func(c *ginCtx) {
+	r.GET("/", func(c *gin.Context) {
 		_ = c.Error(ErrUncaughtPanic)
 	})
 

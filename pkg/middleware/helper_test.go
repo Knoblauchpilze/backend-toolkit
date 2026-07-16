@@ -14,9 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// ginCtx is a convenient alias used in test handler closures.
-type ginCtx = gin.Context
-
 func init() {
 	gin.SetMode(gin.TestMode)
 }
