@@ -7,8 +7,6 @@ import (
 	"github.com/labstack/echo/v5/middleware"
 )
 
-const requestIdHeader = "X-Request-Id"
-
 func ResponseEnvelope() echo.MiddlewareFunc {
 	config := middleware.RequestIDConfig{
 		Generator: func() string {
