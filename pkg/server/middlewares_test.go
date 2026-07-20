@@ -9,22 +9,24 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestUnit_BuildMiddlewaresForRoute_ForRoute(t *testing.T) {
-	r := rest.NewRoute(http.MethodGet, "/path", testHandler)
+func TestUnit_BuildMiddlewaresForRoute(t *testing.T) {
+	t.Run("for route", func(t *testing.T) {
+		r := rest.NewRoute(http.MethodGet, "/path", testHandler)
 
-	actual := buildMiddlewaresForRoute(r)
+		actual := buildMiddlewaresForRoute(r)
 
-	// We can't compare functions in Go so we just check the length
-	// of the middlewares slice
-	assert.Len(t, actual, 5)
-}
+		// We can't compare functions in Go so we just check the length
+		// of the middlewares slice
+		assert.Len(t, actual, 5)
+	})
 
-func TestUnit_BuildMiddlewaresForRoute_ForRawRoute(t *testing.T) {
-	r := rest.NewRawRoute(http.MethodGet, "/path", testHandler)
+	t.Run("for raw route", func(t *testing.T) {
+		r := rest.NewRawRoute(http.MethodGet, "/path", testHandler)
 
-	actual := buildMiddlewaresForRoute(r)
+		actual := buildMiddlewaresForRoute(r)
 
-	assert.Len(t, actual, 4)
+		assert.Len(t, actual, 4)
+	})
 }
 
 var testHandler = func(c *echo.Context) error { return nil }
