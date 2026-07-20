@@ -37,7 +37,7 @@ func NewWithLogger(config Config, log *slog.Logger) *Server {
 	return s
 }
 
-func (s *Server) AddRoute(route rest.Route) error {
+func (s *Server) AddRoute(route *rest.Route) error {
 	path := rest.ConcatenateEndpoints(s.basePath, route.Path())
 	middlewares := buildMiddlewaresForRoute(route)
 

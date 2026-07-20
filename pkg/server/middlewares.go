@@ -6,7 +6,7 @@ import (
 	"github.com/labstack/echo/v5"
 )
 
-func buildMiddlewaresForRoute(route rest.Route) []echo.MiddlewareFunc {
+func buildMiddlewaresForRoute(route *rest.Route) []echo.MiddlewareFunc {
 	var out []echo.MiddlewareFunc
 
 	if route.UseResponseEnvelope() {

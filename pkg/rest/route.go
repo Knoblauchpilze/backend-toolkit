@@ -4,24 +4,17 @@ import (
 	"github.com/labstack/echo/v5"
 )
 
-type Route interface {
-	Method() string
-	Handler() echo.HandlerFunc
-	Path() string
-	UseResponseEnvelope() bool
-}
-
 type Routes []Route
 
-type routeImpl struct {
+type Route struct {
 	method              string
 	path                string
 	handler             echo.HandlerFunc
 	useResponseEnvelope bool
 }
 
-func NewRoute(method string, path string, handler echo.HandlerFunc) Route {
-	return &routeImpl{
+func NewRoute(method string, path string, handler echo.HandlerFunc) *Route {
+	return &Route{
 		method:              method,
 		path:                sanitizePath(path),
 		handler:             handler,
@@ -29,8 +22,8 @@ func NewRoute(method string, path string, handler echo.HandlerFunc) Route {
 	}
 }
 
-func NewRawRoute(method string, path string, handler echo.HandlerFunc) Route {
-	return &routeImpl{
+func NewRawRoute(method string, path string, handler echo.HandlerFunc) *Route {
+	return &Route{
 		method:              method,
 		path:                sanitizePath(path),
 		handler:             handler,
@@ -38,18 +31,18 @@ func NewRawRoute(method string, path string, handler echo.HandlerFunc) Route {
 	}
 }
 
-func (r *routeImpl) Method() string {
+func (r *Route) Method() string {
 	return r.method
 }
 
-func (r *routeImpl) Handler() echo.HandlerFunc {
+func (r *Route) Handler() echo.HandlerFunc {
 	return r.handler
 }
 
-func (r *routeImpl) Path() string {
+func (r *Route) Path() string {
 	return r.path
 }
 
-func (r *routeImpl) UseResponseEnvelope() bool {
+func (r *Route) UseResponseEnvelope() bool {
 	return r.useResponseEnvelope
 }
