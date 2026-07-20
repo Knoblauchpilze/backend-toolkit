@@ -1,17 +1,22 @@
 package middleware
 
 import (
-	"github.com/labstack/echo/v5"
+	"github.com/gin-gonic/gin"
 )
 
-func ErrorConverter() echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c *echo.Context) error {
-			if err := next(c); err != nil {
-				return wrapToHttpError(err)
-			}
+// ErrorConverter converts errors stored in the Gin context (via c.Error) into
+// proper HTTP error responses with a JSON body of the form {"message": "..."}.
+func ErrorConverter() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Next()
 
-			return nil
+		if len(c.Errors) == 0 {
+			return
 		}
+
+		err := c.Errors.Last().Err
+		httpErr := wrapToHttpError(err)
+
+		c.JSON(httpErr.Code, gin.H{"message": httpErr.Message})
 	}
 }

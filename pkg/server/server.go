@@ -7,10 +7,11 @@ import (
 	"net/http"
 	"time"
 
+	ginCors "github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+
 	om "github.com/Knoblauchpilze/backend-toolkit/pkg/middleware"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
-	"github.com/labstack/echo/v5"
-	"github.com/labstack/echo/v5/middleware"
 )
 
 type Server interface {
@@ -20,81 +21,75 @@ type Server interface {
 }
 
 type serverImpl struct {
-	echo            *echo.Echo
+	engine          *gin.Engine
+	log             *slog.Logger
 	basePath        string
 	port            uint16
 	shutdownTimeout time.Duration
-	router          *echo.Group
 	stopChan        chan struct{}
 }
 
 func NewWithLogger(config Config, log *slog.Logger) Server {
-	echoServer := createEchoServer(log)
+	engine := createGinEngine(log)
 
-	s := &serverImpl{
-		echo:            echoServer,
+	return &serverImpl{
+		engine:          engine,
+		log:             log,
 		basePath:        config.BasePath,
 		port:            config.Port,
 		shutdownTimeout: config.ShutdownTimeout,
-		router:          echoServer.Group(""),
 		stopChan:        make(chan struct{}, 1),
 	}
-
-	return s
 }
 
 func (s *serverImpl) AddRoute(route rest.Route) error {
 	path := rest.ConcatenateEndpoints(s.basePath, route.Path())
 	middlewares := buildMiddlewaresForRoute(route)
+	handlers := append(middlewares, wrapHandler(route.Handler()))
 
 	switch route.Method() {
 	case http.MethodGet:
-		s.router.GET(path, route.Handler(), middlewares...)
+		s.engine.GET(path, handlers...)
 	case http.MethodPost:
-		s.router.POST(path, route.Handler(), middlewares...)
+		s.engine.POST(path, handlers...)
 	case http.MethodDelete:
-		s.router.DELETE(path, route.Handler(), middlewares...)
+		s.engine.DELETE(path, handlers...)
 	case http.MethodPatch:
-		s.router.PATCH(path, route.Handler(), middlewares...)
+		s.engine.PATCH(path, handlers...)
 	default:
 		return ErrUnsupportedMethod
 	}
 
-	s.echo.Logger.Debug("Registered route", slog.String("method", route.Method()), slog.String("path", path))
+	s.log.Debug("Registered route", slog.String("method", route.Method()), slog.String("path", path))
 
 	return nil
 }
 
 func (s *serverImpl) Start() error {
-	// https://echo.labstack.com/docs/cookbook/graceful-shutdown
-	// This approach deviates a bit from what is recommended in the
-	// above link. This solution was proposed by AI and seems to
-	// match what was necessary before in echo v4.
-	// As none of the test are broken and the server also shuts down
-	// correctly, it's fine to roll with it.
 	address := fmt.Sprintf(":%d", s.port)
 
-	s.echo.Logger.Info("Starting server", slog.String("address", address))
+	s.log.Info("Starting server", slog.String("address", address))
 
-	ctx, cancel := context.WithCancel(context.Background())
-	go func() {
-		<-s.stopChan
-		cancel()
-	}()
-
-	sc := echo.StartConfig{
-		Address:         address,
-		HideBanner:      true,
-		HidePort:        true,
-		GracefulTimeout: s.shutdownTimeout,
+	httpServer := &http.Server{
+		Addr:    address,
+		Handler: s.engine,
 	}
 
-	if err := sc.Start(ctx, s.echo); err != nil {
-		s.echo.Logger.Error("Server failed", slog.String("address", address), slog.Any("error", err))
+	go func() {
+		<-s.stopChan
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), s.shutdownTimeout)
+		defer cancel()
+		if err := httpServer.Shutdown(shutdownCtx); err != nil {
+			s.log.Error("Server shutdown error", slog.String("address", address), slog.Any("error", err))
+		}
+	}()
+
+	if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		s.log.Error("Server failed", slog.String("address", address), slog.Any("error", err))
 		return err
 	}
 
-	s.echo.Logger.Info("Server gracefully shutdown", slog.String("address", address))
+	s.log.Info("Server gracefully shutdown", slog.String("address", address))
 
 	return nil
 }
@@ -104,22 +99,29 @@ func (s *serverImpl) Stop() error {
 	return nil
 }
 
-func createEchoServer(log *slog.Logger) *echo.Echo {
-	e := echo.New()
-	e.Logger = log
-
-	registerBaseMiddlewares(e)
-
-	return e
+// wrapHandler adapts a rest.HandlerFunc (which returns an error) into a
+// gin.HandlerFunc by storing any returned error in the Gin context so that
+// the ErrorConverter middleware can convert it to an HTTP error response.
+func wrapHandler(h rest.HandlerFunc) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if err := h(c); err != nil {
+			_ = c.Error(err)
+		}
+	}
 }
 
-func registerBaseMiddlewares(e *echo.Echo) {
-	// https://stackoverflow.com/questions/74020538/cors-preflight-did-not-succeed
-	// https://stackoverflow.com/questions/6660019/restful-api-methods-head-options
-	corsConf := middleware.CORSConfig{
-		// https://www.stackhawk.com/blog/golang-cors-guide-what-it-is-and-how-to-enable-it/
-		// Same as the default value
-		AllowOrigins: []string{"*"},
+func createGinEngine(log *slog.Logger) *gin.Engine {
+	gin.SetMode(gin.ReleaseMode)
+	engine := gin.New()
+
+	registerBaseMiddlewares(engine, log)
+
+	return engine
+}
+
+func registerBaseMiddlewares(engine *gin.Engine, log *slog.Logger) {
+	corsConfig := ginCors.Config{
+		AllowAllOrigins: true,
 		AllowMethods: []string{
 			http.MethodOptions,
 			http.MethodGet,
@@ -129,6 +131,11 @@ func registerBaseMiddlewares(e *echo.Echo) {
 		},
 	}
 
-	e.Use(middleware.CORSWithConfig(corsConf))
-	e.Use(om.RequestLogger())
+	// Seed the Gin context with the server-level logger before other middlewares run.
+	engine.Use(func(c *gin.Context) {
+		om.SetContextLogger(c, log)
+		c.Next()
+	})
+	engine.Use(ginCors.New(corsConfig))
+	engine.Use(om.RequestLogger())
 }

@@ -1,50 +1,65 @@
 package middleware
 
 import (
+	"log/slog"
 	"testing"
 
-	"github.com/labstack/echo/v5"
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestUnit_RequestTracer_CallsNextMiddleware(t *testing.T) {
-	callable, called, ctx := createCallableTracerHandler()
+	callable, called, _ := createCallableTracerHandler()
 
-	err := callable(ctx)
+	callable()
 
-	assert.Nil(t, err)
 	assert.True(t, *called)
 }
 
 func TestUnit_RequestTracer_WhenRequestIdNotSet_LeavesLoggerUnchanged(t *testing.T) {
-	_, _, ctx := createCallableTracerHandler()
-	originalLogger := ctx.Logger()
+	originalLogger := slog.Default()
+	var loggerAfterTracer *slog.Logger
 
-	callable, _, _ := createCallableTracerHandler()
-	err := callable(ctx)
-	require.Nil(t, err)
+	w, r := newTestRouter(RequestTracer())
+	r.GET("/", func(c *gin.Context) {
+		loggerAfterTracer = GetContextLogger(c)
+		c.Status(200)
+	})
 
-	assert.Equal(t, originalLogger, ctx.Logger())
+	r.ServeHTTP(w, newGetRequest("/"))
+	require.NotNil(t, loggerAfterTracer)
+	// No request ID was set so the logger should still be the default
+	assert.Equal(t, originalLogger, loggerAfterTracer)
 }
 
 func TestUnit_RequestTracer_WhenRequestIdSet_AddsRequestIdToLogger(t *testing.T) {
-	callable, _, ctx := createCallableTracerHandler()
+	originalLogger := slog.Default()
+	var loggerAfterTracer *slog.Logger
 
-	ctx.Response().Header().Set(requestIdHeader, "my-request-id")
+	w, r := newTestRouter(
+		func(c *gin.Context) {
+			// Simulate what ResponseEnvelope does: set the header before RequestTracer runs
+			c.Header(requestIdHeader, "my-request-id")
+			c.Next()
+		},
+		RequestTracer(),
+	)
+	r.GET("/", func(c *gin.Context) {
+		loggerAfterTracer = GetContextLogger(c)
+		c.Status(200)
+	})
 
-	err := callable(ctx)
-	require.Nil(t, err)
-
-	// The logger should have been updated (it's a different logger with the requestId attribute)
-	assert.NotNil(t, ctx.Logger())
+	r.ServeHTTP(w, newGetRequest("/"))
+	require.NotNil(t, loggerAfterTracer)
+	// Logger should have been enriched with the request ID
+	assert.NotEqual(t, originalLogger, loggerAfterTracer)
 }
 
-func createCallableTracerHandler() (echo.HandlerFunc, *bool, *echo.Context) {
-	generator := func() echo.MiddlewareFunc {
+func createCallableTracerHandler() (func(), *bool, *gin.Context) {
+	callable, called, _ := createCallableHandler(func() gin.HandlerFunc {
 		return RequestTracer()
-	}
-	middleware, called, ctx := createCallableHandler(generator)
-
-	return middleware, called, ctx
+	})
+	ctx, _ := generateTestGinContext()
+	return callable, called, ctx
 }
