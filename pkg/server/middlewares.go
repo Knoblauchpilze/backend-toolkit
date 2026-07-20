@@ -7,7 +7,9 @@ import (
 )
 
 func buildMiddlewaresForRoute(route *rest.Route) []echo.MiddlewareFunc {
-	var out []echo.MiddlewareFunc
+	out := []echo.MiddlewareFunc{
+		middleware.RequestId(),
+	}
 
 	if route.UseResponseEnvelope() {
 		out = append(out, middleware.ResponseEnvelope())

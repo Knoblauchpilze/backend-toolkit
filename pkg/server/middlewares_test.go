@@ -16,7 +16,7 @@ func TestUnit_BuildMiddlewaresForRoute_ForRoute(t *testing.T) {
 
 	// We can't compare functions in Go so we just check the length
 	// of the middlewares slice
-	assert.Len(t, actual, 4)
+	assert.Len(t, actual, 5)
 }
 
 func TestUnit_BuildMiddlewaresForRoute_ForRawRoute(t *testing.T) {
@@ -24,7 +24,7 @@ func TestUnit_BuildMiddlewaresForRoute_ForRawRoute(t *testing.T) {
 
 	actual := buildMiddlewaresForRoute(r)
 
-	assert.Len(t, actual, 3)
+	assert.Len(t, actual, 4)
 }
 
 var testHandler = func(c *echo.Context) error { return nil }
