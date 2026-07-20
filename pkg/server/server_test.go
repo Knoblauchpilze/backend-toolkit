@@ -146,11 +146,11 @@ type responseEnvelope struct {
 	Details    json.RawMessage `json:"details"`
 }
 
-func newTestServer(port uint16) Server {
+func newTestServer(port uint16) *Server {
 	return newTestServerWithPath(port, "/")
 }
 
-func newTestServerWithPath(port uint16, path string) Server {
+func newTestServerWithPath(port uint16, path string) *Server {
 	config := Config{
 		BasePath:        path,
 		Port:            port,
@@ -160,7 +160,7 @@ func newTestServerWithPath(port uint16, path string) Server {
 	return NewWithLogger(config, slog.Default())
 }
 
-func newTestServerWithOkHandler(t *testing.T, port uint16) Server {
+func newTestServerWithOkHandler(t *testing.T, port uint16) *Server {
 	t.Helper()
 
 	s := newTestServer(port)
@@ -177,7 +177,7 @@ func testHttpHandler(c *echo.Context) error {
 }
 
 func asyncRunServerAndAssertStopWithoutError(
-	t *testing.T, s Server,
+	t *testing.T, s *Server,
 ) <-chan struct{} {
 	t.Helper()
 

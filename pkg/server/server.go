@@ -13,13 +13,7 @@ import (
 	"github.com/labstack/echo/v5/middleware"
 )
 
-type Server interface {
-	AddRoute(route rest.Route) error
-	Start() error
-	Stop() error
-}
-
-type serverImpl struct {
+type Server struct {
 	echo            *echo.Echo
 	basePath        string
 	port            uint16
@@ -28,10 +22,10 @@ type serverImpl struct {
 	stopChan        chan struct{}
 }
 
-func NewWithLogger(config Config, log *slog.Logger) Server {
+func NewWithLogger(config Config, log *slog.Logger) *Server {
 	echoServer := createEchoServer(log)
 
-	s := &serverImpl{
+	s := &Server{
 		echo:            echoServer,
 		basePath:        config.BasePath,
 		port:            config.Port,
@@ -43,7 +37,7 @@ func NewWithLogger(config Config, log *slog.Logger) Server {
 	return s
 }
 
-func (s *serverImpl) AddRoute(route rest.Route) error {
+func (s *Server) AddRoute(route rest.Route) error {
 	path := rest.ConcatenateEndpoints(s.basePath, route.Path())
 	middlewares := buildMiddlewaresForRoute(route)
 
@@ -65,7 +59,7 @@ func (s *serverImpl) AddRoute(route rest.Route) error {
 	return nil
 }
 
-func (s *serverImpl) Start() error {
+func (s *Server) Start() error {
 	// https://echo.labstack.com/docs/cookbook/graceful-shutdown
 	// This approach deviates a bit from what is recommended in the
 	// above link. This solution was proposed by AI and seems to
@@ -99,7 +93,7 @@ func (s *serverImpl) Start() error {
 	return nil
 }
 
-func (s *serverImpl) Stop() error {
+func (s *Server) Stop() error {
 	s.stopChan <- struct{}{}
 	return nil
 }
