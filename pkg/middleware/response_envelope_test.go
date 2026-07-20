@@ -10,105 +10,107 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestUnit_ResponseEnvelope_CallsNextMiddleware(t *testing.T) {
-	callable, called, ctx := createCallableHandler(ResponseEnvelope)
+func TestUnit_ResponseEnvelope(t *testing.T) {
+	t.Run("calls next middleware", func(t *testing.T) {
+		callable, called, ctx := createCallableHandler(ResponseEnvelope)
 
-	err := callable(ctx)
+		err := callable(ctx)
+		require.NoError(t, err, "Actual err: %v", err)
 
-	assert.Nil(t, err)
-	assert.True(t, *called)
-}
+		assert.True(t, *called)
+	})
 
-func TestUnit_ResponseEnvelope_WrapsPlainOutputInResponseEnvelope(t *testing.T) {
-	next := createHandlerFuncWithPlainOutput(http.StatusOK, "my-output")
+	t.Run("wraps plain output in response envelope", func(t *testing.T) {
+		next := createHandlerFuncWithPlainOutput(http.StatusOK, "my-output")
 
-	middleware := ResponseEnvelope()
-	callable := middleware(next)
+		middleware := ResponseEnvelope()
+		callable := middleware(next)
 
-	ctx, rw := generateTestEchoContext()
+		ctx, rw := generateTestEchoContext()
 
-	err := callable(ctx)
-	require.Nil(t, err)
+		err := callable(ctx)
+		require.NoError(t, err, "Actual err: %v", err)
 
-	assert.Equal(t, http.StatusOK, rw.Code)
-	body, err := io.ReadAll(rw.Body)
-	require.Nil(t, err)
-	actual := string(body)
-	// https://stackoverflow.com/questions/136505/searching-for-uuids-in-text-with-regex
-	expected := `{"request_id":"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}","status":"SUCCESS","status_code":200,"details":"my-output"}`
-	assert.Regexp(t, expected, actual)
-}
+		assert.Equal(t, http.StatusOK, rw.Code)
+		body, err := io.ReadAll(rw.Body)
+		require.NoError(t, err, "Actual err: %v", err)
+		actual := string(body)
+		// https://stackoverflow.com/questions/136505/searching-for-uuids-in-text-with-regex
+		expected := `{"request_id":"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}","status":"SUCCESS","status_code":200,"details":"my-output"}`
+		assert.Regexp(t, expected, actual)
+	})
 
-func TestUnit_ResponseEnvelope_WrapsJsonOutputInResponseEnvelope(t *testing.T) {
-	type testStruct struct {
-		Key string
-	}
-	sample := testStruct{
-		Key: "value",
-	}
-	next := createHandlerFuncWithJsonOutput(http.StatusOK, sample)
+	t.Run("wraps json output in response envelope", func(t *testing.T) {
+		type testStruct struct {
+			Key string
+		}
+		sample := testStruct{
+			Key: "value",
+		}
+		next := createHandlerFuncWithJsonOutput(http.StatusOK, sample)
 
-	middleware := ResponseEnvelope()
-	callable := middleware(next)
+		middleware := ResponseEnvelope()
+		callable := middleware(next)
 
-	ctx, rw := generateTestEchoContext()
+		ctx, rw := generateTestEchoContext()
 
-	err := callable(ctx)
-	require.Nil(t, err)
+		err := callable(ctx)
+		require.NoError(t, err, "Actual err: %v", err)
 
-	assert.Equal(t, http.StatusOK, rw.Code)
-	body, err := io.ReadAll(rw.Body)
-	require.Nil(t, err)
-	actual := string(body)
-	expected := `{"request_id":"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}","status":"SUCCESS","status_code":200,"details":{"Key":"value"}}`
-	assert.Regexp(t, expected, actual)
-}
+		assert.Equal(t, http.StatusOK, rw.Code)
+		body, err := io.ReadAll(rw.Body)
+		require.NoError(t, err, "Actual err: %v", err)
+		actual := string(body)
+		expected := `{"request_id":"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}","status":"SUCCESS","status_code":200,"details":{"Key":"value"}}`
+		assert.Regexp(t, expected, actual)
+	})
 
-func TestUnit_ResponseEnvelope_CorrectlyUpdatesContentLengthToAccountForEnvelope(t *testing.T) {
-	next := createHandlerFuncWithPlainOutput(http.StatusOK, "my-output")
+	t.Run("correctly updates content length to account for envelope", func(t *testing.T) {
+		next := createHandlerFuncWithPlainOutput(http.StatusOK, "my-output")
 
-	middleware := ResponseEnvelope()
-	callable := middleware(next)
+		middleware := ResponseEnvelope()
+		callable := middleware(next)
 
-	ctx, rw := generateTestEchoContext()
+		ctx, rw := generateTestEchoContext()
 
-	err := callable(ctx)
-	require.Nil(t, err)
+		err := callable(ctx)
+		require.NoError(t, err, "Actual err: %v", err)
 
-	length := rw.Header().Get("Content-Length")
-	// The length accounts for:
-	//  - 51 characters for the request identifier and quotes
-	//  - 18 characters for the status and quotes
-	//  - 17 characters for the HTTP status and quotes
-	//  - 10 characters for the details header and quotes
-	//  - 11 characters for the plain output
-	//  - 5 characters for commas separating fields
-	assert.Equal(t, "112", length)
+		length := rw.Header().Get("Content-Length")
+		// The length accounts for:
+		//  - 51 characters for the request identifier and quotes
+		//  - 18 characters for the status and quotes
+		//  - 17 characters for the HTTP status and quotes
+		//  - 10 characters for the details header and quotes
+		//  - 11 characters for the plain output
+		//  - 5 characters for commas separating fields
+		assert.Equal(t, "112", length)
 
-	out, err := io.ReadAll(rw.Body)
-	require.NoError(t, err, "Actual err: %v", err)
+		out, err := io.ReadAll(rw.Body)
+		require.NoError(t, err, "Actual err: %v", err)
 
-	expectedBody := `{"request_id":"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}","status":"SUCCESS","status_code":200,"details":"my-output"}`
-	assert.Regexp(t, expectedBody, string(out))
-}
+		expectedBody := `{"request_id":"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}","status":"SUCCESS","status_code":200,"details":"my-output"}`
+		assert.Regexp(t, expectedBody, string(out))
+	})
 
-func TestUnit_ResponseEnvelope_WhenStatusIsNot200Ok_ExpectStatusReflectsIt(t *testing.T) {
-	next := createHandlerFuncWithPlainOutput(http.StatusBadGateway, "my-output")
+	t.Run("when status is not 200 ok expect status reflects it", func(t *testing.T) {
+		next := createHandlerFuncWithPlainOutput(http.StatusBadGateway, "my-output")
 
-	middleware := ResponseEnvelope()
-	callable := middleware(next)
+		middleware := ResponseEnvelope()
+		callable := middleware(next)
 
-	ctx, rw := generateTestEchoContext()
+		ctx, rw := generateTestEchoContext()
 
-	err := callable(ctx)
-	require.Nil(t, err)
+		err := callable(ctx)
+		require.NoError(t, err, "Actual err: %v", err)
 
-	assert.Equal(t, http.StatusBadGateway, rw.Code)
-	body, err := io.ReadAll(rw.Body)
-	require.Nil(t, err)
-	actual := string(body)
-	expected := `{"request_id":"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}","status":"ERROR","status_code":502,"details":"my-output"}`
-	assert.Regexp(t, expected, actual)
+		assert.Equal(t, http.StatusBadGateway, rw.Code)
+		body, err := io.ReadAll(rw.Body)
+		require.NoError(t, err, "Actual err: %v", err)
+		actual := string(body)
+		expected := `{"request_id":"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}","status":"ERROR","status_code":502,"details":"my-output"}`
+		assert.Regexp(t, expected, actual)
+	})
 }
 
 func createHandlerFuncWithPlainOutput(httpCode int, out string) echo.HandlerFunc {
