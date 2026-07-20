@@ -5,12 +5,15 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestUnit_ResponseEnvelope(t *testing.T) {
+	sampleRequestId := uuid.MustParse("a57f4ca1-1a22-4990-b3de-5f836a3ea4e9").String()
+
 	t.Run("calls next middleware", func(t *testing.T) {
 		callable, called, ctx := createCallableHandler(ResponseEnvelope)
 
@@ -27,6 +30,7 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 		callable := middleware(next)
 
 		ctx, rw := generateTestEchoContext()
+		ctx.Set(requestIdContextKey, sampleRequestId)
 
 		err := callable(ctx)
 		require.NoError(t, err, "Actual err: %v", err)
@@ -35,8 +39,7 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 		body, err := io.ReadAll(rw.Body)
 		require.NoError(t, err, "Actual err: %v", err)
 		actual := string(body)
-		// https://stackoverflow.com/questions/136505/searching-for-uuids-in-text-with-regex
-		expected := `{"request_id":"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}","status":"SUCCESS","status_code":200,"details":"my-output"}`
+		expected := `{"request_id":"a57f4ca1-1a22-4990-b3de-5f836a3ea4e9","status":"SUCCESS","status_code":200,"details":"my-output"}`
 		assert.Regexp(t, expected, actual)
 	})
 
@@ -53,6 +56,7 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 		callable := middleware(next)
 
 		ctx, rw := generateTestEchoContext()
+		ctx.Set(requestIdContextKey, sampleRequestId)
 
 		err := callable(ctx)
 		require.NoError(t, err, "Actual err: %v", err)
@@ -61,7 +65,7 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 		body, err := io.ReadAll(rw.Body)
 		require.NoError(t, err, "Actual err: %v", err)
 		actual := string(body)
-		expected := `{"request_id":"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}","status":"SUCCESS","status_code":200,"details":{"Key":"value"}}`
+		expected := `{"request_id":"a57f4ca1-1a22-4990-b3de-5f836a3ea4e9","status":"SUCCESS","status_code":200,"details":{"Key":"value"}}`
 		assert.Regexp(t, expected, actual)
 	})
 
@@ -72,6 +76,7 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 		callable := middleware(next)
 
 		ctx, rw := generateTestEchoContext()
+		ctx.Set(requestIdContextKey, sampleRequestId)
 
 		err := callable(ctx)
 		require.NoError(t, err, "Actual err: %v", err)
@@ -89,7 +94,7 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 		out, err := io.ReadAll(rw.Body)
 		require.NoError(t, err, "Actual err: %v", err)
 
-		expectedBody := `{"request_id":"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}","status":"SUCCESS","status_code":200,"details":"my-output"}`
+		expectedBody := `{"request_id":"a57f4ca1-1a22-4990-b3de-5f836a3ea4e9","status":"SUCCESS","status_code":200,"details":"my-output"}`
 		assert.Regexp(t, expectedBody, string(out))
 	})
 
@@ -100,6 +105,7 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 		callable := middleware(next)
 
 		ctx, rw := generateTestEchoContext()
+		ctx.Set(requestIdContextKey, sampleRequestId)
 
 		err := callable(ctx)
 		require.NoError(t, err, "Actual err: %v", err)
@@ -108,8 +114,24 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 		body, err := io.ReadAll(rw.Body)
 		require.NoError(t, err, "Actual err: %v", err)
 		actual := string(body)
-		expected := `{"request_id":"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}","status":"ERROR","status_code":502,"details":"my-output"}`
+		expected := `{"request_id":"a57f4ca1-1a22-4990-b3de-5f836a3ea4e9","status":"ERROR","status_code":502,"details":"my-output"}`
 		assert.Regexp(t, expected, actual)
+	})
+
+	t.Run("uses unknown request id when context does not provide one", func(t *testing.T) {
+		next := createHandlerFuncWithPlainOutput(http.StatusOK, "my-output")
+
+		callable := ResponseEnvelope()(next)
+		ctx, rw := generateTestEchoContext()
+
+		err := callable(ctx)
+		require.NoError(t, err, "Actual err: %v", err)
+
+		body, err := io.ReadAll(rw.Body)
+		require.NoError(t, err, "Actual err: %v", err)
+
+		expected := `{"request_id":"unknown","status":"SUCCESS","status_code":200,"details":"my-output"}`
+		assert.Regexp(t, expected, string(body))
 	})
 }
 

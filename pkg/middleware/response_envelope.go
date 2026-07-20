@@ -2,25 +2,32 @@ package middleware
 
 import (
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
-	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
-	"github.com/labstack/echo/v5/middleware"
+)
+
+const (
+	defaultRequestId = "unknown"
 )
 
 func ResponseEnvelope() echo.MiddlewareFunc {
-	config := middleware.RequestIDConfig{
-		Generator: func() string {
-			return uuid.New().String()
-		},
-		RequestIDHandler: func(c *echo.Context, requestId string) {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c *echo.Context) error {
+			requestId, ok := RequestIdFromContext(c)
+			if !ok {
+				requestId = defaultRequestId
+			}
+
 			echoResp, err := echo.UnwrapResponse(c.Response())
 			if err == nil {
-				rw := rest.NewResponseEnvelopeWriter(echoResp.ResponseWriter, requestId, rest.DecodeJSONOrString)
+				rw := rest.NewResponseEnvelopeWriter(
+					echoResp.ResponseWriter,
+					requestId,
+					rest.DecodeJSONOrString,
+				)
 				echoResp.ResponseWriter = rw
 			}
-		},
-		TargetHeader: requestIdHeader,
-	}
 
-	return middleware.RequestIDWithConfig(config)
+			return next(c)
+		}
+	}
 }
