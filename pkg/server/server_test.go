@@ -17,6 +17,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const uuidRegex = `[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`
+
 func TestUnit_Server_WhenAddingUnSupportedRoutes_ExpectFailure(t *testing.T) {
 	s := newTestServer(4000)
 
@@ -228,8 +230,7 @@ func unmarshalResponseAndAssertRequestId(t *testing.T, resp *http.Response) resp
 	err = json.Unmarshal(data, &out)
 	require.NoError(t, err, "Actual err: %v", err)
 
-	const idRegex = `[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`
-	assert.Regexp(t, idRegex, out.RequestId)
+	assert.Regexp(t, uuidRegex, out.RequestId)
 
 	return out
 }
