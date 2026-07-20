@@ -34,7 +34,7 @@ func TestUnit_RequestTracer(t *testing.T) {
 		ctx, out := generateTestEchoContextWithLogger()
 		originalLogger := ctx.Logger()
 
-		ctx.Response().Header().Set(requestIdHeader, "my-request-id")
+		ctx.Set(requestIdContextKey, "my-request-id")
 
 		err := callable(ctx)
 		require.NoError(t, err, "Actual err: %v", err)
