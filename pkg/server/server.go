@@ -130,3 +130,13 @@ func registerBaseMiddlewares(e *echo.Echo) {
 	e.Use(om.ErrorConverter())
 	e.Use(om.Recover())
 }
+
+func buildMiddlewaresForRoute(route *rest.Route) []echo.MiddlewareFunc {
+	out := []echo.MiddlewareFunc{}
+
+	if route.UseResponseEnvelope() {
+		out = append(out, om.ResponseEnvelope())
+	}
+
+	return out
+}
