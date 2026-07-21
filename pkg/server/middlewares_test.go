@@ -32,7 +32,7 @@ func TestUnit_BuildMiddlewaresForRoute(t *testing.T) {
 	})
 }
 
-func TestIntegration_BuildMiddlewaresForRoute(t *testing.T) {
+func TestIT_BuildMiddlewaresForRoute(t *testing.T) {
 	t.Run("route middleware stack wraps response and keeps request id consistent", func(t *testing.T) {
 		handler := func(c *echo.Context) error {
 			return c.String(http.StatusOK, "Hello")
