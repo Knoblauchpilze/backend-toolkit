@@ -127,5 +127,6 @@ func registerBaseMiddlewares(e *echo.Echo) {
 	e.Use(om.RequestId())
 	e.Use(om.RequestTracer())
 	e.Use(om.RequestLogger())
+	e.Use(om.ErrorConverter())
 	e.Use(om.Recover())
 }

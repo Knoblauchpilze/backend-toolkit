@@ -13,10 +13,5 @@ func buildMiddlewaresForRoute(route *rest.Route) []echo.MiddlewareFunc {
 		out = append(out, middleware.ResponseEnvelope())
 	}
 
-	out = append(
-		out,
-		middleware.ErrorConverter(),
-	)
-
 	return out
 }
