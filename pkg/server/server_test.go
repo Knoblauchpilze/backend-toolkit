@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"testing"
 	"time"
 
@@ -18,9 +19,10 @@ import (
 )
 
 const uuidRegex = `[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`
+const requestIdHeader = "X-Request-Id"
 
 func TestUnit_Server(t *testing.T) {
-	t.Run("WhenAddingUnsupportedRoutes_ExpectFailure", func(t *testing.T) {
+	t.Run("expect failure when adding unsupported route", func(t *testing.T) {
 		s := newTestServer(4000)
 
 		unsupportedMethods := []string{
@@ -40,7 +42,7 @@ func TestUnit_Server(t *testing.T) {
 		}
 	})
 
-	t.Run("AnswersToRequestsWithResponseEnvelope", func(t *testing.T) {
+	t.Run("route responses with envelope wrapping", func(t *testing.T) {
 		s := newTestServerWithOkHandler(t, 4001)
 
 		done := asyncRunServerAndAssertStopWithoutError(t, s)
@@ -54,7 +56,7 @@ func TestUnit_Server(t *testing.T) {
 		assertIsOkResponse(t, response)
 	})
 
-	t.Run("WhenRegisteringRawRoute_AnswersToRequestsWithoutResponseEnvelope", func(t *testing.T) {
+	t.Run("raw route responds with no envelope wrapping", func(t *testing.T) {
 		s := newTestServer(4006)
 		helloHandler := func(c *echo.Context) error {
 			return c.String(http.StatusOK, "Hello")
@@ -72,12 +74,16 @@ func TestUnit_Server(t *testing.T) {
 
 		require.NoError(t, err, "Actual err: %v", err)
 		assert.Equal(t, http.StatusOK, response.StatusCode)
+		assert.Regexp(t, uuidRegex, response.Header.Get(requestIdHeader))
 		body, err := io.ReadAll(response.Body)
 		require.NoError(t, err, "Actual err: %v", err)
+		assertResponseContentLengthMatchesBody(t, response, body)
 		assert.Equal(t, "Hello", string(body))
+		err = response.Body.Close()
+		require.NoError(t, err, "Actual err: %v", err)
 	})
 
-	t.Run("WhenConfigDefinesABasePath_ExpectPrefixedToRoutes", func(t *testing.T) {
+	t.Run("base path is prefixed to route path", func(t *testing.T) {
 		s := newTestServerWithPath(4002, "prefix")
 		route := rest.NewRoute(http.MethodGet, "/route", testHttpHandler)
 		err := s.AddRoute(route)
@@ -94,7 +100,7 @@ func TestUnit_Server(t *testing.T) {
 		assertIsOkResponse(t, response)
 	})
 
-	t.Run("WhenHandlerPanics_ExpectErrorResponseEnvelope", func(t *testing.T) {
+	t.Run("returns error envelope when handler panics", func(t *testing.T) {
 		s := newTestServer(4003)
 		errorHandler := func(c *echo.Context) error {
 			panic(fmt.Errorf("this handler panics"))
@@ -118,7 +124,7 @@ func TestUnit_Server(t *testing.T) {
 		assert.Equal(t, `{"message":"this handler panics"}`, string(actual.Details))
 	})
 
-	t.Run("WhenHandlerReturnsError_ExpectErrorResponseEnvelope", func(t *testing.T) {
+	t.Run("returns error envelope when handler returns error", func(t *testing.T) {
 		s := newTestServer(4004)
 		errorHandler := func(c *echo.Context) error {
 			return db.ErrAlreadyCommitted
@@ -227,14 +233,30 @@ func unmarshalResponseAndAssertRequestId(t *testing.T, resp *http.Response) resp
 
 	data, err := io.ReadAll(resp.Body)
 	require.NoError(t, err, "Actual err: %v", err)
+	assertResponseContentLengthMatchesBody(t, resp, data)
 
 	var out responseEnvelope
 	err = json.Unmarshal(data, &out)
 	require.NoError(t, err, "Actual err: %v", err)
 
+	headerRequestId := resp.Header.Get(requestIdHeader)
+	assert.Regexp(t, uuidRegex, headerRequestId)
 	assert.Regexp(t, uuidRegex, out.RequestId)
+	assert.Equal(t, headerRequestId, out.RequestId)
 
 	return out
+}
+
+func assertResponseContentLengthMatchesBody(
+	t *testing.T,
+	resp *http.Response,
+	body []byte,
+) {
+	t.Helper()
+
+	contentLength, err := strconv.Atoi(resp.Header.Get("Content-Length"))
+	require.NoError(t, err, "Actual err: %v", err)
+	assert.Equal(t, len(body), contentLength)
 }
 
 func assertIsOkResponse(t *testing.T, response *http.Response) {
