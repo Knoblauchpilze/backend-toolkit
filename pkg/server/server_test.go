@@ -124,6 +124,33 @@ func TestUnit_Server(t *testing.T) {
 		assert.Equal(t, `{"message":"this handler panics"}`, string(actual.Details))
 	})
 
+	t.Run("returns non-envelope error when raw route handler panics", func(t *testing.T) {
+		s := newTestServer(4007)
+		errorHandler := func(c *echo.Context) error {
+			panic(fmt.Errorf("this handler panics"))
+		}
+		route := rest.NewRawRoute(http.MethodGet, "/", errorHandler)
+		err := s.AddRoute(route)
+		require.NoError(t, err, "Actual err: %v", err)
+
+		done := asyncRunServerAndAssertStopWithoutError(t, s)
+
+		response := doRequest(t, http.MethodGet, "http://localhost:4007")
+
+		err = s.Stop()
+		<-done
+
+		require.NoError(t, err, "Actual err: %v", err)
+		assert.Equal(t, http.StatusInternalServerError, response.StatusCode)
+		assert.Regexp(t, uuidRegex, response.Header.Get(requestIdHeader))
+		body, err := io.ReadAll(response.Body)
+		require.NoError(t, err, "Actual err: %v", err)
+		assertResponseContentLengthMatchesBody(t, response, body)
+		assert.JSONEq(t, `{"message":"this handler panics"}`, string(body))
+		err = response.Body.Close()
+		require.NoError(t, err, "Actual err: %v", err)
+	})
+
 	t.Run("returns error envelope when handler returns error", func(t *testing.T) {
 		s := newTestServer(4004)
 		errorHandler := func(c *echo.Context) error {
