@@ -125,5 +125,7 @@ func registerBaseMiddlewares(e *echo.Echo) {
 
 	e.Use(middleware.CORSWithConfig(corsConf))
 	e.Use(om.RequestLogger())
+	e.Use(om.RequestId())
+	e.Use(om.RequestTracer())
 	e.Use(om.Recover())
 }

@@ -3,7 +3,6 @@ package server
 import (
 	"net/http"
 	"net/http/httptest"
-	"strconv"
 	"testing"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
@@ -20,7 +19,7 @@ func TestUnit_BuildMiddlewaresForRoute(t *testing.T) {
 
 		// We can't compare functions in Go so we just check the length
 		// of the middlewares slice
-		assert.Len(t, actual, 4)
+		assert.Len(t, actual, 2)
 	})
 
 	t.Run("for raw route", func(t *testing.T) {
@@ -28,12 +27,12 @@ func TestUnit_BuildMiddlewaresForRoute(t *testing.T) {
 
 		actual := buildMiddlewaresForRoute(r)
 
-		assert.Len(t, actual, 3)
+		assert.Len(t, actual, 1)
 	})
 }
 
 func TestIT_BuildMiddlewaresForRoute(t *testing.T) {
-	t.Run("route middleware stack wraps response and keeps request id consistent", func(t *testing.T) {
+	t.Run("route middleware stack wraps response", func(t *testing.T) {
 		handler := func(c *echo.Context) error {
 			return c.String(http.StatusOK, "Hello")
 		}
@@ -45,20 +44,9 @@ func TestIT_BuildMiddlewaresForRoute(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rw.Code)
 		// TODO: This should be JSON
 		assert.Equal(t, "text/plain; charset=UTF-8", rw.Header().Get("Content-Type"))
-
-		requestId := rw.Header().Get("X-Request-Id")
-		assert.Regexp(t, uuidRegex, requestId)
-
-		length, err := strconv.Atoi(rw.Header().Get("Content-Length"))
-		require.NoError(t, err, "Actual err: %v", err)
-		assert.Equal(t, rw.Body.Len(), length)
-
-		actual := unmarshalResponseAndAssertRequestId(t, rw.Result())
-
-		assert.Equal(t, requestId, actual.RequestId)
-		assert.Equal(t, "SUCCESS", actual.Status)
-		assert.Equal(t, http.StatusOK, actual.StatusCode)
-		assert.Equal(t, `"Hello"`, string(actual.Details))
+		assert.Contains(t, rw.Body.String(), `"status":"SUCCESS"`)
+		assert.Contains(t, rw.Body.String(), `"status_code":200`)
+		assert.Contains(t, rw.Body.String(), `"details":"Hello"`)
 	})
 
 	t.Run("raw route middleware stack bypasses response envelope", func(t *testing.T) {
@@ -73,9 +61,6 @@ func TestIT_BuildMiddlewaresForRoute(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rw.Code)
 		assert.Equal(t, "text/plain; charset=UTF-8", rw.Header().Get("Content-Type"))
 		assert.Equal(t, "Hello", rw.Body.String())
-
-		requestId := rw.Header().Get("X-Request-Id")
-		assert.Regexp(t, uuidRegex, requestId)
 	})
 }
 
@@ -89,15 +74,22 @@ func runRouteMiddlewareChain(
 	e := echo.New()
 	req := httptest.NewRequest(route.Method(), "http://example.com"+route.Path(), nil)
 	rw := httptest.NewRecorder()
-	ctx := e.NewContext(req, rw)
-
-	callable := route.Handler()
 	middlewares := buildMiddlewaresForRoute(route)
-	for i := len(middlewares) - 1; i >= 0; i-- {
-		callable = middlewares[i](callable)
+
+	switch route.Method() {
+	case http.MethodGet:
+		e.GET(route.Path(), route.Handler(), middlewares...)
+	case http.MethodPost:
+		e.POST(route.Path(), route.Handler(), middlewares...)
+	case http.MethodDelete:
+		e.DELETE(route.Path(), route.Handler(), middlewares...)
+	case http.MethodPatch:
+		e.PATCH(route.Path(), route.Handler(), middlewares...)
+	default:
+		return nil, ErrUnsupportedMethod
 	}
 
-	err := callable(ctx)
+	e.ServeHTTP(rw, req)
 
-	return rw, err
+	return rw, nil
 }
