@@ -19,126 +19,128 @@ import (
 
 const uuidRegex = `[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`
 
-func TestUnit_Server_WhenAddingUnSupportedRoutes_ExpectFailure(t *testing.T) {
-	s := newTestServer(4000)
+func TestUnit_Server(t *testing.T) {
+	t.Run("WhenAddingUnsupportedRoutes_ExpectFailure", func(t *testing.T) {
+		s := newTestServer(4000)
 
-	unsupportedMethods := []string{
-		http.MethodHead,
-		http.MethodPut,
-		http.MethodConnect,
-		http.MethodOptions,
-		http.MethodTrace,
-	}
+		unsupportedMethods := []string{
+			http.MethodHead,
+			http.MethodPut,
+			http.MethodConnect,
+			http.MethodOptions,
+			http.MethodTrace,
+		}
 
-	for _, method := range unsupportedMethods {
-		t.Run(method, func(t *testing.T) {
-			sampleRoute := rest.NewRoute(method, "/", testHttpHandler)
-			err := s.AddRoute(sampleRoute)
-			assert.Equal(t, ErrUnsupportedMethod, err, "Actual err: %v", err)
-		})
-	}
-}
+		for _, method := range unsupportedMethods {
+			t.Run(method, func(t *testing.T) {
+				sampleRoute := rest.NewRoute(method, "/", testHttpHandler)
+				err := s.AddRoute(sampleRoute)
+				assert.Equal(t, ErrUnsupportedMethod, err, "Actual err: %v", err)
+			})
+		}
+	})
 
-func TestUnit_Server_AnswersToRequestsWithResponseEnvelope(t *testing.T) {
-	s := newTestServerWithOkHandler(t, 4001)
+	t.Run("AnswersToRequestsWithResponseEnvelope", func(t *testing.T) {
+		s := newTestServerWithOkHandler(t, 4001)
 
-	done := asyncRunServerAndAssertStopWithoutError(t, s)
+		done := asyncRunServerAndAssertStopWithoutError(t, s)
 
-	response := doRequest(t, http.MethodGet, "http://localhost:4001")
+		response := doRequest(t, http.MethodGet, "http://localhost:4001")
 
-	err := s.Stop()
-	<-done
+		err := s.Stop()
+		<-done
 
-	require.NoError(t, err, "Actual err: %v", err)
-	assertIsOkResponse(t, response)
-}
+		require.NoError(t, err, "Actual err: %v", err)
+		assertIsOkResponse(t, response)
+	})
 
-func TestUnit_Server_WhenRegisteringRawRoute_AnswersToRequestsWithoutResponseEnvelope(t *testing.T) {
-	s := newTestServer(4006)
-	helloHandler := func(c *echo.Context) error {
-		return c.String(http.StatusOK, "Hello")
-	}
-	route := rest.NewRawRoute(http.MethodGet, "/", helloHandler)
-	err := s.AddRoute(route)
-	require.NoError(t, err, "Actual err: %v", err)
+	t.Run("WhenRegisteringRawRoute_AnswersToRequestsWithoutResponseEnvelope", func(t *testing.T) {
+		s := newTestServer(4006)
+		helloHandler := func(c *echo.Context) error {
+			return c.String(http.StatusOK, "Hello")
+		}
+		route := rest.NewRawRoute(http.MethodGet, "/", helloHandler)
+		err := s.AddRoute(route)
+		require.NoError(t, err, "Actual err: %v", err)
 
-	done := asyncRunServerAndAssertStopWithoutError(t, s)
+		done := asyncRunServerAndAssertStopWithoutError(t, s)
 
-	response := doRequest(t, http.MethodGet, "http://localhost:4006")
+		response := doRequest(t, http.MethodGet, "http://localhost:4006")
 
-	err = s.Stop()
-	<-done
+		err = s.Stop()
+		<-done
 
-	require.NoError(t, err, "Actual err: %v", err)
-	assert.Equal(t, http.StatusOK, response.StatusCode)
-	body, err := io.ReadAll(response.Body)
-	require.NoError(t, err, "Actual err: %v", err)
-	assert.Equal(t, "Hello", string(body))
-}
+		require.NoError(t, err, "Actual err: %v", err)
+		assert.Equal(t, http.StatusOK, response.StatusCode)
+		body, err := io.ReadAll(response.Body)
+		require.NoError(t, err, "Actual err: %v", err)
+		assert.Equal(t, "Hello", string(body))
+	})
 
-func TestUnit_Server_WhenConfigDefinesABasePath_ExpectPrefixedToRoutes(t *testing.T) {
-	s := newTestServerWithPath(4002, "prefix")
-	route := rest.NewRoute(http.MethodGet, "/route", testHttpHandler)
-	err := s.AddRoute(route)
-	require.NoError(t, err, "Actual err: %v", err)
+	t.Run("WhenConfigDefinesABasePath_ExpectPrefixedToRoutes", func(t *testing.T) {
+		s := newTestServerWithPath(4002, "prefix")
+		route := rest.NewRoute(http.MethodGet, "/route", testHttpHandler)
+		err := s.AddRoute(route)
+		require.NoError(t, err, "Actual err: %v", err)
 
-	done := asyncRunServerAndAssertStopWithoutError(t, s)
+		done := asyncRunServerAndAssertStopWithoutError(t, s)
 
-	response := doRequest(t, http.MethodGet, "http://localhost:4002/prefix/route")
+		response := doRequest(t, http.MethodGet, "http://localhost:4002/prefix/route")
 
-	err = s.Stop()
-	<-done
+		err = s.Stop()
+		<-done
 
-	require.NoError(t, err, "Actual err: %v", err)
-	assertIsOkResponse(t, response)
-}
+		require.NoError(t, err, "Actual err: %v", err)
+		assertIsOkResponse(t, response)
+	})
 
-func TestUnit_Server_WhenHandlerPanics_ExpectErrorResponseEnvelope(t *testing.T) {
-	s := newTestServer(4003)
-	errorHandler := func(c *echo.Context) error {
-		panic(fmt.Errorf("this handler panics"))
-	}
-	route := rest.NewRoute(http.MethodGet, "/", errorHandler)
-	err := s.AddRoute(route)
-	require.NoError(t, err, "Actual err: %v", err)
+	t.Run("WhenHandlerPanics_ExpectErrorResponseEnvelope", func(t *testing.T) {
+		s := newTestServer(4003)
+		errorHandler := func(c *echo.Context) error {
+			panic(fmt.Errorf("this handler panics"))
+		}
+		route := rest.NewRoute(http.MethodGet, "/", errorHandler)
+		err := s.AddRoute(route)
+		require.NoError(t, err, "Actual err: %v", err)
 
-	done := asyncRunServerAndAssertStopWithoutError(t, s)
+		done := asyncRunServerAndAssertStopWithoutError(t, s)
 
-	response := doRequest(t, http.MethodGet, "http://localhost:4003")
+		response := doRequest(t, http.MethodGet, "http://localhost:4003")
 
-	err = s.Stop()
-	<-done
+		err = s.Stop()
+		<-done
 
-	require.NoError(t, err, "Actual err: %v", err)
-	assert.Equal(t, http.StatusInternalServerError, response.StatusCode)
-	actual := unmarshalResponseAndAssertRequestId(t, response)
-	assert.Equal(t, "ERROR", actual.Status)
-	assert.Equal(t, http.StatusInternalServerError, actual.StatusCode)
-	assert.Equal(t, `{"message":"this handler panics"}`, string(actual.Details))
-}
+		require.NoError(t, err, "Actual err: %v", err)
+		assert.Equal(t, http.StatusInternalServerError, response.StatusCode)
+		actual := unmarshalResponseAndAssertRequestId(t, response)
+		assert.Equal(t, "ERROR", actual.Status)
+		assert.Equal(t, http.StatusInternalServerError, actual.StatusCode)
+		assert.Equal(t, `{"message":"this handler panics"}`, string(actual.Details))
+	})
 
-func TestUnit_Server_WhenHandlerReturnsError_ExpectErrorResponseEnvelope(t *testing.T) {
-	s := newTestServer(4004)
-	errorHandler := func(c *echo.Context) error {
-		return db.ErrAlreadyCommitted
-	}
-	route := rest.NewRoute(http.MethodGet, "/", errorHandler)
-	err := s.AddRoute(route)
-	require.NoError(t, err, "Actual err: %v", err)
+	t.Run("WhenHandlerReturnsError_ExpectErrorResponseEnvelope", func(t *testing.T) {
+		s := newTestServer(4004)
+		errorHandler := func(c *echo.Context) error {
+			return db.ErrAlreadyCommitted
+		}
+		route := rest.NewRoute(http.MethodGet, "/", errorHandler)
+		err := s.AddRoute(route)
+		require.NoError(t, err, "Actual err: %v", err)
 
-	done := asyncRunServerAndAssertStopWithoutError(t, s)
+		done := asyncRunServerAndAssertStopWithoutError(t, s)
 
-	response := doRequest(t, http.MethodGet, "http://localhost:4004")
+		response := doRequest(t, http.MethodGet, "http://localhost:4004")
 
-	err = s.Stop()
-	<-done
+		err = s.Stop()
+		<-done
 
-	require.NoError(t, err, "Actual err: %v", err)
-	assert.Equal(t, http.StatusInternalServerError, response.StatusCode)
-	actual := unmarshalResponseAndAssertRequestId(t, response)
-	assert.Equal(t, "ERROR", actual.Status)
-	assert.Equal(t, http.StatusInternalServerError, actual.StatusCode)
-	assert.Equal(t, `{"message":"an unexpected error occurred. Code: 102"}`, string(actual.Details))
+		require.NoError(t, err, "Actual err: %v", err)
+		assert.Equal(t, http.StatusInternalServerError, response.StatusCode)
+		actual := unmarshalResponseAndAssertRequestId(t, response)
+		assert.Equal(t, "ERROR", actual.Status)
+		assert.Equal(t, http.StatusInternalServerError, actual.StatusCode)
+		assert.Equal(t, `{"message":"an unexpected error occurred. Code: 102"}`, string(actual.Details))
+	})
 }
 
 type responseEnvelope struct {
