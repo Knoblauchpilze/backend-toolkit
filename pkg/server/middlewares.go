@@ -19,7 +19,6 @@ func buildMiddlewaresForRoute(route *rest.Route) []echo.MiddlewareFunc {
 		out,
 		middleware.RequestTracer(),
 		middleware.ErrorConverter(),
-		middleware.Recover(),
 	)
 
 	return out
