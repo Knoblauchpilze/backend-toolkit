@@ -1,9 +1,11 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 
+	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/assert"
 )
@@ -38,6 +40,18 @@ func TestUnit_ErrorConverter(t *testing.T) {
 		err := callable(ctx)
 
 		assertIsHttpErrorWithMessageAndCode(t, err, "an unexpected error occurred. Code: 400", http.StatusInternalServerError)
+	})
+
+	t.Run("wraps error with code and cause into http error", func(t *testing.T) {
+		errWithCause := errors.WrapCode(fmt.Errorf("some error"), errUncaughtPanic)
+		next := createErrorHandler(errWithCause)
+		middleware := ErrorConverter()
+		callable := middleware(next)
+		ctx, _ := generateTestEchoContext()
+
+		err := callable(ctx)
+
+		assertIsHttpErrorWithMessageAndCode(t, err, "an unexpected error occurred. Code: 400 (cause: some error)", http.StatusInternalServerError)
 	})
 }
 
