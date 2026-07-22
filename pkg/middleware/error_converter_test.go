@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"fmt"
 	"net/http"
 	"testing"
 
@@ -9,35 +8,37 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestUnit_ErrorConverter_CallsNextMiddleware(t *testing.T) {
-	callable, called, ctx := createCallableHandler(ErrorConverter)
+func TestUnit_ErrorConverter(t *testing.T) {
+	t.Run("calls next middleware", func(t *testing.T) {
+		callable, called, ctx := createCallableHandler(ErrorConverter)
 
-	err := callable(ctx)
+		err := callable(ctx)
 
-	assert.Nil(t, err)
-	assert.True(t, *called)
-}
+		assert.Nil(t, err)
+		assert.True(t, *called)
+	})
 
-func TestUnit_ErrorConverter_WrapsUnknownErrorIntoHttpError(t *testing.T) {
-	next := createErrorHandler(fmt.Errorf("some error"))
-	middleware := ErrorConverter()
-	callable := middleware(next)
-	ctx, _ := generateTestEchoContext()
+	t.Run("wraps unknown error into http error", func(t *testing.T) {
+		next := createErrorHandler(errSample)
+		middleware := ErrorConverter()
+		callable := middleware(next)
+		ctx, _ := generateTestEchoContext()
 
-	err := callable(ctx)
+		err := callable(ctx)
 
-	assertIsHttpErrorWithMessageAndCode(t, err, "some error", http.StatusInternalServerError)
-}
+		assertIsHttpErrorWithMessageAndCode(t, err, "some error", http.StatusInternalServerError)
+	})
 
-func TestUnit_ErrorConverter_WrapsErrorWithCodeIntoHttpError(t *testing.T) {
-	next := createErrorHandler(ErrUncaughtPanic)
-	middleware := ErrorConverter()
-	callable := middleware(next)
-	ctx, _ := generateTestEchoContext()
+	t.Run("wraps error with code into http error", func(t *testing.T) {
+		next := createErrorHandler(ErrUncaughtPanic)
+		middleware := ErrorConverter()
+		callable := middleware(next)
+		ctx, _ := generateTestEchoContext()
 
-	err := callable(ctx)
+		err := callable(ctx)
 
-	assertIsHttpErrorWithMessageAndCode(t, err, "an unexpected error occurred. Code: 400", http.StatusInternalServerError)
+		assertIsHttpErrorWithMessageAndCode(t, err, "an unexpected error occurred. Code: 400", http.StatusInternalServerError)
+	})
 }
 
 func createErrorHandler(err error) echo.HandlerFunc {
