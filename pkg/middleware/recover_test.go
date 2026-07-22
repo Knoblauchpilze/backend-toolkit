@@ -14,61 +14,63 @@ var (
 	errSample = errors.New("some error")
 )
 
-func TestUnit_Recover_CallsNextMiddleware(t *testing.T) {
-	callable, called, ctx := createCallableHandler(Recover)
+func TestUnit_Recover(t *testing.T) {
+	t.Run("calls next middleware", func(t *testing.T) {
+		callable, called, ctx := createCallableHandler(Recover)
 
-	err := callable(ctx)
+		err := callable(ctx)
 
-	assert.Nil(t, err)
-	assert.True(t, *called)
-}
+		assert.Nil(t, err)
+		assert.True(t, *called)
+	})
 
-func TestUnit_Recover_PreventsPanic(t *testing.T) {
-	next, called := createPanicHandler()
+	t.Run("prevents panic", func(t *testing.T) {
+		next, called := createPanicHandler()
 
-	middleware := Recover()
-	callable := middleware(next)
+		middleware := Recover()
+		callable := middleware(next)
 
-	ctx, _ := generateTestEchoContext()
+		ctx, _ := generateTestEchoContext()
 
-	err := callable(ctx)
+		err := callable(ctx)
 
-	assert.NotNil(t, err)
-	assert.True(t, *called)
-}
+		assert.NotNil(t, err)
+		assert.True(t, *called)
+	})
 
-func TestUnit_Recover_LogsError(t *testing.T) {
-	next, _ := createPanicHandler()
+	t.Run("logs error", func(t *testing.T) {
+		next, _ := createPanicHandler()
 
-	middleware := Recover()
-	callable := middleware(next)
+		middleware := Recover()
+		callable := middleware(next)
 
-	ctx, out := generateTestEchoContextWithLogger()
+		ctx, out := generateTestEchoContextWithLogger()
 
-	err := callable(ctx)
-	require.NotNil(t, err)
-	afterCall := time.Now()
+		err := callable(ctx)
+		require.NotNil(t, err)
+		afterCall := time.Now()
 
-	actual := unmarshalLogOutput(t, *out)
-	assert.Equal(t, "ERROR", actual.Level)
-	safetyMargin := 5 * time.Second
-	assert.True(t, areTimeCloserThan(actual.Time, afterCall, safetyMargin), "%v and %v are not within %v", afterCall, actual.Time, safetyMargin)
-	// https://golangforall.com/en/post/golang-regexp-matching-newline.html
-	assert.Regexp(t, "GET example.com/ generated panic: some error. Stack: [[:graph:]\\s]*", actual.Message)
-}
+		actual := unmarshalLogOutput(t, *out)
+		assert.Equal(t, "ERROR", actual.Level)
+		safetyMargin := 5 * time.Second
+		assert.True(t, areTimeCloserThan(actual.Time, afterCall, safetyMargin), "%v and %v are not within %v", afterCall, actual.Time, safetyMargin)
+		// https://golangforall.com/en/post/golang-regexp-matching-newline.html
+		assert.Regexp(t, "GET example.com/ generated panic: some error. Stack: [[:graph:]\\s]*", actual.Message)
+	})
 
-func TestUnit_Recover_SetsStatusCodeToError(t *testing.T) {
-	next, _ := createPanicHandler()
+	t.Run("returns error from panic", func(t *testing.T) {
+		next, _ := createPanicHandler()
 
-	middleware := Recover()
-	callable := middleware(next)
+		middleware := Recover()
+		callable := middleware(next)
 
-	ctx, _ := generateTestEchoContext()
+		ctx, _ := generateTestEchoContext()
 
-	err := callable(ctx)
-	require.NotNil(t, err)
+		err := callable(ctx)
+		require.NotNil(t, err)
 
-	assert.ErrorIs(t, err, errSample)
+		assert.ErrorIs(t, err, errSample)
+	})
 }
 
 func createPanicHandler() (echo.HandlerFunc, *bool) {
