@@ -3,7 +3,6 @@ package db
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"testing"
 
 	berrors "github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
@@ -11,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var errSomeError = fmt.Errorf("some error")
+var errSomeError = errors.New("some error")
 
 func TestUnit_Error_AsDatabaseError(t *testing.T) {
 	t.Run("does not detect random error", func(t *testing.T) {

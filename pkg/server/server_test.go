@@ -2,7 +2,7 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -18,8 +18,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const uuidRegex = `[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`
-const requestIdHeader = "X-Request-Id"
+const (
+	uuidRegex       = `[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`
+	requestIdHeader = "X-Request-Id"
+)
 
 func TestUnit_Server(t *testing.T) {
 	t.Run("expect failure when adding unsupported route", func(t *testing.T) {
@@ -103,7 +105,7 @@ func TestUnit_Server(t *testing.T) {
 	t.Run("returns error envelope when handler panics", func(t *testing.T) {
 		s := newTestServer(4003)
 		errorHandler := func(c *echo.Context) error {
-			panic(fmt.Errorf("this handler panics"))
+			panic(errors.New("this handler panics"))
 		}
 		route := rest.NewRoute(http.MethodGet, "/", errorHandler)
 		err := s.AddRoute(route)
@@ -127,7 +129,7 @@ func TestUnit_Server(t *testing.T) {
 	t.Run("returns non-envelope error when raw route handler panics", func(t *testing.T) {
 		s := newTestServer(4007)
 		errorHandler := func(c *echo.Context) error {
-			panic(fmt.Errorf("this handler panics"))
+			panic(errors.New("this handler panics"))
 		}
 		route := rest.NewRawRoute(http.MethodGet, "/", errorHandler)
 		err := s.AddRoute(route)

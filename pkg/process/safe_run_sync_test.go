@@ -1,14 +1,14 @@
 package process
 
 import (
-	"fmt"
+	"errors"
 	"testing"
 
-	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
+	berrors "github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
-var errSample = fmt.Errorf("sample error")
+var errSample = errors.New("sample error")
 
 func TestUnit_SafeRunSync_CallsProcess(t *testing.T) {
 	var called int
@@ -81,5 +81,5 @@ func TestUnit_SafeRunSync_PanicWithRandomDatatype(t *testing.T) {
 	}
 
 	assert.NotPanics(t, run)
-	assert.Equal(t, errors.New("2"), actual)
+	assert.Equal(t, berrors.New("2"), actual)
 }

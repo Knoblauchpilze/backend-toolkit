@@ -3,7 +3,6 @@ package errors
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,7 +11,7 @@ import (
 
 const someCode = ErrorCode(26)
 
-var errSomeError = fmt.Errorf("some error")
+var errSomeError = errors.New("some error")
 
 func TestUnit_Error_New(t *testing.T) {
 	err := New("foo")

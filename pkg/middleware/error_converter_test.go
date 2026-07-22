@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"fmt"
 	"net/http"
 	"testing"
 
@@ -43,7 +42,7 @@ func TestUnit_ErrorConverter(t *testing.T) {
 	})
 
 	t.Run("wraps error with code and cause into http error", func(t *testing.T) {
-		errWithCause := errors.WrapCode(fmt.Errorf("some error"), errUncaughtPanic)
+		errWithCause := errors.WrapCode(errSample, errUncaughtPanic)
 		next := createErrorHandler(errWithCause)
 		middleware := ErrorConverter()
 		callable := middleware(next)

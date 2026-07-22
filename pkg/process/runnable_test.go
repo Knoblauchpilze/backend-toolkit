@@ -2,6 +2,7 @@ package process
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -113,8 +114,8 @@ func TestUnit_StartWithSignalHandler_HandlesCorrectlyInterruptError(t *testing.T
 
 func TestUnit_StartWithSignalHandler_RunErrorOverridesInterruptError(t *testing.T) {
 	if *waitForInterruption {
-		errRun := fmt.Errorf("run error")
-		errInterrupt := fmt.Errorf("interrupt error")
+		errRun := errors.New("run error")
+		errInterrupt := errors.New("interrupt error")
 		d := newDummyRunnableWithRunError(errRun, errInterrupt)
 		runInterruptedRunnable(d)
 		return

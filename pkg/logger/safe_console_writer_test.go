@@ -2,7 +2,7 @@ package logger
 
 import (
 	"bytes"
-	"fmt"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -30,7 +30,7 @@ func (m *mockWriter) Write(p []byte) (int, error) {
 
 func TestUnit_SafeConsoleWriter_WhenWriterFails_ExpectFailure(t *testing.T) {
 	m := &mockWriter{
-		err: fmt.Errorf("some error"),
+		err: errors.New("some error"),
 	}
 
 	safeWriter := newSafeConsoleWriter(m)
