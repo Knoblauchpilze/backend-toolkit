@@ -37,7 +37,7 @@ func Recover() echo.MiddlewareFunc {
 
 					c.Logger().Error(createErrorLog(data))
 
-					err = wrapToHttpError(recoveredErr)
+					err = recoveredErr
 				}
 			}()
 			return next(c)

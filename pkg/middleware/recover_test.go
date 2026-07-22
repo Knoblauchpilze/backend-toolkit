@@ -1,14 +1,17 @@
 package middleware
 
 import (
-	"fmt"
-	"net/http"
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+)
+
+var (
+	errSample = errors.New("some error")
 )
 
 func TestUnit_Recover_CallsNextMiddleware(t *testing.T) {
@@ -65,14 +68,14 @@ func TestUnit_Recover_SetsStatusCodeToError(t *testing.T) {
 	err := callable(ctx)
 	require.NotNil(t, err)
 
-	assertIsHttpErrorWithMessageAndCode(t, err, "some error", http.StatusInternalServerError)
+	assert.ErrorIs(t, err, errSample)
 }
 
 func createPanicHandler() (echo.HandlerFunc, *bool) {
 	var called bool
 	handler := func(c *echo.Context) error {
 		called = true
-		panic(fmt.Errorf("some error"))
+		panic(errSample)
 	}
 
 	return handler, &called
