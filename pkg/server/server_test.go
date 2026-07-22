@@ -123,7 +123,11 @@ func TestUnit_Server(t *testing.T) {
 		actual := unmarshalResponseAndAssertRequestId(t, response)
 		assert.Equal(t, "ERROR", actual.Status)
 		assert.Equal(t, http.StatusInternalServerError, actual.StatusCode)
-		assert.Equal(t, `{"message":"this handler panics"}`, string(actual.Details))
+		assert.Equal(
+			t,
+			`{"message":"an unexpected error occurred. Code: 400 (cause: this handler panics)"}`,
+			string(actual.Details),
+		)
 	})
 
 	t.Run("returns non-envelope error when raw route handler panics", func(t *testing.T) {
@@ -148,7 +152,11 @@ func TestUnit_Server(t *testing.T) {
 		body, err := io.ReadAll(response.Body)
 		require.NoError(t, err, "Actual err: %v", err)
 		assertResponseContentLengthMatchesBody(t, response, body)
-		assert.JSONEq(t, `{"message":"this handler panics"}`, string(body))
+		assert.JSONEq(
+			t,
+			`{"message":"an unexpected error occurred. Code: 400 (cause: this handler panics)"}`,
+			string(body),
+		)
 		err = response.Body.Close()
 		require.NoError(t, err, "Actual err: %v", err)
 	})

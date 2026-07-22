@@ -5,7 +5,12 @@ import (
 	"net/http"
 	"runtime"
 
+	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 	"github.com/labstack/echo/v5"
+)
+
+const (
+	errUncaughtPanic errors.ErrorCode = 400
 )
 
 type recoveredErrorData struct {
@@ -23,6 +28,10 @@ func Recover() echo.MiddlewareFunc {
 					recoveredErr, ok := r.(error)
 					if !ok {
 						recoveredErr = fmt.Errorf("%v", r)
+					}
+
+					if _, ok := recoveredErr.(*errors.ErrorWithCode); !ok {
+						recoveredErr = errors.WrapCode(recoveredErr, errUncaughtPanic)
 					}
 
 					stack := make([]byte, 4<<10) // 4 KB

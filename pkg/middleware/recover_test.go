@@ -1,17 +1,18 @@
 package middleware
 
 import (
-	"errors"
+	stderrors "errors"
 	"testing"
 	"time"
 
+	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 var (
-	errSample = errors.New("some error")
+	errSample = stderrors.New("some error")
 )
 
 func TestUnit_Recover(t *testing.T) {
@@ -55,7 +56,11 @@ func TestUnit_Recover(t *testing.T) {
 		safetyMargin := 5 * time.Second
 		assert.True(t, areTimeCloserThan(actual.Time, afterCall, safetyMargin), "%v and %v are not within %v", afterCall, actual.Time, safetyMargin)
 		// https://golangforall.com/en/post/golang-regexp-matching-newline.html
-		assert.Regexp(t, "GET example.com/ generated panic: some error. Stack: [[:graph:]\\s]*", actual.Message)
+		assert.Regexp(
+			t,
+			"GET example.com/ generated panic: an unexpected error occurred\\. Code: 400 \\(cause: some error\\)\\. Stack: [[:graph:]\\s]*",
+			actual.Message,
+		)
 	})
 
 	t.Run("returns error from panic", func(t *testing.T) {
@@ -69,7 +74,27 @@ func TestUnit_Recover(t *testing.T) {
 		err := callable(ctx)
 		require.NotNil(t, err)
 
-		assert.ErrorIs(t, err, errSample)
+		errWithCode, ok := errors.AsErrorWithCode(err)
+		require.True(t, ok)
+		assert.Equal(t, errUncaughtPanic, errWithCode.Code)
+		assert.ErrorIs(t, errWithCode.Cause, errSample)
+	})
+
+	t.Run("does not rewrap error with code", func(t *testing.T) {
+		next, _ := createPanicHandlerWithErrorCode()
+
+		middleware := Recover()
+		callable := middleware(next)
+
+		ctx, _ := generateTestEchoContext()
+
+		err := callable(ctx)
+		require.NotNil(t, err)
+
+		errWithCode, ok := errors.AsErrorWithCode(err)
+		require.True(t, ok)
+		assert.Equal(t, errors.ErrorCode(123), errWithCode.Code)
+		assert.ErrorIs(t, errWithCode.Cause, errSample)
 	})
 }
 
@@ -78,6 +103,17 @@ func createPanicHandler() (echo.HandlerFunc, *bool) {
 	handler := func(c *echo.Context) error {
 		called = true
 		panic(errSample)
+	}
+
+	return handler, &called
+}
+
+func createPanicHandlerWithErrorCode() (echo.HandlerFunc, *bool) {
+	var called bool
+	handler := func(c *echo.Context) error {
+		called = true
+		errWithCode := errors.WrapCode(errSample, errors.ErrorCode(123))
+		panic(errWithCode)
 	}
 
 	return handler, &called

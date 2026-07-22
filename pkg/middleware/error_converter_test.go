@@ -31,14 +31,20 @@ func TestUnit_ErrorConverter(t *testing.T) {
 	})
 
 	t.Run("wraps error with code into http error", func(t *testing.T) {
-		next := createErrorHandler(ErrUncaughtPanic)
+		expectedErr := errors.FromCode(58)
+		next := createErrorHandler(expectedErr)
 		middleware := ErrorConverter()
 		callable := middleware(next)
 		ctx, _ := generateTestEchoContext()
 
 		err := callable(ctx)
 
-		assertIsHttpErrorWithMessageAndCode(t, err, "an unexpected error occurred. Code: 400", http.StatusInternalServerError)
+		assertIsHttpErrorWithMessageAndCode(
+			t,
+			err,
+			"an unexpected error occurred. Code: 58",
+			http.StatusInternalServerError,
+		)
 	})
 
 	t.Run("wraps error with code and cause into http error", func(t *testing.T) {

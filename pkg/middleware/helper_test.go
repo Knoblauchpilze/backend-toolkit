@@ -69,6 +69,8 @@ type message struct {
 }
 
 func unmarshalLogOutput(t *testing.T, out bytes.Buffer) message {
+	t.Helper()
+
 	var actual message
 
 	err := json.Unmarshal(out.Bytes(), &actual)
@@ -78,6 +80,8 @@ func unmarshalLogOutput(t *testing.T, out bytes.Buffer) message {
 }
 
 func assertIsHttpErrorWithMessageAndCode(t *testing.T, err error, message string, httpCode int) {
+	t.Helper()
+
 	httpErr, ok := err.(*echo.HTTPError)
 	require.True(t, ok)
 
