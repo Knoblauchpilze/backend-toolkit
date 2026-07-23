@@ -7,52 +7,23 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type decoderDetails struct {
-	Value int `json:"value"`
-}
+func TestUnit_Decoder(t *testing.T) {
+	t.Run("decode json or string decodes json", func(t *testing.T) {
+		actual, err := DecodeJSONOrString([]byte(`{"value":12}`))
+		require.Nil(t, err)
 
-func TestUnit_Decoder_DecodeJSONTo_Succeeds(t *testing.T) {
-	actual, err := DecodeJSONTo[decoderDetails]([]byte(`{"value":12}`))
-	require.Nil(t, err)
+		asMap, ok := actual.(map[string]any)
+		require.True(t, ok)
 
-	expected := decoderDetails{Value: 12}
-	assert.Equal(t, expected, actual)
-}
+		assert.Equal(t, float64(12), asMap["value"])
+	})
 
-func TestUnit_Decoder_DecodeJSONTo_FailsOnInvalidJSON(t *testing.T) {
-	_, err := DecodeJSONTo[decoderDetails]([]byte(`{"value":`))
-	require.Error(t, err)
-}
+	t.Run("decode json or string falls back to string", func(t *testing.T) {
+		actual, err := DecodeJSONOrString([]byte("some-data"))
+		require.Nil(t, err)
 
-func TestUnit_Decoder_DecodeRawBytes_ReturnsInput(t *testing.T) {
-	actual, err := DecodeRawBytes([]byte("some-data"))
-	require.Nil(t, err)
-
-	assert.Equal(t, []byte("some-data"), actual)
-}
-
-func TestUnit_Decoder_DecodeString_ReturnsInputAsString(t *testing.T) {
-	actual, err := DecodeString([]byte("some-data"))
-	require.Nil(t, err)
-
-	assert.Equal(t, "some-data", actual)
-}
-
-func TestUnit_Decoder_DecodeJSONOrString_DecodesJSON(t *testing.T) {
-	actual, err := DecodeJSONOrString([]byte(`{"value":12}`))
-	require.Nil(t, err)
-
-	asMap, ok := actual.(map[string]any)
-	require.True(t, ok)
-
-	assert.Equal(t, float64(12), asMap["value"])
-}
-
-func TestUnit_Decoder_DecodeJSONOrString_FallbacksToString(t *testing.T) {
-	actual, err := DecodeJSONOrString([]byte("some-data"))
-	require.Nil(t, err)
-
-	asString, ok := actual.(string)
-	require.True(t, ok)
-	assert.Equal(t, "some-data", asString)
+		asString, ok := actual.(string)
+		require.True(t, ok)
+		assert.Equal(t, "some-data", asString)
+	})
 }
