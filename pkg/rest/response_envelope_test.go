@@ -7,50 +7,52 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestUnit_ResponseEnvelope_SuccessfullyMarshalsTypedDetails(t *testing.T) {
-	type details struct {
-		Field int `json:"field"`
-	}
-
-	r := ResponseEnvelope[details]{
-		RequestId:  "1348f004-7620-4c80-915d-26da0ac144f6",
-		Status:     StatusSuccess,
-		StatusCode: 200,
-		Details:    details{Field: 32},
-	}
-
-	out, err := json.Marshal(r)
-
-	assert.Nil(t, err)
-	expectedJson := `
-	{
-		"request_id": "1348f004-7620-4c80-915d-26da0ac144f6",
-		"status": "SUCCESS",
-		"status_code": 200,
-		"details": {
-			"field": 32
+func TestUnit_ResponseEnvelope(t *testing.T) {
+	t.Run("successfully marshals typed details", func(t *testing.T) {
+		type details struct {
+			Field int `json:"field"`
 		}
-	}`
-	assert.JSONEq(t, expectedJson, string(out))
-}
 
-func TestUnit_ResponseEnvelope_SuccessfullyMarshalsSimpleDetails(t *testing.T) {
-	r := ResponseEnvelope[int32]{
-		RequestId:  "1348f004-7620-4c80-915d-26da0ac144f6",
-		Status:     StatusSuccess,
-		StatusCode: 200,
-		Details:    int32(16),
-	}
+		r := ResponseEnvelope[details]{
+			RequestId:  "1348f004-7620-4c80-915d-26da0ac144f6",
+			Status:     StatusSuccess,
+			StatusCode: 200,
+			Details:    details{Field: 32},
+		}
 
-	out, err := json.Marshal(r)
+		out, err := json.Marshal(r)
 
-	assert.Nil(t, err)
-	expectedJson := `
-	{
-		"request_id": "1348f004-7620-4c80-915d-26da0ac144f6",
-		"status": "SUCCESS",
-		"status_code": 200,
-		"details": 16
-	}`
-	assert.JSONEq(t, expectedJson, string(out))
+		assert.Nil(t, err)
+		expectedJson := `
+		{
+			"request_id": "1348f004-7620-4c80-915d-26da0ac144f6",
+			"status": "SUCCESS",
+			"status_code": 200,
+			"details": {
+				"field": 32
+			}
+		}`
+		assert.JSONEq(t, expectedJson, string(out))
+	})
+
+	t.Run("successfully marshals simple details", func(t *testing.T) {
+		r := ResponseEnvelope[int32]{
+			RequestId:  "1348f004-7620-4c80-915d-26da0ac144f6",
+			Status:     StatusSuccess,
+			StatusCode: 200,
+			Details:    int32(16),
+		}
+
+		out, err := json.Marshal(r)
+
+		assert.Nil(t, err)
+		expectedJson := `
+		{
+			"request_id": "1348f004-7620-4c80-915d-26da0ac144f6",
+			"status": "SUCCESS",
+			"status_code": 200,
+			"details": 16
+		}`
+		assert.JSONEq(t, expectedJson, string(out))
+	})
 }
