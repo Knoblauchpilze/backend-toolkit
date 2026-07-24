@@ -4,9 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/labstack/echo/v5"
 )
 
 type ResponseEnvelopeDecoder[T any] func(data []byte) (T, error)
+
+const requestIdHeader = "X-Request-Id"
 
 type envelopeResponseWriter[T any] struct {
 	response ResponseEnvelope[T]
@@ -54,10 +58,12 @@ func (erw *envelopeResponseWriter[T]) WriteTyped(data T) (int, error) {
 		return 0, err
 	}
 
-	erw.wroteHeader = true
-
-	// Update Content-Length to reflect the actual wrapped payload size
+	// Set transport-layer headers before committing response
+	erw.writer.Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	erw.writer.Header().Set(requestIdHeader, erw.response.RequestId)
 	erw.writer.Header().Set("Content-Length", fmt.Sprintf("%d", len(out)))
+
+	erw.wroteHeader = true
 
 	return erw.writer.Write(out)
 }
@@ -70,6 +76,11 @@ func (erw *envelopeResponseWriter[T]) WriteHeader(statusCode int) {
 	erw.wroteHeader = true
 	erw.response.StatusCode = statusCode
 	erw.response.Status = statusFromHTTPCode(statusCode)
+
+	// Set transport-layer headers at write header time to ensure they're committed
+	erw.writer.Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	erw.writer.Header().Set(requestIdHeader, erw.response.RequestId)
+
 	erw.writer.WriteHeader(statusCode)
 }
 
