@@ -3,6 +3,7 @@ package middleware
 import (
 	"io"
 	"net/http"
+	"strconv"
 	"testing"
 
 	"github.com/google/uuid"
@@ -23,7 +24,7 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 		assert.True(t, *called)
 	})
 
-	t.Run("wraps plain output in response envelope", func(t *testing.T) {
+	t.Run("wraps plain output in envelope with request id", func(t *testing.T) {
 		next := createHandlerFuncWithPlainOutput(http.StatusOK, "my-output")
 
 		middleware := ResponseEnvelope()
@@ -36,6 +37,10 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 		require.NoError(t, err, "Actual err: %v", err)
 
 		assert.Equal(t, http.StatusOK, rw.Code)
+		assert.Equal(t, sampleRequestId, rw.Header().Get(requestIdHeader))
+		length := rw.Header().Get("Content-Length")
+		// The length includes the value (`my-output`) and the envelope
+		assert.Equal(t, "112", length)
 		body, err := io.ReadAll(rw.Body)
 		require.NoError(t, err, "Actual err: %v", err)
 		actual := string(body)
@@ -43,7 +48,7 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 		assert.Regexp(t, expected, actual)
 	})
 
-	t.Run("wraps json output in response envelope", func(t *testing.T) {
+	t.Run("wraps json output in envelope with request id", func(t *testing.T) {
 		type testStruct struct {
 			Key string
 		}
@@ -62,40 +67,42 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 		require.NoError(t, err, "Actual err: %v", err)
 
 		assert.Equal(t, http.StatusOK, rw.Code)
+		assert.Equal(t, sampleRequestId, rw.Header().Get(requestIdHeader))
 		body, err := io.ReadAll(rw.Body)
 		require.NoError(t, err, "Actual err: %v", err)
+
+		length, err := strconv.Atoi(rw.Header().Get("Content-Length"))
+		require.NoError(t, err, "Actual err: %v", err)
+		assert.Equal(t, len(body), length)
+
 		actual := string(body)
 		expected := `{"request_id":"a57f4ca1-1a22-4990-b3de-5f836a3ea4e9","status":"SUCCESS","status_code":200,"details":{"Key":"value"}}`
 		assert.Regexp(t, expected, actual)
 	})
 
-	t.Run("correctly updates content length to account for envelope", func(t *testing.T) {
-		next := createHandlerFuncWithPlainOutput(http.StatusOK, "my-output")
+	t.Run("wraps output in envelope with unknown request id", func(t *testing.T) {
+		type testStruct struct {
+			Key string
+		}
 
-		middleware := ResponseEnvelope()
-		callable := middleware(next)
+		next := createHandlerFuncWithJsonOutput(http.StatusOK, testStruct{Key: "value"})
 
+		callable := ResponseEnvelope()(next)
 		ctx, rw := generateTestEchoContext()
-		ctx.Set(requestIdContextKey, sampleRequestId)
 
 		err := callable(ctx)
 		require.NoError(t, err, "Actual err: %v", err)
 
-		length := rw.Header().Get("Content-Length")
-		// The length accounts for:
-		//  - 51 characters for the request identifier and quotes
-		//  - 18 characters for the status and quotes
-		//  - 17 characters for the HTTP status and quotes
-		//  - 10 characters for the details header and quotes
-		//  - 11 characters for the plain output
-		//  - 5 characters for commas separating fields
-		assert.Equal(t, "112", length)
-
-		out, err := io.ReadAll(rw.Body)
+		assert.Equal(t, defaultRequestId, rw.Header().Get(requestIdHeader))
+		body, err := io.ReadAll(rw.Body)
 		require.NoError(t, err, "Actual err: %v", err)
 
-		expectedBody := `{"request_id":"a57f4ca1-1a22-4990-b3de-5f836a3ea4e9","status":"SUCCESS","status_code":200,"details":"my-output"}`
-		assert.Regexp(t, expectedBody, string(out))
+		length, err := strconv.Atoi(rw.Header().Get("Content-Length"))
+		require.NoError(t, err, "Actual err: %v", err)
+		assert.Equal(t, len(body), length)
+
+		expected := `{"request_id":"unknown","status":"SUCCESS","status_code":200,"details":{"Key":"value"}}`
+		assert.Regexp(t, expected, string(body))
 	})
 
 	t.Run("when status is not 200 ok expect status reflects it", func(t *testing.T) {
@@ -111,27 +118,17 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 		require.NoError(t, err, "Actual err: %v", err)
 
 		assert.Equal(t, http.StatusBadGateway, rw.Code)
+		assert.Equal(t, sampleRequestId, rw.Header().Get(requestIdHeader))
 		body, err := io.ReadAll(rw.Body)
 		require.NoError(t, err, "Actual err: %v", err)
+
+		length, err := strconv.Atoi(rw.Header().Get("Content-Length"))
+		require.NoError(t, err, "Actual err: %v", err)
+		assert.Equal(t, len(body), length)
+
 		actual := string(body)
 		expected := `{"request_id":"a57f4ca1-1a22-4990-b3de-5f836a3ea4e9","status":"ERROR","status_code":502,"details":"my-output"}`
 		assert.Regexp(t, expected, actual)
-	})
-
-	t.Run("uses unknown request id when context does not provide one", func(t *testing.T) {
-		next := createHandlerFuncWithPlainOutput(http.StatusOK, "my-output")
-
-		callable := ResponseEnvelope()(next)
-		ctx, rw := generateTestEchoContext()
-
-		err := callable(ctx)
-		require.NoError(t, err, "Actual err: %v", err)
-
-		body, err := io.ReadAll(rw.Body)
-		require.NoError(t, err, "Actual err: %v", err)
-
-		expected := `{"request_id":"unknown","status":"SUCCESS","status_code":200,"details":"my-output"}`
-		assert.Regexp(t, expected, string(body))
 	})
 }
 
