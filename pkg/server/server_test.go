@@ -85,6 +85,36 @@ func TestUnit_Server(t *testing.T) {
 		require.NoError(t, err, "Actual err: %v", err)
 	})
 
+	t.Run("route with string output returns enveloped json response", func(t *testing.T) {
+		s := newTestServer(4008)
+		stringHandler := func(c *echo.Context) error {
+			return c.String(http.StatusOK, "test-string-output")
+		}
+		route := rest.NewRoute(http.MethodGet, "/", stringHandler)
+		err := s.AddRoute(route)
+		require.NoError(t, err, "Actual err: %v", err)
+
+		done := asyncRunServerAndAssertStopWithoutError(t, s)
+
+		response := doRequest(t, http.MethodGet, "http://localhost:4008")
+
+		err = s.Stop()
+		require.NoError(t, err, "Actual err: %v", err)
+
+		<-done
+
+		assert.Equal(t, http.StatusOK, response.StatusCode)
+		assert.Equal(t, echo.MIMEApplicationJSON, response.Header.Get(echo.HeaderContentType))
+		assert.Regexp(t, uuidRegex, response.Header.Get(requestIdHeader))
+		body, err := io.ReadAll(response.Body)
+		require.NoError(t, err, "Actual err: %v", err)
+		assertResponseContentLengthMatchesBody(t, response, body)
+		actual := unmarshalResponseAndAssertRequestId(t, response)
+		assert.Equal(t, "SUCCESS", actual.Status)
+		assert.Equal(t, http.StatusOK, actual.StatusCode)
+		assert.Equal(t, `"test-string-output"`, string(actual.Details))
+	})
+
 	t.Run("base path is prefixed to route path", func(t *testing.T) {
 		s := newTestServerWithPath(4002, "prefix")
 		route := rest.NewRoute(http.MethodGet, "/route", testHttpHandler)
@@ -300,6 +330,7 @@ func assertIsOkResponse(t *testing.T, response *http.Response) {
 	t.Helper()
 
 	assert.Equal(t, http.StatusOK, response.StatusCode)
+	assert.Equal(t, echo.MIMEApplicationJSON, response.Header.Get(echo.HeaderContentType))
 	actual := unmarshalResponseAndAssertRequestId(t, response)
 	assert.Equal(t, "SUCCESS", actual.Status)
 	assert.Equal(t, http.StatusOK, actual.StatusCode)
