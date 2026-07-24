@@ -44,7 +44,7 @@ func TestUnit_Server(t *testing.T) {
 		}
 	})
 
-	t.Run("route responses with envelope wrapping", func(t *testing.T) {
+	t.Run("route responds with envelope wrapping", func(t *testing.T) {
 		s := newTestServerWithOkHandler(t, 4001)
 
 		done := asyncRunServerAndAssertStopWithoutError(t, s)
