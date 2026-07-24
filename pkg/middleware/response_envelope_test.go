@@ -37,6 +37,7 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 		require.NoError(t, err, "Actual err: %v", err)
 
 		assert.Equal(t, http.StatusOK, rw.Code)
+		assert.Equal(t, echo.MIMEApplicationJSON, rw.Header().Get(echo.HeaderContentType))
 		assert.Equal(t, sampleRequestId, rw.Header().Get(requestIdHeader))
 		length := rw.Header().Get("Content-Length")
 		// The length includes the value (`my-output`) and the envelope
@@ -67,6 +68,7 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 		require.NoError(t, err, "Actual err: %v", err)
 
 		assert.Equal(t, http.StatusOK, rw.Code)
+		assert.Equal(t, echo.MIMEApplicationJSON, rw.Header().Get(echo.HeaderContentType))
 		assert.Equal(t, sampleRequestId, rw.Header().Get(requestIdHeader))
 		body, err := io.ReadAll(rw.Body)
 		require.NoError(t, err, "Actual err: %v", err)
@@ -93,6 +95,7 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 		err := callable(ctx)
 		require.NoError(t, err, "Actual err: %v", err)
 
+		assert.Equal(t, echo.MIMEApplicationJSON, rw.Header().Get(echo.HeaderContentType))
 		assert.Equal(t, defaultRequestId, rw.Header().Get(requestIdHeader))
 		body, err := io.ReadAll(rw.Body)
 		require.NoError(t, err, "Actual err: %v", err)
@@ -118,6 +121,7 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 		require.NoError(t, err, "Actual err: %v", err)
 
 		assert.Equal(t, http.StatusBadGateway, rw.Code)
+		assert.Equal(t, echo.MIMEApplicationJSON, rw.Header().Get(echo.HeaderContentType))
 		assert.Equal(t, sampleRequestId, rw.Header().Get(requestIdHeader))
 		body, err := io.ReadAll(rw.Body)
 		require.NoError(t, err, "Actual err: %v", err)
