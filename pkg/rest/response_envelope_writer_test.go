@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -294,5 +295,84 @@ func TestUnit_EnvelopeResponseWriter(t *testing.T) {
 			}
 		}`
 		assert.JSONEq(t, expectedJson, out.Body.String())
+	})
+
+	t.Run("sets content type and request id header on success", func(t *testing.T) {
+		out := httptest.NewRecorder()
+
+		rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONOrString)
+
+		_, err := rw.WriteTyped(sampleJsonData)
+		require.NoError(t, err, "Actual err: %v", err)
+
+		assert.Equal(t, echo.MIMEApplicationJSON, out.Header().Get(echo.HeaderContentType))
+
+		assert.Equal(t, sampleRequestId, out.Header().Get("X-Request-Id"))
+
+		body := out.Body.Bytes()
+		contentLength := out.Header().Get("Content-Length")
+		assert.Equal(t, fmt.Sprintf("%d", len(body)), contentLength)
+	})
+
+	t.Run("sets content type and request id header on error", func(t *testing.T) {
+		out := httptest.NewRecorder()
+
+		rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONOrString)
+
+		rw.WriteHeader(http.StatusInternalServerError)
+		_, err := rw.WriteTyped(sampleJsonData)
+		require.NoError(t, err, "Actual err: %v", err)
+
+		assert.Equal(t, echo.MIMEApplicationJSON, out.Header().Get(echo.HeaderContentType))
+		assert.Equal(t, sampleRequestId, out.Header().Get("X-Request-Id"))
+
+		body := out.Body.Bytes()
+		contentLength := out.Header().Get("Content-Length")
+		assert.Equal(t, fmt.Sprintf("%d", len(body)), contentLength)
+		assert.Equal(t, http.StatusInternalServerError, out.Code)
+	})
+
+	t.Run("sets JSON content type also when sending plain string", func(t *testing.T) {
+		out := httptest.NewRecorder()
+
+		rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONOrString)
+
+		_, err := rw.Write([]byte("plain string output"))
+		require.NoError(t, err, "Actual err: %v", err)
+
+		assert.Equal(t, echo.MIMEApplicationJSON, out.Header().Get(echo.HeaderContentType))
+		assert.Equal(t, sampleRequestId, out.Header().Get("X-Request-Id"))
+
+		body := out.Body.Bytes()
+		contentLength := out.Header().Get("Content-Length")
+		assert.Equal(t, fmt.Sprintf("%d", len(body)), contentLength)
+		expectedJson := `
+		{
+			"request_id": "b8e9de68-3d49-4d40-a9a6-f8f3d3eab8f1",
+			"status": "SUCCESS",
+			"status_code": 200,
+			"details": "plain string output"
+		}`
+		assert.JSONEq(t, expectedJson, out.Body.String())
+	})
+
+	t.Run("decode error path asserts no partial body and correct content length", func(t *testing.T) {
+		out := httptest.NewRecorder()
+
+		failingDecoder := func(data []byte) (interface{}, error) {
+			return nil, fmt.Errorf("invalid format")
+		}
+
+		rw := NewResponseEnvelopeWriter(out, sampleRequestId, failingDecoder)
+
+		_, err := rw.Write([]byte("malformed data"))
+		require.Error(t, err, "Expected decode error")
+		assert.EqualError(t, err, "invalid format")
+
+		body := out.Body.Bytes()
+		assert.Empty(t, body)
+
+		contentLength := out.Header().Get("Content-Length")
+		assert.True(t, contentLength == "" || contentLength == "0")
 	})
 }
