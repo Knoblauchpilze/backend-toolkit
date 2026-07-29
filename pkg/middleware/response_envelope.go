@@ -12,7 +12,7 @@ const (
 func ResponseEnvelope() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c *echo.Context) error {
-			requestId, ok := RequestIdFromContext(c)
+			requestId, ok := rest.RequestIdFromContext(c)
 			if !ok {
 				requestId = defaultRequestId
 			}

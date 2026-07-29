@@ -3,6 +3,7 @@ package middleware
 import (
 	"testing"
 
+	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
 	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -34,7 +35,7 @@ func TestUnit_RequestTracer(t *testing.T) {
 		ctx, out := generateTestEchoContextWithLogger()
 		originalLogger := ctx.Logger()
 
-		ctx.Set(requestIdContextKey, "my-request-id")
+		rest.SetContextRequestId(ctx, "my-request-id")
 
 		err := callable(ctx)
 		require.NoError(t, err, "Actual err: %v", err)

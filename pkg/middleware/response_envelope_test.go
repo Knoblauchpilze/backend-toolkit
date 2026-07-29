@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/assert"
@@ -31,7 +32,7 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 		callable := middleware(next)
 
 		ctx, rw := generateTestEchoContext()
-		ctx.Set(requestIdContextKey, sampleRequestId)
+		rest.SetContextRequestId(ctx, sampleRequestId)
 
 		err := callable(ctx)
 		require.NoError(t, err, "Actual err: %v", err)
@@ -62,7 +63,7 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 		callable := middleware(next)
 
 		ctx, rw := generateTestEchoContext()
-		ctx.Set(requestIdContextKey, sampleRequestId)
+		rest.SetContextRequestId(ctx, sampleRequestId)
 
 		err := callable(ctx)
 		require.NoError(t, err, "Actual err: %v", err)
@@ -115,7 +116,7 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 		callable := middleware(next)
 
 		ctx, rw := generateTestEchoContext()
-		ctx.Set(requestIdContextKey, sampleRequestId)
+		rest.SetContextRequestId(ctx, sampleRequestId)
 
 		err := callable(ctx)
 		require.NoError(t, err, "Actual err: %v", err)
