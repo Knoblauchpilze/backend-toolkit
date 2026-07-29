@@ -102,12 +102,12 @@ func createEchoServer(log *slog.Logger) *echo.Echo {
 	e := echo.New()
 	e.Logger = log
 
-	registerBaseMiddlewares(e)
+	registerBaseMiddlewares(e, log)
 
 	return e
 }
 
-func registerBaseMiddlewares(e *echo.Echo) {
+func registerBaseMiddlewares(e *echo.Echo, log *slog.Logger) {
 	// https://stackoverflow.com/questions/74020538/cors-preflight-did-not-succeed
 	// https://stackoverflow.com/questions/6660019/restful-api-methods-head-options
 	corsConf := middleware.CORSConfig{
@@ -125,7 +125,7 @@ func registerBaseMiddlewares(e *echo.Echo) {
 
 	e.Use(middleware.CORSWithConfig(corsConf))
 	e.Use(om.RequestId())
-	e.Use(om.RequestTracer())
+	e.Use(om.RequestTracer(log))
 	e.Use(om.RequestLogger())
 	e.Use(om.ErrorConverter())
 	e.Use(om.Recover())

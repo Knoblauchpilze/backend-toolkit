@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"log/slog"
 	"testing"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
@@ -21,13 +22,14 @@ func TestUnit_RequestTracer(t *testing.T) {
 
 	t.Run("when request id not set leaves logger unchanged", func(t *testing.T) {
 		_, _, ctx := createCallableTracerHandler()
-		originalLogger := ctx.Logger()
+		originalLogger := rest.GetContextLogger(ctx)
 
 		callable, _, _ := createCallableTracerHandler()
 		err := callable(ctx)
 		require.NoError(t, err, "Actual err: %v", err)
 
-		assert.Equal(t, originalLogger, ctx.Logger())
+		actual := rest.GetContextLogger(ctx)
+		assert.Equal(t, originalLogger, actual)
 	})
 
 	t.Run("when request id set adds request id to logger", func(t *testing.T) {
@@ -40,16 +42,17 @@ func TestUnit_RequestTracer(t *testing.T) {
 		err := callable(ctx)
 		require.NoError(t, err, "Actual err: %v", err)
 
-		assert.NotEqual(t, originalLogger, ctx.Logger())
+		actual := rest.GetContextLogger(ctx)
+		assert.NotEqual(t, originalLogger, actual)
 
-		ctx.Logger().Info("test-message")
+		actual.Info("test-message")
 		assert.Contains(t, out.String(), `"requestId":"my-request-id"`)
 	})
 }
 
 func createCallableTracerHandler() (echo.HandlerFunc, *bool, *echo.Context) {
 	generator := func() echo.MiddlewareFunc {
-		return RequestTracer()
+		return RequestTracer(slog.Default())
 	}
 	middleware, called, ctx := createCallableHandler(generator)
 

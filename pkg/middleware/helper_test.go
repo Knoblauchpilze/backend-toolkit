@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
 	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/require"
 )
@@ -44,7 +45,7 @@ func generateTestEchoContextWithLogger() (*echo.Context, *bytes.Buffer) {
 
 	var out bytes.Buffer
 	slogLogger := slog.New(slog.NewJSONHandler(&out, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	ctx.SetLogger(slogLogger)
+	rest.SetContextLogger(ctx, slogLogger)
 
 	return ctx, &out
 }

@@ -31,12 +31,15 @@ func TestUnit_Recover(t *testing.T) {
 		middleware := Recover()
 		callable := middleware(next)
 
-		ctx, _ := generateTestEchoContext()
+		ctx, out := generateTestEchoContextWithLogger()
 
 		err := callable(ctx)
 
 		assert.NotNil(t, err)
 		assert.True(t, *called)
+
+		expected := `GET example.com/ generated panic: an unexpected error occurred. Code: 400 (cause: some error)`
+		assert.Contains(t, out.String(), expected)
 	})
 
 	t.Run("logs error", func(t *testing.T) {
@@ -69,7 +72,7 @@ func TestUnit_Recover(t *testing.T) {
 		middleware := Recover()
 		callable := middleware(next)
 
-		ctx, _ := generateTestEchoContext()
+		ctx, _ := generateTestEchoContextWithLogger()
 
 		err := callable(ctx)
 		require.NotNil(t, err)
@@ -86,7 +89,7 @@ func TestUnit_Recover(t *testing.T) {
 		middleware := Recover()
 		callable := middleware(next)
 
-		ctx, _ := generateTestEchoContext()
+		ctx, _ := generateTestEchoContextWithLogger()
 
 		err := callable(ctx)
 		require.NotNil(t, err)

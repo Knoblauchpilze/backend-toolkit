@@ -34,12 +34,12 @@ func TestUnit_RequestIdFromContext(t *testing.T) {
 }
 
 func TestUnit_GetContextLogger(t *testing.T) {
-	t.Run("when no logger injected returns non nil logger", func(t *testing.T) {
+	t.Run("when no logger injected returns nil logger", func(t *testing.T) {
 		ctx, _ := generateTestEchoContextFromRequest(nil)
 
 		actual := GetContextLogger(ctx)
 
-		assert.NotNil(t, actual)
+		assert.Nil(t, actual)
 	})
 
 	t.Run("logs to configured output when logger is available", func(t *testing.T) {
@@ -47,7 +47,7 @@ func TestUnit_GetContextLogger(t *testing.T) {
 
 		var out bytes.Buffer
 		slogLogger := slog.New(slog.NewJSONHandler(&out, &slog.HandlerOptions{Level: slog.LevelDebug}))
-		ctx.SetLogger(slogLogger)
+		SetContextLogger(ctx, slogLogger)
 
 		GetContextLogger(ctx).Info("test-message")
 
