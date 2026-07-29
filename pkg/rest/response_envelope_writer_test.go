@@ -26,7 +26,7 @@ func TestUnit_EnvelopeResponseWriter(t *testing.T) {
 
 		rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONOrString)
 
-		_, err := rw.WriteTyped(sampleJsonData)
+		_, err := rw.writeTyped(sampleJsonData)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		expectedJson := `
@@ -77,7 +77,7 @@ func TestUnit_EnvelopeResponseWriter(t *testing.T) {
 
 		rw.WriteHeader(http.StatusAccepted)
 		rw.WriteHeader(http.StatusUnauthorized)
-		_, err := rw.WriteTyped(sampleJsonData)
+		_, err := rw.writeTyped(sampleJsonData)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		assert.Equal(t, http.StatusAccepted, out.Code)
@@ -102,7 +102,7 @@ func TestUnit_EnvelopeResponseWriter(t *testing.T) {
 		rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONOrString)
 
 		rw.WriteHeader(http.StatusCreated)
-		_, err := rw.WriteTyped(sampleJsonData)
+		_, err := rw.writeTyped(sampleJsonData)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		assert.Equal(t, http.StatusCreated, out.Code)
@@ -124,7 +124,7 @@ func TestUnit_EnvelopeResponseWriter(t *testing.T) {
 		rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONOrString)
 
 		rw.WriteHeader(http.StatusCreated)
-		_, err := rw.WriteTyped(sampleJsonData)
+		_, err := rw.writeTyped(sampleJsonData)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		lengths, ok := rw.Header()["Content-Length"]
@@ -146,7 +146,7 @@ func TestUnit_EnvelopeResponseWriter(t *testing.T) {
 		rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONOrString)
 
 		rw.WriteHeader(http.StatusUnauthorized)
-		_, err := rw.WriteTyped(sampleJsonData)
+		_, err := rw.writeTyped(sampleJsonData)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		assert.Equal(t, http.StatusUnauthorized, out.Code)
@@ -192,7 +192,7 @@ func TestUnit_EnvelopeResponseWriter(t *testing.T) {
 
 		rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONOrString)
 
-		_, err := rw.WriteTyped("some-data")
+		_, err := rw.writeTyped("some-data")
 		require.NoError(t, err, "Actual err: %v", err)
 
 		expectedJson := `
@@ -276,7 +276,7 @@ func TestUnit_EnvelopeResponseWriter(t *testing.T) {
 
 		rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONOrString)
 
-		_, err := rw.WriteTyped(sampleJsonData)
+		_, err := rw.writeTyped(sampleJsonData)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		rw.WriteHeader(http.StatusUnauthorized)
@@ -302,7 +302,7 @@ func TestUnit_EnvelopeResponseWriter(t *testing.T) {
 
 		rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONOrString)
 
-		_, err := rw.WriteTyped(sampleJsonData)
+		_, err := rw.writeTyped(sampleJsonData)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		assert.Equal(t, echo.MIMEApplicationJSON, out.Header().Get(echo.HeaderContentType))
@@ -320,7 +320,7 @@ func TestUnit_EnvelopeResponseWriter(t *testing.T) {
 		rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONOrString)
 
 		rw.WriteHeader(http.StatusInternalServerError)
-		_, err := rw.WriteTyped(sampleJsonData)
+		_, err := rw.writeTyped(sampleJsonData)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		assert.Equal(t, echo.MIMEApplicationJSON, out.Header().Get(echo.HeaderContentType))
@@ -374,5 +374,24 @@ func TestUnit_EnvelopeResponseWriter(t *testing.T) {
 
 		contentLength := out.Header().Get("Content-Length")
 		assert.True(t, contentLength == "" || contentLength == "0")
+	})
+
+	t.Run("returns error when writing multiple times to the body", func(t *testing.T) {
+		out := httptest.NewRecorder()
+
+		rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONOrString)
+
+		_, err := rw.Write([]byte(`{"value":12}`))
+		require.NoError(t, err, "Actual err: %v", err)
+
+		bodyAfterFirstWrite := out.Body.String()
+		contentLengthAfterFirstWrite := out.Header().Get("Content-Length")
+
+		_, err = rw.Write([]byte(`{"value":99}`))
+		require.Error(t, err)
+
+		assert.ErrorIs(t, err, ErrMultipleBodyWrite, "Actual err: %v", err)
+		assert.Equal(t, bodyAfterFirstWrite, out.Body.String())
+		assert.Equal(t, contentLengthAfterFirstWrite, out.Header().Get("Content-Length"))
 	})
 }

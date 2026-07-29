@@ -24,6 +24,7 @@ type envelopeResponseWriter[T any] struct {
 	// HTTP response's values, this field, when true, prevents any changes to any
 	// of those two values.
 	wroteHeader bool
+	wroteBody   bool
 }
 
 func NewResponseEnvelopeWriter[T any](w http.ResponseWriter, requestId string, decoder ResponseEnvelopeDecoder[T]) *envelopeResponseWriter[T] {
@@ -43,15 +44,23 @@ func (erw *envelopeResponseWriter[T]) Header() http.Header {
 }
 
 func (erw *envelopeResponseWriter[T]) Write(data []byte) (int, error) {
+	if erw.wroteBody {
+		return 0, ErrMultipleBodyWrite
+	}
+
 	details, err := erw.decoder(data)
 	if err != nil {
 		return 0, err
 	}
 
-	return erw.WriteTyped(details)
+	return erw.writeTyped(details)
 }
 
-func (erw *envelopeResponseWriter[T]) WriteTyped(data T) (int, error) {
+func (erw *envelopeResponseWriter[T]) writeTyped(data T) (int, error) {
+	if erw.wroteBody {
+		return 0, ErrMultipleBodyWrite
+	}
+
 	erw.response.Details = data
 	out, err := json.Marshal(erw.response)
 	if err != nil {
@@ -64,6 +73,7 @@ func (erw *envelopeResponseWriter[T]) WriteTyped(data T) (int, error) {
 	erw.writer.Header().Set("Content-Length", fmt.Sprintf("%d", len(out)))
 
 	erw.wroteHeader = true
+	erw.wroteBody = true
 
 	return erw.writer.Write(out)
 }
