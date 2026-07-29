@@ -6,6 +6,7 @@ import (
 	"runtime"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
+	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
 	"github.com/labstack/echo/v5"
 )
 
@@ -44,7 +45,8 @@ func Recover() echo.MiddlewareFunc {
 						stack: stack[:length],
 					}
 
-					c.Logger().Error(createErrorLog(data))
+					log := rest.GetContextLogger(c)
+					log.Error(createErrorLog(data))
 
 					err = recoveredErr
 				}

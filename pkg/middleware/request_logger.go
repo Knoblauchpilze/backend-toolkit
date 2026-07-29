@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
 )
@@ -16,7 +17,8 @@ func RequestLogger() echo.MiddlewareFunc {
 		LogURIPath: true,
 		LogStatus:  true,
 		LogValuesFunc: func(c *echo.Context, values middleware.RequestLoggerValues) error {
-			createRequestLog(values, c.Logger())
+			log := rest.GetContextLogger(c)
+			createRequestLog(values, log)
 			return nil
 		},
 	}
