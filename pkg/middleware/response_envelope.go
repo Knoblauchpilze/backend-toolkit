@@ -22,7 +22,6 @@ func ResponseEnvelope() echo.MiddlewareFunc {
 				rw := rest.NewResponseEnvelopeWriter(
 					echoResp.ResponseWriter,
 					requestId,
-					rest.DecodeJSONOrString,
 				)
 				echoResp.ResponseWriter = rw
 			}

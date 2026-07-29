@@ -24,7 +24,7 @@ func TestUnit_EnvelopeResponseWriter(t *testing.T) {
 	t.Run("automatically sets success status when no status is used", func(t *testing.T) {
 		out := httptest.NewRecorder()
 
-		rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONOrString)
+		rw := NewResponseEnvelopeWriter(out, sampleRequestId)
 
 		_, err := rw.writeTyped(sampleJsonData)
 		require.NoError(t, err, "Actual err: %v", err)
@@ -48,7 +48,7 @@ func TestUnit_EnvelopeResponseWriter(t *testing.T) {
 
 		out.Header().Add("Key2", "other-value")
 
-		rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONOrString)
+		rw := NewResponseEnvelopeWriter(out, sampleRequestId)
 		actual := rw.Header()
 
 		expected := http.Header{
@@ -61,7 +61,7 @@ func TestUnit_EnvelopeResponseWriter(t *testing.T) {
 	t.Run("sets status code on call to write header", func(t *testing.T) {
 		out := httptest.NewRecorder()
 
-		rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONOrString)
+		rw := NewResponseEnvelopeWriter(out, sampleRequestId)
 
 		rw.WriteHeader(http.StatusUnauthorized)
 
@@ -73,7 +73,7 @@ func TestUnit_EnvelopeResponseWriter(t *testing.T) {
 	t.Run("uses first status code when write header is called multiple times", func(t *testing.T) {
 		out := httptest.NewRecorder()
 
-		rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONOrString)
+		rw := NewResponseEnvelopeWriter(out, sampleRequestId)
 
 		rw.WriteHeader(http.StatusAccepted)
 		rw.WriteHeader(http.StatusUnauthorized)
@@ -99,7 +99,7 @@ func TestUnit_EnvelopeResponseWriter(t *testing.T) {
 	t.Run("wraps success response", func(t *testing.T) {
 		out := httptest.NewRecorder()
 
-		rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONOrString)
+		rw := NewResponseEnvelopeWriter(out, sampleRequestId)
 
 		rw.WriteHeader(http.StatusCreated)
 		_, err := rw.writeTyped(sampleJsonData)
@@ -121,7 +121,7 @@ func TestUnit_EnvelopeResponseWriter(t *testing.T) {
 	t.Run("sets content length to match output", func(t *testing.T) {
 		out := httptest.NewRecorder()
 
-		rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONOrString)
+		rw := NewResponseEnvelopeWriter(out, sampleRequestId)
 
 		rw.WriteHeader(http.StatusCreated)
 		_, err := rw.writeTyped(sampleJsonData)
@@ -143,7 +143,7 @@ func TestUnit_EnvelopeResponseWriter(t *testing.T) {
 	t.Run("wraps error response", func(t *testing.T) {
 		out := httptest.NewRecorder()
 
-		rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONOrString)
+		rw := NewResponseEnvelopeWriter(out, sampleRequestId)
 
 		rw.WriteHeader(http.StatusUnauthorized)
 		_, err := rw.writeTyped(sampleJsonData)
@@ -165,7 +165,7 @@ func TestUnit_EnvelopeResponseWriter(t *testing.T) {
 	t.Run("decodes bytes after write header using committed status", func(t *testing.T) {
 		out := httptest.NewRecorder()
 
-		rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONOrString)
+		rw := NewResponseEnvelopeWriter(out, sampleRequestId)
 
 		rw.WriteHeader(http.StatusAccepted)
 		_, err := rw.Write([]byte(`{"value":12}`))
@@ -190,7 +190,7 @@ func TestUnit_EnvelopeResponseWriter(t *testing.T) {
 	t.Run("wraps plain string as details string", func(t *testing.T) {
 		out := httptest.NewRecorder()
 
-		rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONOrString)
+		rw := NewResponseEnvelopeWriter(out, sampleRequestId)
 
 		_, err := rw.writeTyped("some-data")
 		require.NoError(t, err, "Actual err: %v", err)
@@ -209,7 +209,7 @@ func TestUnit_EnvelopeResponseWriter(t *testing.T) {
 	t.Run("decodes json when writing bytes", func(t *testing.T) {
 		out := httptest.NewRecorder()
 
-		rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONOrString)
+		rw := NewResponseEnvelopeWriter(out, sampleRequestId)
 
 		_, err := rw.Write([]byte(`{"value":12}`))
 		require.Nil(t, err)
@@ -230,7 +230,7 @@ func TestUnit_EnvelopeResponseWriter(t *testing.T) {
 	t.Run("decodes json when writing bytes", func(t *testing.T) {
 		out := httptest.NewRecorder()
 
-		rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONOrString)
+		rw := NewResponseEnvelopeWriter(out, sampleRequestId)
 
 		value := details{Value: 45}
 		data, err := json.Marshal(value)
@@ -255,7 +255,7 @@ func TestUnit_EnvelopeResponseWriter(t *testing.T) {
 	t.Run("decodes string when writing bytes", func(t *testing.T) {
 		out := httptest.NewRecorder()
 
-		rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONOrString)
+		rw := NewResponseEnvelopeWriter(out, sampleRequestId)
 
 		_, err := rw.Write([]byte("An error occurred"))
 		require.Nil(t, err)
@@ -274,7 +274,7 @@ func TestUnit_EnvelopeResponseWriter(t *testing.T) {
 	t.Run("ignores late write header after body write", func(t *testing.T) {
 		out := httptest.NewRecorder()
 
-		rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONOrString)
+		rw := NewResponseEnvelopeWriter(out, sampleRequestId)
 
 		_, err := rw.writeTyped(sampleJsonData)
 		require.NoError(t, err, "Actual err: %v", err)
@@ -300,7 +300,7 @@ func TestUnit_EnvelopeResponseWriter(t *testing.T) {
 	t.Run("sets content type and request id header on success", func(t *testing.T) {
 		out := httptest.NewRecorder()
 
-		rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONOrString)
+		rw := NewResponseEnvelopeWriter(out, sampleRequestId)
 
 		_, err := rw.writeTyped(sampleJsonData)
 		require.NoError(t, err, "Actual err: %v", err)
@@ -317,7 +317,7 @@ func TestUnit_EnvelopeResponseWriter(t *testing.T) {
 	t.Run("sets content type and request id header on error", func(t *testing.T) {
 		out := httptest.NewRecorder()
 
-		rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONOrString)
+		rw := NewResponseEnvelopeWriter(out, sampleRequestId)
 
 		rw.WriteHeader(http.StatusInternalServerError)
 		_, err := rw.writeTyped(sampleJsonData)
@@ -335,7 +335,7 @@ func TestUnit_EnvelopeResponseWriter(t *testing.T) {
 	t.Run("sets JSON content type also when sending plain string", func(t *testing.T) {
 		out := httptest.NewRecorder()
 
-		rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONOrString)
+		rw := NewResponseEnvelopeWriter(out, sampleRequestId)
 
 		_, err := rw.Write([]byte("plain string output"))
 		require.NoError(t, err, "Actual err: %v", err)
@@ -356,30 +356,10 @@ func TestUnit_EnvelopeResponseWriter(t *testing.T) {
 		assert.JSONEq(t, expectedJson, out.Body.String())
 	})
 
-	t.Run("decode error path asserts no partial body and correct content length", func(t *testing.T) {
-		out := httptest.NewRecorder()
-
-		failingDecoder := func(data []byte) (interface{}, error) {
-			return nil, fmt.Errorf("invalid format")
-		}
-
-		rw := NewResponseEnvelopeWriter(out, sampleRequestId, failingDecoder)
-
-		_, err := rw.Write([]byte("malformed data"))
-		require.Error(t, err, "Expected decode error")
-		assert.EqualError(t, err, "invalid format")
-
-		body := out.Body.Bytes()
-		assert.Empty(t, body)
-
-		contentLength := out.Header().Get("Content-Length")
-		assert.True(t, contentLength == "" || contentLength == "0")
-	})
-
 	t.Run("returns error when writing multiple times to the body", func(t *testing.T) {
 		out := httptest.NewRecorder()
 
-		rw := NewResponseEnvelopeWriter(out, sampleRequestId, DecodeJSONOrString)
+		rw := NewResponseEnvelopeWriter(out, sampleRequestId)
 
 		_, err := rw.Write([]byte(`{"value":12}`))
 		require.NoError(t, err, "Actual err: %v", err)

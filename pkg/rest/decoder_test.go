@@ -9,7 +9,7 @@ import (
 
 func TestUnit_Decoder(t *testing.T) {
 	t.Run("decode json or string decodes json", func(t *testing.T) {
-		actual, err := DecodeJSONOrString([]byte(`{"value":12}`))
+		actual, err := decodeJSONOrString([]byte(`{"value":12}`))
 		require.Nil(t, err)
 
 		asMap, ok := actual.(map[string]any)
@@ -19,7 +19,7 @@ func TestUnit_Decoder(t *testing.T) {
 	})
 
 	t.Run("decode json or string falls back to string", func(t *testing.T) {
-		actual, err := DecodeJSONOrString([]byte("some-data"))
+		actual, err := decodeJSONOrString([]byte("some-data"))
 		require.Nil(t, err)
 
 		asString, ok := actual.(string)

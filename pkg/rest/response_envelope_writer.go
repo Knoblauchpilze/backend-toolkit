@@ -5,17 +5,23 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 	"github.com/labstack/echo/v5"
 )
 
-type ResponseEnvelopeDecoder[T any] func(data []byte) (T, error)
+const (
+	requestIdHeader = "X-Request-Id"
 
-const requestIdHeader = "X-Request-Id"
+	errMultipleBodyWrite errors.ErrorCode = 350
+)
 
-type envelopeResponseWriter[T any] struct {
-	response ResponseEnvelope[T]
+var (
+	ErrMultipleBodyWrite = errors.FromCodeAndDetails(errMultipleBodyWrite, "response body already written")
+)
+
+type EnvelopeResponseWriter struct {
+	response ResponseEnvelope[any]
 	writer   http.ResponseWriter
-	decoder  ResponseEnvelopeDecoder[T]
 
 	// wroteHeader controls whether either WriteHeader or writing the response body
 	// was already called. In both cases, the response's status is committed to the
@@ -27,28 +33,27 @@ type envelopeResponseWriter[T any] struct {
 	wroteBody   bool
 }
 
-func NewResponseEnvelopeWriter[T any](w http.ResponseWriter, requestId string, decoder ResponseEnvelopeDecoder[T]) *envelopeResponseWriter[T] {
-	return &envelopeResponseWriter[T]{
-		response: ResponseEnvelope[T]{
+func NewResponseEnvelopeWriter(w http.ResponseWriter, requestId string) *EnvelopeResponseWriter {
+	return &EnvelopeResponseWriter{
+		response: ResponseEnvelope[any]{
 			RequestId:  requestId,
 			Status:     StatusSuccess,
 			StatusCode: http.StatusOK,
 		},
-		writer:  w,
-		decoder: decoder,
+		writer: w,
 	}
 }
 
-func (erw *envelopeResponseWriter[T]) Header() http.Header {
+func (erw *EnvelopeResponseWriter) Header() http.Header {
 	return erw.writer.Header()
 }
 
-func (erw *envelopeResponseWriter[T]) Write(data []byte) (int, error) {
+func (erw *EnvelopeResponseWriter) Write(data []byte) (int, error) {
 	if erw.wroteBody {
 		return 0, ErrMultipleBodyWrite
 	}
 
-	details, err := erw.decoder(data)
+	details, err := decodeJSONOrString(data)
 	if err != nil {
 		return 0, err
 	}
@@ -56,7 +61,7 @@ func (erw *envelopeResponseWriter[T]) Write(data []byte) (int, error) {
 	return erw.writeTyped(details)
 }
 
-func (erw *envelopeResponseWriter[T]) writeTyped(data T) (int, error) {
+func (erw *EnvelopeResponseWriter) writeTyped(data any) (int, error) {
 	if erw.wroteBody {
 		return 0, ErrMultipleBodyWrite
 	}
@@ -78,7 +83,7 @@ func (erw *envelopeResponseWriter[T]) writeTyped(data T) (int, error) {
 	return erw.writer.Write(out)
 }
 
-func (erw *envelopeResponseWriter[T]) WriteHeader(statusCode int) {
+func (erw *EnvelopeResponseWriter) WriteHeader(statusCode int) {
 	if erw.wroteHeader {
 		return
 	}
