@@ -8,10 +8,20 @@ import (
 
 const (
 	requestIdContextKey = "request_id"
+	loggerContextKey    = "toolkit_logger"
 )
 
 func GetContextLogger(c *echo.Context) *slog.Logger {
-	return c.Logger()
+	val := c.Get(loggerContextKey)
+	if log, ok := val.(*slog.Logger); ok && log != nil {
+		return log
+	}
+
+	return nil
+}
+
+func SetContextLogger(c *echo.Context, log *slog.Logger) {
+	c.Set(loggerContextKey, log)
 }
 
 func SetContextRequestId(c *echo.Context, requestId string) {

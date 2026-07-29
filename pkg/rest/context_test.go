@@ -42,7 +42,7 @@ func TestUnit_GetContextLogger(t *testing.T) {
 		assert.NotNil(t, actual)
 	})
 
-	t.Run("when logger is injected logs to expected output", func(t *testing.T) {
+	t.Run("logs to configured output when logger is available", func(t *testing.T) {
 		ctx, _ := generateTestEchoContextFromRequest(httptest.NewRequest(http.MethodGet, "/", nil))
 
 		var out bytes.Buffer
@@ -52,5 +52,56 @@ func TestUnit_GetContextLogger(t *testing.T) {
 		GetContextLogger(ctx).Info("test-message")
 
 		assert.Contains(t, out.String(), `"msg":"test-message"`)
+	})
+
+	t.Run("returns logger when already available in the context", func(t *testing.T) {
+		ctx, _ := generateTestEchoContextFromRequest(httptest.NewRequest(http.MethodGet, "/", nil))
+
+		var out bytes.Buffer
+		expected := slog.New(slog.NewJSONHandler(&out, &slog.HandlerOptions{Level: slog.LevelDebug}))
+		SetContextLogger(ctx, expected)
+
+		actual := GetContextLogger(ctx)
+		actual.Info("test-message")
+
+		assert.Equal(t, expected, actual)
+		assert.Contains(t, out.String(), `"msg":"test-message"`)
+	})
+}
+
+func TestUnit_SetContextLogger(t *testing.T) {
+	t.Run("stores logger that can be read by GetContextLogger", func(t *testing.T) {
+		ctx, _ := generateTestEchoContextFromRequest(httptest.NewRequest(http.MethodGet, "/", nil))
+
+		var out bytes.Buffer
+		log := slog.New(slog.NewJSONHandler(&out, &slog.HandlerOptions{Level: slog.LevelDebug}))
+
+		SetContextLogger(ctx, log)
+
+		actual := GetContextLogger(ctx)
+		actual.Info("test-message")
+
+		assert.Equal(t, log, actual)
+		assert.Contains(t, out.String(), `"msg":"test-message"`)
+	})
+
+	t.Run("overrides existing logger when defining a new one", func(t *testing.T) {
+		ctx, _ := generateTestEchoContextFromRequest(httptest.NewRequest(http.MethodGet, "/", nil))
+
+		var firstOut bytes.Buffer
+		firstLog := slog.New(slog.NewJSONHandler(&firstOut, &slog.HandlerOptions{Level: slog.LevelDebug}))
+
+		var secondOut bytes.Buffer
+		secondLog := slog.New(slog.NewJSONHandler(&secondOut, &slog.HandlerOptions{Level: slog.LevelDebug}))
+
+		SetContextLogger(ctx, firstLog)
+		SetContextLogger(ctx, secondLog)
+
+		actual := GetContextLogger(ctx)
+		actual.Info("test-message")
+
+		assert.Equal(t, secondLog, actual)
+		assert.Contains(t, secondOut.String(), `"msg":"test-message"`)
+		assert.Empty(t, firstOut.String())
 	})
 }
