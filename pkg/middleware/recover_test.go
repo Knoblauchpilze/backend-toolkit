@@ -2,6 +2,7 @@ package middleware
 
 import (
 	stderrors "errors"
+	"net/http"
 	"testing"
 	"time"
 
@@ -23,6 +24,23 @@ func TestUnit_Recover(t *testing.T) {
 
 		assert.Nil(t, err)
 		assert.True(t, *called)
+	})
+
+	t.Run("returns nil when next returns nil error", func(t *testing.T) {
+		called := false
+		next := func(c *echo.Context) error {
+			called = true
+			return nil
+		}
+
+		middleware := Recover()
+		callable := middleware(next)
+		ctx, _ := generateTestEchoContext(t)
+
+		err := callable(ctx)
+
+		assert.True(t, called)
+		require.NoError(t, err, "Actual err: %v", err)
 	})
 
 	t.Run("prevents panic", func(t *testing.T) {
@@ -77,16 +95,22 @@ func TestUnit_Recover(t *testing.T) {
 		ctx, _ := generateTestEchoContext(t, addLogger)
 
 		err := callable(ctx)
-		require.NotNil(t, err)
 
-		errWithCode, ok := errors.AsErrorWithCode(err)
-		require.True(t, ok)
-		assert.Equal(t, errUncaughtPanic, errWithCode.Code)
-		assert.ErrorIs(t, errWithCode.Cause, errSample)
+		assertIsHttpErrorWithMessageAndCode(
+			t,
+			err,
+			"an unexpected error occurred. Code: 400 (cause: some error)",
+			http.StatusInternalServerError,
+		)
 	})
 
 	t.Run("does not rewrap error with code", func(t *testing.T) {
-		next, _ := createPanicHandlerWithErrorCode()
+		called := false
+		next := func(c *echo.Context) error {
+			called = true
+			errWithCode := errors.WrapCode(errSample, errors.ErrorCode(123))
+			panic(errWithCode)
+		}
 
 		middleware := Recover()
 		callable := middleware(next)
@@ -94,12 +118,35 @@ func TestUnit_Recover(t *testing.T) {
 		ctx, _ := generateTestEchoContext(t, addLogger)
 
 		err := callable(ctx)
-		require.NotNil(t, err)
 
-		errWithCode, ok := errors.AsErrorWithCode(err)
-		require.True(t, ok)
-		assert.Equal(t, errors.ErrorCode(123), errWithCode.Code)
-		assert.ErrorIs(t, errWithCode.Cause, errSample)
+		require.True(t, called)
+		assertIsHttpErrorWithMessageAndCode(
+			t,
+			err,
+			"an unexpected error occurred. Code: 123 (cause: some error)",
+			http.StatusInternalServerError,
+		)
+	})
+
+	t.Run("converts non panicked errors", func(t *testing.T) {
+		called := false
+		next := func(c *echo.Context) error {
+			called = true
+			return errSample
+		}
+
+		middleware := Recover()
+		callable := middleware(next)
+		ctx, _ := generateTestEchoContext(t, addLogger)
+
+		err := callable(ctx)
+
+		require.True(t, called)
+		assertIsHttpErrorWithMessageAndCode(
+			t,
+			err,
+			"some error",
+			http.StatusInternalServerError)
 	})
 }
 
@@ -108,17 +155,6 @@ func createPanicHandler() (echo.HandlerFunc, *bool) {
 	handler := func(c *echo.Context) error {
 		called = true
 		panic(errSample)
-	}
-
-	return handler, &called
-}
-
-func createPanicHandlerWithErrorCode() (echo.HandlerFunc, *bool) {
-	var called bool
-	handler := func(c *echo.Context) error {
-		called = true
-		errWithCode := errors.WrapCode(errSample, errors.ErrorCode(123))
-		panic(errWithCode)
 	}
 
 	return handler, &called

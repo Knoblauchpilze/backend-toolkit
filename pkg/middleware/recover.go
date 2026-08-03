@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	stderrors "errors"
 	"fmt"
 	"net/http"
 	"runtime"
@@ -48,10 +49,12 @@ func Recover() echo.MiddlewareFunc {
 					log := rest.GetContextLogger(c.Request().Context())
 					log.Error(createErrorLog(data))
 
-					err = recoveredErr
+					err = wrapToHttpError(recoveredErr)
 				}
 			}()
-			return next(c)
+
+			err = next(c)
+			return wrapToHttpError(err)
 		}
 	}
 }
@@ -74,4 +77,17 @@ func pathFromRequest(req *http.Request) string {
 	}
 
 	return fmt.Sprintf("%s%s", host, path)
+}
+
+func wrapToHttpError(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	var httpErr *echo.HTTPError
+	if stderrors.As(err, &httpErr) {
+		return err
+	}
+
+	return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 }

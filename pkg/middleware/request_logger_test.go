@@ -62,7 +62,7 @@ func TestUnit_RequestLogger(t *testing.T) {
 		func() {
 			// Recover to
 			defer func() {
-				recover()
+				recover() //nolint:errcheck
 				recovered = true
 			}()
 			callable(ctx) //nolint:errcheck
