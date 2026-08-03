@@ -4,21 +4,24 @@ import (
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
-	"github.com/labstack/echo/v5/middleware"
 )
 
 const requestIdHeader = "X-Request-Id"
 
 func RequestId() echo.MiddlewareFunc {
-	cfg := middleware.RequestIDConfig{
-		Generator:    func() string { return uuid.New().String() },
-		TargetHeader: requestIdHeader,
-		RequestIDHandler: func(c *echo.Context, requestId string) {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c *echo.Context) error {
 			req := c.Request()
+			requestId := req.Header.Get(requestIdHeader)
+			if requestId == "" {
+				requestId = uuid.NewString()
+			}
+
+			c.Response().Header().Set(requestIdHeader, requestId)
 			ctx := rest.WithContextRequestId(req.Context(), requestId)
 			c.SetRequest(req.WithContext(ctx))
-		},
-	}
 
-	return middleware.RequestIDWithConfig(cfg)
+			return next(c)
+		}
+	}
 }

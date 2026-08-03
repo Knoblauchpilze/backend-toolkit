@@ -50,6 +50,9 @@ func TestUnit_RequestId(t *testing.T) {
 		require.NoError(t, err, "Actual err: %v", err)
 
 		assert.True(t, *called)
+		contextValue, exists := rest.RequestIdFromContext(ctx.Request().Context())
+		assert.True(t, exists)
+		assert.Equal(t, existingRequestId, contextValue)
 		assert.Equal(t, existingRequestId, ctx.Response().Header().Get(requestIdHeader))
 	})
 }
