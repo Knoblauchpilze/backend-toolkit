@@ -1,18 +1,19 @@
 package rest
 
 import (
+	"context"
 	"log/slog"
-
-	"github.com/labstack/echo/v5"
 )
+
+type contextKey string
 
 const (
-	requestIdContextKey = "request_id"
-	loggerContextKey    = "toolkit_logger"
+	requestIdContextKey contextKey = "request_id"
+	loggerContextKey    contextKey = "toolkit_logger"
 )
 
-func GetContextLogger(c *echo.Context) *slog.Logger {
-	val := c.Get(loggerContextKey)
+func GetContextLogger(ctx context.Context) *slog.Logger {
+	val := ctx.Value(loggerContextKey)
 	if log, ok := val.(*slog.Logger); ok && log != nil {
 		return log
 	}
@@ -20,16 +21,16 @@ func GetContextLogger(c *echo.Context) *slog.Logger {
 	return nil
 }
 
-func SetContextLogger(c *echo.Context, log *slog.Logger) {
-	c.Set(loggerContextKey, log)
+func WithContextLogger(ctx context.Context, log *slog.Logger) context.Context {
+	return context.WithValue(ctx, loggerContextKey, log)
 }
 
-func SetContextRequestId(c *echo.Context, requestId string) {
-	c.Set(requestIdContextKey, requestId)
+func WithContextRequestId(ctx context.Context, requestId string) context.Context {
+	return context.WithValue(ctx, requestIdContextKey, requestId)
 }
 
-func RequestIdFromContext(c *echo.Context) (string, bool) {
-	val := c.Get(requestIdContextKey)
+func RequestIdFromContext(ctx context.Context) (string, bool) {
+	val := ctx.Value(requestIdContextKey)
 	s, ok := val.(string)
 	return s, ok && s != ""
 }

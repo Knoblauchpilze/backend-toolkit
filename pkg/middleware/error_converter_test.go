@@ -11,7 +11,7 @@ import (
 
 func TestUnit_ErrorConverter(t *testing.T) {
 	t.Run("calls next middleware", func(t *testing.T) {
-		callable, called, ctx := createCallableHandler(ErrorConverter)
+		callable, called, ctx := createCallableHandler(t, ErrorConverter)
 
 		err := callable(ctx)
 
@@ -23,7 +23,7 @@ func TestUnit_ErrorConverter(t *testing.T) {
 		next := createErrorHandler(errSample)
 		middleware := ErrorConverter()
 		callable := middleware(next)
-		ctx, _ := generateTestEchoContext()
+		ctx, _ := generateTestEchoContext(t)
 
 		err := callable(ctx)
 
@@ -35,7 +35,7 @@ func TestUnit_ErrorConverter(t *testing.T) {
 		next := createErrorHandler(expectedErr)
 		middleware := ErrorConverter()
 		callable := middleware(next)
-		ctx, _ := generateTestEchoContext()
+		ctx, _ := generateTestEchoContext(t)
 
 		err := callable(ctx)
 
@@ -52,7 +52,7 @@ func TestUnit_ErrorConverter(t *testing.T) {
 		next := createErrorHandler(errWithCause)
 		middleware := ErrorConverter()
 		callable := middleware(next)
-		ctx, _ := generateTestEchoContext()
+		ctx, _ := generateTestEchoContext(t)
 
 		err := callable(ctx)
 

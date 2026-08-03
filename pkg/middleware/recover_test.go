@@ -17,7 +17,7 @@ var (
 
 func TestUnit_Recover(t *testing.T) {
 	t.Run("calls next middleware", func(t *testing.T) {
-		callable, called, ctx := createCallableHandler(Recover)
+		callable, called, ctx := createCallableHandler(t, Recover)
 
 		err := callable(ctx)
 
@@ -31,7 +31,8 @@ func TestUnit_Recover(t *testing.T) {
 		middleware := Recover()
 		callable := middleware(next)
 
-		ctx, out := generateTestEchoContextWithLogger()
+		modifer, out := generateLoggerModifier(t)
+		ctx, _ := generateTestEchoContext(t, modifer)
 
 		err := callable(ctx)
 
@@ -48,7 +49,8 @@ func TestUnit_Recover(t *testing.T) {
 		middleware := Recover()
 		callable := middleware(next)
 
-		ctx, out := generateTestEchoContextWithLogger()
+		modifer, out := generateLoggerModifier(t)
+		ctx, _ := generateTestEchoContext(t, modifer)
 
 		err := callable(ctx)
 		require.NotNil(t, err)
@@ -72,7 +74,7 @@ func TestUnit_Recover(t *testing.T) {
 		middleware := Recover()
 		callable := middleware(next)
 
-		ctx, _ := generateTestEchoContextWithLogger()
+		ctx, _ := generateTestEchoContext(t, addLogger)
 
 		err := callable(ctx)
 		require.NotNil(t, err)
@@ -89,7 +91,7 @@ func TestUnit_Recover(t *testing.T) {
 		middleware := Recover()
 		callable := middleware(next)
 
-		ctx, _ := generateTestEchoContextWithLogger()
+		ctx, _ := generateTestEchoContext(t, addLogger)
 
 		err := callable(ctx)
 		require.NotNil(t, err)

@@ -3,8 +3,6 @@ package rest
 import (
 	"bytes"
 	"log/slog"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"github.com/google/uuid"
@@ -13,9 +11,8 @@ import (
 
 func TestUnit_RequestIdFromContext(t *testing.T) {
 	t.Run("returns request id when it exists", func(t *testing.T) {
-		ctx, _ := generateTestEchoContextFromRequest(httptest.NewRequest(http.MethodGet, "/", nil))
 		expectedId := uuid.NewString()
-		SetContextRequestId(ctx, expectedId)
+		ctx := WithContextRequestId(t.Context(), expectedId)
 
 		requestId, ok := RequestIdFromContext(ctx)
 
@@ -24,7 +21,7 @@ func TestUnit_RequestIdFromContext(t *testing.T) {
 	})
 
 	t.Run("returns empy value when unset", func(t *testing.T) {
-		ctx, _ := generateTestEchoContextFromRequest(httptest.NewRequest(http.MethodGet, "/", nil))
+		ctx := t.Context()
 
 		requestId, ok := RequestIdFromContext(ctx)
 
@@ -35,7 +32,7 @@ func TestUnit_RequestIdFromContext(t *testing.T) {
 
 func TestUnit_GetContextLogger(t *testing.T) {
 	t.Run("when no logger injected returns nil logger", func(t *testing.T) {
-		ctx, _ := generateTestEchoContextFromRequest(nil)
+		ctx := t.Context()
 
 		actual := GetContextLogger(ctx)
 
@@ -43,11 +40,11 @@ func TestUnit_GetContextLogger(t *testing.T) {
 	})
 
 	t.Run("logs to configured output when logger is available", func(t *testing.T) {
-		ctx, _ := generateTestEchoContextFromRequest(httptest.NewRequest(http.MethodGet, "/", nil))
+		ctx := t.Context()
 
 		var out bytes.Buffer
 		slogLogger := slog.New(slog.NewJSONHandler(&out, &slog.HandlerOptions{Level: slog.LevelDebug}))
-		SetContextLogger(ctx, slogLogger)
+		ctx = WithContextLogger(ctx, slogLogger)
 
 		GetContextLogger(ctx).Info("test-message")
 
@@ -55,11 +52,11 @@ func TestUnit_GetContextLogger(t *testing.T) {
 	})
 
 	t.Run("returns logger when already available in the context", func(t *testing.T) {
-		ctx, _ := generateTestEchoContextFromRequest(httptest.NewRequest(http.MethodGet, "/", nil))
+		ctx := t.Context()
 
 		var out bytes.Buffer
 		expected := slog.New(slog.NewJSONHandler(&out, &slog.HandlerOptions{Level: slog.LevelDebug}))
-		SetContextLogger(ctx, expected)
+		ctx = WithContextLogger(ctx, expected)
 
 		actual := GetContextLogger(ctx)
 		actual.Info("test-message")
@@ -69,14 +66,14 @@ func TestUnit_GetContextLogger(t *testing.T) {
 	})
 }
 
-func TestUnit_SetContextLogger(t *testing.T) {
+func TestUnit_WithContextLogger(t *testing.T) {
 	t.Run("stores logger that can be read by GetContextLogger", func(t *testing.T) {
-		ctx, _ := generateTestEchoContextFromRequest(httptest.NewRequest(http.MethodGet, "/", nil))
+		ctx := t.Context()
 
 		var out bytes.Buffer
 		log := slog.New(slog.NewJSONHandler(&out, &slog.HandlerOptions{Level: slog.LevelDebug}))
 
-		SetContextLogger(ctx, log)
+		ctx = WithContextLogger(ctx, log)
 
 		actual := GetContextLogger(ctx)
 		actual.Info("test-message")
@@ -86,7 +83,7 @@ func TestUnit_SetContextLogger(t *testing.T) {
 	})
 
 	t.Run("overrides existing logger when defining a new one", func(t *testing.T) {
-		ctx, _ := generateTestEchoContextFromRequest(httptest.NewRequest(http.MethodGet, "/", nil))
+		ctx := t.Context()
 
 		var firstOut bytes.Buffer
 		firstLog := slog.New(slog.NewJSONHandler(&firstOut, &slog.HandlerOptions{Level: slog.LevelDebug}))
@@ -94,8 +91,8 @@ func TestUnit_SetContextLogger(t *testing.T) {
 		var secondOut bytes.Buffer
 		secondLog := slog.New(slog.NewJSONHandler(&secondOut, &slog.HandlerOptions{Level: slog.LevelDebug}))
 
-		SetContextLogger(ctx, firstLog)
-		SetContextLogger(ctx, secondLog)
+		ctx = WithContextLogger(ctx, firstLog)
+		ctx = WithContextLogger(ctx, secondLog)
 
 		actual := GetContextLogger(ctx)
 		actual.Info("test-message")

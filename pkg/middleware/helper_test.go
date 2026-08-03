@@ -10,8 +10,13 @@ import (
 	"time"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/require"
+)
+
+var (
+	sampleRequestId = uuid.MustParse("f1df556f-f7c1-4022-832c-e1a7b8a6f3d5")
 )
 
 func createTestEchoHandlerFuncWithCalledBoolean() (echo.HandlerFunc, *bool) {
@@ -25,9 +30,12 @@ func createTestEchoHandlerFuncWithCalledBoolean() (echo.HandlerFunc, *bool) {
 
 type middlewareGenerator func() echo.MiddlewareFunc
 
-func createCallableHandler(generator middlewareGenerator) (echo.HandlerFunc, *bool, *echo.Context) {
+func createCallableHandler(
+	t *testing.T,
+	generator middlewareGenerator,
+) (echo.HandlerFunc, *bool, *echo.Context) {
 	next, called := createTestEchoHandlerFuncWithCalledBoolean()
-	ctx, _ := generateTestEchoContext()
+	ctx, _ := generateTestEchoContext(t)
 
 	middlewareFunc := generator()
 	callable := middlewareFunc(next)
@@ -35,22 +43,66 @@ func createCallableHandler(generator middlewareGenerator) (echo.HandlerFunc, *bo
 	return callable, called, ctx
 }
 
-func generateTestEchoContext() (*echo.Context, *httptest.ResponseRecorder) {
+type contextModifier func(*testing.T, *echo.Context)
+
+func generateTestEchoContext(
+	t *testing.T,
+	modifiers ...contextModifier,
+) (*echo.Context, *httptest.ResponseRecorder) {
+	t.Helper()
+
 	req := httptest.NewRequest(http.MethodGet, "http://example.com/", nil)
-	return generateTestEchoContextFromRequest(req)
+
+	ctx, rw := generateTestEchoContextFromRequest(t, req)
+
+	for _, modifier := range modifiers {
+		modifier(t, ctx)
+	}
+
+	return ctx, rw
 }
 
-func generateTestEchoContextWithLogger() (*echo.Context, *bytes.Buffer) {
-	ctx, _ := generateTestEchoContext()
+func addLogger(t *testing.T, ctx *echo.Context) {
+	t.Helper()
 
 	var out bytes.Buffer
 	slogLogger := slog.New(slog.NewJSONHandler(&out, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	rest.SetContextLogger(ctx, slogLogger)
-
-	return ctx, &out
+	req := ctx.Request()
+	reqCtx := rest.WithContextLogger(req.Context(), slogLogger)
+	ctx.SetRequest(req.WithContext(reqCtx))
 }
 
-func generateTestEchoContextFromRequest(req *http.Request) (*echo.Context, *httptest.ResponseRecorder) {
+func addRequestId(t *testing.T, ctx *echo.Context) {
+	t.Helper()
+
+	req := ctx.Request()
+	reqCtx := rest.WithContextRequestId(req.Context(), sampleRequestId.String())
+	ctx.SetRequest(req.WithContext(reqCtx))
+}
+
+func generateLoggerModifier(
+	t *testing.T,
+) (contextModifier, *bytes.Buffer) {
+	t.Helper()
+
+	var out bytes.Buffer
+
+	modifier := func(t *testing.T, ctx *echo.Context) {
+		slogLogger := slog.New(slog.NewJSONHandler(&out, &slog.HandlerOptions{Level: slog.LevelDebug}))
+		req := ctx.Request()
+		reqCtx := rest.WithContextLogger(req.Context(), slogLogger)
+		ctx.SetRequest(req.WithContext(reqCtx))
+	}
+
+	return modifier, &out
+}
+
+func generateTestEchoContextFromRequest(
+	t *testing.T,
+	req *http.Request,
+) (*echo.Context, *httptest.ResponseRecorder) {
+	t.Helper()
+
 	e := echo.New()
 	rw := httptest.NewRecorder()
 

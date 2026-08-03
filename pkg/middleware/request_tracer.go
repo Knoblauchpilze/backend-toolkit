@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"log/slog"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
@@ -10,9 +11,12 @@ import (
 func RequestTracer(log *slog.Logger) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c *echo.Context) error {
-			requestId, exists := rest.RequestIdFromContext(c)
+			req := c.Request()
+			ctx := req.Context()
+			requestId, exists := rest.RequestIdFromContext(ctx)
 			if exists {
-				enrichRequestLoggerWithRequestId(c, requestId, log)
+				ctx = enrichRequestLoggerWithRequestId(ctx, requestId, log)
+				c.SetRequest(req.WithContext(ctx))
 			}
 
 			return next(c)
@@ -21,16 +25,16 @@ func RequestTracer(log *slog.Logger) echo.MiddlewareFunc {
 }
 
 func enrichRequestLoggerWithRequestId(
-	c *echo.Context,
+	ctx context.Context,
 	requestId string,
 	defaultLogger *slog.Logger,
-) {
-	reqLog := rest.GetContextLogger(c)
+) context.Context {
+	reqLog := rest.GetContextLogger(ctx)
 	if reqLog == nil {
 		reqLog = defaultLogger
 	}
 
 	reqLog = reqLog.With("requestId", requestId)
 
-	rest.SetContextLogger(c, reqLog)
+	return rest.WithContextLogger(ctx, reqLog)
 }

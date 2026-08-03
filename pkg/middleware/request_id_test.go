@@ -13,7 +13,7 @@ import (
 
 func TestUnit_RequestId(t *testing.T) {
 	t.Run("calls next middleware", func(t *testing.T) {
-		callable, called, ctx := createCallableHandler(RequestId)
+		callable, called, ctx := createCallableHandler(t, RequestId)
 
 		err := callable(ctx)
 		require.NoError(t, err, "Actual err: %v", err)
@@ -22,7 +22,7 @@ func TestUnit_RequestId(t *testing.T) {
 	})
 
 	t.Run("sets response header and context with same value", func(t *testing.T) {
-		callable, _, ctx := createCallableHandler(RequestId)
+		callable, _, ctx := createCallableHandler(t, RequestId)
 
 		err := callable(ctx)
 		require.NoError(t, err, "Actual err: %v", err)
@@ -31,7 +31,7 @@ func TestUnit_RequestId(t *testing.T) {
 		assert.NotEmpty(t, headerValue)
 		assert.Regexp(t, `^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`, headerValue)
 
-		contextValue, exists := rest.RequestIdFromContext(ctx)
+		contextValue, exists := rest.RequestIdFromContext(ctx.Request().Context())
 		assert.True(t, exists)
 		assert.Equal(t, headerValue, contextValue)
 	})
@@ -42,7 +42,7 @@ func TestUnit_RequestId(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "http://example.com/", nil)
 		req.Header.Set(requestIdHeader, existingRequestId)
 
-		ctx, _ := generateTestEchoContextFromRequest(req)
+		ctx, _ := generateTestEchoContextFromRequest(t, req)
 		next, called := createTestEchoHandlerFuncWithCalledBoolean()
 
 		callable := RequestId()(next)

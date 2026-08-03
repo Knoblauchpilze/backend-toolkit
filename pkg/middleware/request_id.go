@@ -14,7 +14,9 @@ func RequestId() echo.MiddlewareFunc {
 		Generator:    func() string { return uuid.New().String() },
 		TargetHeader: requestIdHeader,
 		RequestIDHandler: func(c *echo.Context, requestId string) {
-			rest.SetContextRequestId(c, requestId)
+			req := c.Request()
+			ctx := rest.WithContextRequestId(req.Context(), requestId)
+			c.SetRequest(req.WithContext(ctx))
 		},
 	}
 

@@ -14,8 +14,10 @@ import (
 
 func TestUnit_RequestLogger(t *testing.T) {
 	t.Run("calls next middleware", func(t *testing.T) {
-		callable, called, ctx := createCallableHandler(RequestLogger)
-		rest.SetContextLogger(ctx, slog.Default())
+		callable, called, ctx := createCallableHandler(t, RequestLogger)
+		req := ctx.Request()
+		reqCtx := rest.WithContextLogger(req.Context(), slog.Default())
+		ctx.SetRequest(req.WithContext(reqCtx))
 
 		err := callable(ctx)
 
@@ -24,11 +26,13 @@ func TestUnit_RequestLogger(t *testing.T) {
 	})
 
 	t.Run("prints request timing", func(t *testing.T) {
-		callable, _, ctx := createCallableHandler(RequestLogger)
+		callable, _, ctx := createCallableHandler(t, RequestLogger)
 
 		var out bytes.Buffer
 		slogLogger := slog.New(slog.NewJSONHandler(&out, &slog.HandlerOptions{Level: slog.LevelDebug}))
-		rest.SetContextLogger(ctx, slogLogger)
+		req := ctx.Request()
+		reqCtx := rest.WithContextLogger(req.Context(), slogLogger)
+		ctx.SetRequest(req.WithContext(reqCtx))
 
 		err := callable(ctx)
 		require.Nil(t, err)

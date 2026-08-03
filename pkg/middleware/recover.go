@@ -45,7 +45,7 @@ func Recover() echo.MiddlewareFunc {
 						stack: stack[:length],
 					}
 
-					log := rest.GetContextLogger(c)
+					log := rest.GetContextLogger(c.Request().Context())
 					log.Error(createErrorLog(data))
 
 					err = recoveredErr

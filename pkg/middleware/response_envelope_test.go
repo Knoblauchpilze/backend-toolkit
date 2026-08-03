@@ -6,18 +6,14 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
-	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestUnit_ResponseEnvelope(t *testing.T) {
-	sampleRequestId := uuid.MustParse("a57f4ca1-1a22-4990-b3de-5f836a3ea4e9").String()
-
 	t.Run("calls next middleware", func(t *testing.T) {
-		callable, called, ctx := createCallableHandler(ResponseEnvelope)
+		callable, called, ctx := createCallableHandler(t, ResponseEnvelope)
 
 		err := callable(ctx)
 		require.NoError(t, err, "Actual err: %v", err)
@@ -31,22 +27,21 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 		middleware := ResponseEnvelope()
 		callable := middleware(next)
 
-		ctx, rw := generateTestEchoContext()
-		rest.SetContextRequestId(ctx, sampleRequestId)
+		ctx, rw := generateTestEchoContext(t, addRequestId)
 
 		err := callable(ctx)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		assert.Equal(t, http.StatusOK, rw.Code)
 		assert.Equal(t, echo.MIMEApplicationJSON, rw.Header().Get(echo.HeaderContentType))
-		assert.Equal(t, sampleRequestId, rw.Header().Get(requestIdHeader))
+		assert.Equal(t, sampleRequestId.String(), rw.Header().Get(requestIdHeader))
 		length := rw.Header().Get("Content-Length")
 		// The length includes the value (`my-output`) and the envelope
 		assert.Equal(t, "112", length)
 		body, err := io.ReadAll(rw.Body)
 		require.NoError(t, err, "Actual err: %v", err)
 		actual := string(body)
-		expected := `{"request_id":"a57f4ca1-1a22-4990-b3de-5f836a3ea4e9","status":"SUCCESS","status_code":200,"details":"my-output"}`
+		expected := `{"request_id":"f1df556f-f7c1-4022-832c-e1a7b8a6f3d5","status":"SUCCESS","status_code":200,"details":"my-output"}`
 		assert.Regexp(t, expected, actual)
 	})
 
@@ -62,15 +57,14 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 		middleware := ResponseEnvelope()
 		callable := middleware(next)
 
-		ctx, rw := generateTestEchoContext()
-		rest.SetContextRequestId(ctx, sampleRequestId)
+		ctx, rw := generateTestEchoContext(t, addRequestId)
 
 		err := callable(ctx)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		assert.Equal(t, http.StatusOK, rw.Code)
 		assert.Equal(t, echo.MIMEApplicationJSON, rw.Header().Get(echo.HeaderContentType))
-		assert.Equal(t, sampleRequestId, rw.Header().Get(requestIdHeader))
+		assert.Equal(t, sampleRequestId.String(), rw.Header().Get(requestIdHeader))
 		body, err := io.ReadAll(rw.Body)
 		require.NoError(t, err, "Actual err: %v", err)
 
@@ -79,7 +73,7 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 		assert.Equal(t, len(body), length)
 
 		actual := string(body)
-		expected := `{"request_id":"a57f4ca1-1a22-4990-b3de-5f836a3ea4e9","status":"SUCCESS","status_code":200,"details":{"Key":"value"}}`
+		expected := `{"request_id":"f1df556f-f7c1-4022-832c-e1a7b8a6f3d5","status":"SUCCESS","status_code":200,"details":{"Key":"value"}}`
 		assert.Regexp(t, expected, actual)
 	})
 
@@ -91,7 +85,7 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 		next := createHandlerFuncWithJsonOutput(http.StatusOK, testStruct{Key: "value"})
 
 		callable := ResponseEnvelope()(next)
-		ctx, rw := generateTestEchoContext()
+		ctx, rw := generateTestEchoContext(t)
 
 		err := callable(ctx)
 		require.NoError(t, err, "Actual err: %v", err)
@@ -115,15 +109,14 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 		middleware := ResponseEnvelope()
 		callable := middleware(next)
 
-		ctx, rw := generateTestEchoContext()
-		rest.SetContextRequestId(ctx, sampleRequestId)
+		ctx, rw := generateTestEchoContext(t, addRequestId)
 
 		err := callable(ctx)
 		require.NoError(t, err, "Actual err: %v", err)
 
 		assert.Equal(t, http.StatusBadGateway, rw.Code)
 		assert.Equal(t, echo.MIMEApplicationJSON, rw.Header().Get(echo.HeaderContentType))
-		assert.Equal(t, sampleRequestId, rw.Header().Get(requestIdHeader))
+		assert.Equal(t, sampleRequestId.String(), rw.Header().Get(requestIdHeader))
 		body, err := io.ReadAll(rw.Body)
 		require.NoError(t, err, "Actual err: %v", err)
 
@@ -132,7 +125,7 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 		assert.Equal(t, len(body), length)
 
 		actual := string(body)
-		expected := `{"request_id":"a57f4ca1-1a22-4990-b3de-5f836a3ea4e9","status":"ERROR","status_code":502,"details":"my-output"}`
+		expected := `{"request_id":"f1df556f-f7c1-4022-832c-e1a7b8a6f3d5","status":"ERROR","status_code":502,"details":"my-output"}`
 		assert.Regexp(t, expected, actual)
 	})
 }

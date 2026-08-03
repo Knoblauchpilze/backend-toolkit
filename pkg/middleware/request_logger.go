@@ -17,7 +17,7 @@ func RequestLogger() echo.MiddlewareFunc {
 		LogURIPath: true,
 		LogStatus:  true,
 		LogValuesFunc: func(c *echo.Context, values middleware.RequestLoggerValues) error {
-			log := rest.GetContextLogger(c)
+			log := rest.GetContextLogger(c.Request().Context())
 			createRequestLog(values, log)
 			return nil
 		},
