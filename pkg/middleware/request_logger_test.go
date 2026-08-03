@@ -50,6 +50,28 @@ func TestUnit_RequestLogger(t *testing.T) {
 		assert.Regexp(t, "[0-9]+.[0-9][mµn]s", actual.Duration)
 		assert.Equal(t, http.StatusOK, actual.Status)
 	})
+
+	t.Run("prints request timing when handler panics", func(t *testing.T) {
+		next, _ := createPanicHandler()
+
+		modifer, out := generateLoggerModifier(t)
+		ctx, _ := generateTestEchoContext(t, modifer)
+
+		callable := RequestLogger()(next)
+		recovered := false
+		func() {
+			// Recover to
+			defer func() {
+				recover()
+				recovered = true
+			}()
+			callable(ctx) //nolint:errcheck
+		}()
+
+		require.True(t, recovered)
+		actual := unmarshalLogOutput(t, *out)
+		assert.Equal(t, "Request processed", actual.Message)
+	})
 }
 
 func areTimeCloserThan(t1 time.Time, t2 time.Time, distance time.Duration) bool {

@@ -3,39 +3,37 @@ package middleware
 import (
 	"fmt"
 	"log/slog"
+	"net/http"
 	"time"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
 	"github.com/labstack/echo/v5"
-	"github.com/labstack/echo/v5/middleware"
 )
 
 func RequestLogger() echo.MiddlewareFunc {
-	config := middleware.RequestLoggerConfig{
-		LogHost:    true,
-		LogMethod:  true,
-		LogURIPath: true,
-		LogStatus:  true,
-		LogValuesFunc: func(c *echo.Context, values middleware.RequestLoggerValues) error {
-			log := rest.GetContextLogger(c.Request().Context())
-			createRequestLog(values, log)
-			return nil
-		},
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c *echo.Context) error {
+			start := time.Now()
+			defer func() {
+				req := c.Request()
+				log := rest.GetContextLogger(req.Context())
+				status := http.StatusOK
+				if echoResp, unwrapErr := echo.UnwrapResponse(c.Response()); unwrapErr == nil {
+					status = echoResp.Status
+				}
+				createRequestLog(log, req, status, time.Since(start))
+			}()
+			return next(c)
+		}
 	}
-	// Voluntarily ignoring errors
-	logging, _ := config.ToMiddleware()
-
-	return logging
 }
 
-func createRequestLog(values middleware.RequestLoggerValues, log *slog.Logger) {
-	elapsed := time.Since(values.StartTime)
-
+func createRequestLog(log *slog.Logger, req *http.Request, status int, elapsed time.Duration) {
 	log.Info(
 		"Request processed",
-		slog.String("method", values.Method),
-		slog.String("uri", fmt.Sprintf("%s%s", values.Host, values.URIPath)),
+		slog.String("method", req.Method),
+		slog.String("uri", fmt.Sprintf("%s%s", req.Host, req.URL.Path)),
 		slog.String("duration", fmt.Sprintf("%v", elapsed)),
-		slog.Int("status", values.Status),
+		slog.Int("status", status),
 	)
 }
