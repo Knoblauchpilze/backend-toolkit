@@ -8,8 +8,8 @@ import (
 
 const requestIdHeader = "X-Request-Id"
 
-func RequestId() echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
+func RequestId() MiddlewareFunc {
+	return func(next HandlerFunc) HandlerFunc {
 		return func(c *echo.Context) error {
 			req := c.Request()
 			requestId := req.Header.Get(requestIdHeader)

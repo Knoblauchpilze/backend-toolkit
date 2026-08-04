@@ -88,7 +88,7 @@ func main() {
 	}
 }
 
-func infoHandlerGenerator(conn db.Connection) echo.HandlerFunc {
+func infoHandlerGenerator(conn db.Connection) middleware.HandlerFunc {
 	return func(c *echo.Context) error {
 		sqlQuery := "SELECT count(*) FROM my-table"
 

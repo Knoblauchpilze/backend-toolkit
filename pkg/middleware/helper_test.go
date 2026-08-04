@@ -19,7 +19,7 @@ var (
 	sampleRequestId = uuid.MustParse("f1df556f-f7c1-4022-832c-e1a7b8a6f3d5")
 )
 
-func createTestEchoHandlerFuncWithCalledBoolean() (echo.HandlerFunc, *bool) {
+func createTestEchoHandlerFuncWithCalledBoolean() (HandlerFunc, *bool) {
 	called := false
 	call := func(c *echo.Context) error {
 		called = true
@@ -28,12 +28,12 @@ func createTestEchoHandlerFuncWithCalledBoolean() (echo.HandlerFunc, *bool) {
 	return call, &called
 }
 
-type middlewareGenerator func() echo.MiddlewareFunc
+type middlewareGenerator func() MiddlewareFunc
 
 func createCallableHandler(
 	t *testing.T,
 	generator middlewareGenerator,
-) (echo.HandlerFunc, *bool, *echo.Context) {
+) (HandlerFunc, *bool, *echo.Context) {
 	next, called := createTestEchoHandlerFuncWithCalledBoolean()
 	ctx, _ := generateTestEchoContext(t)
 

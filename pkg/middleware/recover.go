@@ -22,8 +22,8 @@ type recoveredErrorData struct {
 	stack []byte
 }
 
-func Recover() echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
+func Recover() MiddlewareFunc {
+	return func(next HandlerFunc) HandlerFunc {
 		return func(c *echo.Context) (err error) {
 			defer func() {
 				if r := recover(); r != nil {

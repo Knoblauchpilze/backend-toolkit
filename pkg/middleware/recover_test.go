@@ -150,7 +150,7 @@ func TestUnit_Recover(t *testing.T) {
 	})
 }
 
-func createPanicHandler() (echo.HandlerFunc, *bool) {
+func createPanicHandler() (HandlerFunc, *bool) {
 	var called bool
 	handler := func(c *echo.Context) error {
 		called = true

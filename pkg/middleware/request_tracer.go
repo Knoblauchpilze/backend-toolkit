@@ -8,8 +8,8 @@ import (
 	"github.com/labstack/echo/v5"
 )
 
-func RequestTracer(log *slog.Logger) echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
+func RequestTracer(log *slog.Logger) MiddlewareFunc {
+	return func(next HandlerFunc) HandlerFunc {
 		return func(c *echo.Context) error {
 			req := c.Request()
 			ctx := req.Context()

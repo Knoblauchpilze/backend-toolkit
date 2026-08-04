@@ -9,8 +9,8 @@ const (
 	defaultRequestId = "unknown"
 )
 
-func ResponseEnvelope() echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
+func ResponseEnvelope() MiddlewareFunc {
+	return func(next HandlerFunc) HandlerFunc {
 		return func(c *echo.Context) error {
 			requestId, ok := rest.RequestIdFromContext(c.Request().Context())
 			if !ok {

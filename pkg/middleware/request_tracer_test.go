@@ -53,8 +53,8 @@ func TestUnit_RequestTracer(t *testing.T) {
 	})
 }
 
-func createCallableTracerHandler(t *testing.T) (echo.HandlerFunc, *bool, *echo.Context) {
-	generator := func() echo.MiddlewareFunc {
+func createCallableTracerHandler(t *testing.T) (HandlerFunc, *bool, *echo.Context) {
+	generator := func() MiddlewareFunc {
 		return RequestTracer(slog.Default())
 	}
 	middleware, called, ctx := createCallableHandler(t, generator)

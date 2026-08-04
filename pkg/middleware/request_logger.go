@@ -10,8 +10,8 @@ import (
 	"github.com/labstack/echo/v5"
 )
 
-func RequestLogger() echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
+func RequestLogger() MiddlewareFunc {
+	return func(next HandlerFunc) HandlerFunc {
 		return func(c *echo.Context) error {
 			start := time.Now()
 			defer func() {
