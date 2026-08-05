@@ -1,10 +1,10 @@
 package middleware
 
 import (
-	"github.com/labstack/echo/v5"
+	"github.com/gin-gonic/gin"
 )
 
 type (
-	HandlerFunc    = echo.HandlerFunc
-	MiddlewareFunc = echo.MiddlewareFunc
+	HandlerFunc    = gin.HandlerFunc
+	MiddlewareFunc = gin.HandlerFunc
 )
