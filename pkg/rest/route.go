@@ -1,7 +1,7 @@
 package rest
 
 import (
-	"github.com/labstack/echo/v5"
+	"github.com/gin-gonic/gin"
 )
 
 type Routes []Route
@@ -9,11 +9,11 @@ type Routes []Route
 type Route struct {
 	method              string
 	path                string
-	handler             echo.HandlerFunc
+	handler             gin.HandlerFunc
 	useResponseEnvelope bool
 }
 
-func NewRoute(method string, path string, handler echo.HandlerFunc) *Route {
+func NewRoute(method string, path string, handler gin.HandlerFunc) *Route {
 	return &Route{
 		method:              method,
 		path:                sanitizePath(path),
@@ -22,7 +22,7 @@ func NewRoute(method string, path string, handler echo.HandlerFunc) *Route {
 	}
 }
 
-func NewRawRoute(method string, path string, handler echo.HandlerFunc) *Route {
+func NewRawRoute(method string, path string, handler gin.HandlerFunc) *Route {
 	return &Route{
 		method:              method,
 		path:                sanitizePath(path),
@@ -35,7 +35,7 @@ func (r *Route) Method() string {
 	return r.method
 }
 
-func (r *Route) Handler() echo.HandlerFunc {
+func (r *Route) Handler() gin.HandlerFunc {
 	return r.handler
 }
 
