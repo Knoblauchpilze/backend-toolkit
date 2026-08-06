@@ -43,7 +43,9 @@ func Recover() NewHandlerFunc {
 				}
 
 				log := rest.GetContextLogger(c.Request.Context())
-				log.Error(createErrorLog(data))
+				if log != nil {
+					log.Error(createErrorLog(data))
+				}
 
 				if recoveredErr != nil {
 					c.AbortWithStatusJSON(

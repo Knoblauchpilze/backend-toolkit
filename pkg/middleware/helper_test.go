@@ -28,6 +28,16 @@ func createTestEchoHandlerFuncWithCalledBoolean() (HandlerFunc, *bool) {
 	return call, &called
 }
 
+func createPanicHandler() (HandlerFunc, *bool) {
+	var called bool
+	handler := func(c *echo.Context) error {
+		called = true
+		panic(errSample)
+	}
+
+	return handler, &called
+}
+
 type middlewareGenerator func() MiddlewareFunc
 
 func createCallableHandler(
@@ -130,14 +140,4 @@ func unmarshalLogOutput(t *testing.T, out bytes.Buffer) message {
 	require.Nil(t, err)
 
 	return actual
-}
-
-func assertIsHttpErrorWithMessageAndCode(t *testing.T, err error, message string, httpCode int) {
-	t.Helper()
-
-	httpErr, ok := err.(*echo.HTTPError)
-	require.True(t, ok)
-
-	require.Equal(t, httpCode, httpErr.Code)
-	require.Equal(t, message, httpErr.Message)
 }

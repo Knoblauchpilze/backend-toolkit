@@ -6,6 +6,7 @@ import (
 )
 
 type (
+	// TODO: Remove the New prefix
 	NewHandlerFunc = gin.HandlerFunc
 
 	HandlerFunc    = echo.HandlerFunc
