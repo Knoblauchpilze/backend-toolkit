@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
-	"github.com/labstack/echo/v5"
 )
 
 const (
@@ -73,7 +72,7 @@ func (erw *EnvelopeResponseWriter) writeTyped(data any) (int, error) {
 	}
 
 	// Set transport-layer headers before committing response
-	erw.writer.Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	erw.writer.Header().Set("Content-Type", "application/json")
 	erw.writer.Header().Set(requestIdHeader, erw.response.RequestId)
 	erw.writer.Header().Set("Content-Length", fmt.Sprintf("%d", len(out)))
 
@@ -93,7 +92,7 @@ func (erw *EnvelopeResponseWriter) WriteHeader(statusCode int) {
 	erw.response.Status = statusFromHTTPCode(statusCode)
 
 	// Set transport-layer headers at write header time to ensure they're committed
-	erw.writer.Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	erw.writer.Header().Set("Content-Type", "application/json")
 	erw.writer.Header().Set(requestIdHeader, erw.response.RequestId)
 
 	erw.writer.WriteHeader(statusCode)

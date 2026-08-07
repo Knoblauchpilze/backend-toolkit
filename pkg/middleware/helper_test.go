@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/require"
@@ -19,6 +20,60 @@ var (
 	sampleRequestId = uuid.MustParse("f1df556f-f7c1-4022-832c-e1a7b8a6f3d5")
 )
 
+func createPanicHandlerWithCalledBoolean() (NewHandlerFunc, *bool) {
+	var called bool
+	handler := func(c *gin.Context) {
+		called = true
+		panic(errSample)
+	}
+
+	return handler, &called
+}
+
+func createHandlerWithCalledBoolean() (NewHandlerFunc, *bool) {
+	called := false
+	call := func(c *gin.Context) {
+		called = true
+		c.Status(http.StatusNoContent)
+	}
+	return call, &called
+}
+
+func createTestGinRouterWithHandler(
+	t *testing.T,
+	handler NewHandlerFunc,
+	middlewares ...NewHandlerFunc,
+) *gin.Engine {
+	t.Helper()
+
+	r := gin.New()
+
+	for _, middleware := range middlewares {
+		r.Use(middleware)
+	}
+
+	r.GET("/", handler)
+
+	return r
+}
+
+func createTestRequestWithLogger(
+	t *testing.T,
+	method string,
+) (*http.Request, *bytes.Buffer) {
+	t.Helper()
+
+	var out bytes.Buffer
+
+	slogLogger := slog.New(slog.NewJSONHandler(&out, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	ctx := rest.WithContextLogger(t.Context(), slogLogger)
+
+	req := httptest.NewRequestWithContext(ctx, method, "http://example.com/", nil)
+
+	return req, &out
+}
+
+// TODO: Deprecated
 func createTestEchoHandlerFuncWithCalledBoolean() (HandlerFunc, *bool) {
 	called := false
 	call := func(c *echo.Context) error {
@@ -26,6 +81,16 @@ func createTestEchoHandlerFuncWithCalledBoolean() (HandlerFunc, *bool) {
 		return c.NoContent(http.StatusOK)
 	}
 	return call, &called
+}
+
+func createPanicHandler() (HandlerFunc, *bool) {
+	var called bool
+	handler := func(c *echo.Context) error {
+		called = true
+		panic(errSample)
+	}
+
+	return handler, &called
 }
 
 type middlewareGenerator func() MiddlewareFunc
@@ -111,6 +176,8 @@ func generateTestEchoContextFromRequest(
 	return ctx, rw
 }
 
+// TODO: End deprecated
+
 type message struct {
 	Time     time.Time `json:"time"`
 	Level    string    `json:"level"`
@@ -130,14 +197,4 @@ func unmarshalLogOutput(t *testing.T, out bytes.Buffer) message {
 	require.Nil(t, err)
 
 	return actual
-}
-
-func assertIsHttpErrorWithMessageAndCode(t *testing.T, err error, message string, httpCode int) {
-	t.Helper()
-
-	httpErr, ok := err.(*echo.HTTPError)
-	require.True(t, ok)
-
-	require.Equal(t, httpCode, httpErr.Code)
-	require.Equal(t, message, httpErr.Message)
 }

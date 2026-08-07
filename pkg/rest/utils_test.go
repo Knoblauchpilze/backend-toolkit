@@ -5,8 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -104,7 +104,7 @@ func TestUnit_FetchIdFromQueryParam_whenNoId_expectNotExistAndNoError(t *testing
 	assert := assert.New(t)
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	ctx, _ := generateTestEchoContextFromRequest(req)
+	ctx, _ := generateTestGinContextFromRequest(req)
 
 	exists, _, err := FetchIdFromQueryParam(defaultKey, ctx)
 	assert.False(exists)
@@ -115,7 +115,7 @@ func TestUnit_FetchIdFromQueryParam_whenIdSetForOtherKey_expectNotExistAndNoErro
 	assert := assert.New(t)
 
 	req := generateRequestWithQueryParams("not-the-default-key", sampleUuid.String())
-	ctx, _ := generateTestEchoContextFromRequest(req)
+	ctx, _ := generateTestGinContextFromRequest(req)
 
 	exists, _, err := FetchIdFromQueryParam(defaultKey, ctx)
 	assert.False(exists)
@@ -126,7 +126,7 @@ func TestUnit_FetchIdFromQueryParam_whenIdSyntaxIsWrong_expectExistAndError(t *t
 	assert := assert.New(t)
 
 	req := generateRequestWithQueryParams(defaultKey, "not-a-uuid")
-	ctx, _ := generateTestEchoContextFromRequest(req)
+	ctx, _ := generateTestGinContextFromRequest(req)
 
 	exists, _, err := FetchIdFromQueryParam(defaultKey, ctx)
 	assert.True(exists)
@@ -137,7 +137,7 @@ func TestUnit_FetchIdFromQueryParam_whenIdIsSet_expectExistCorrectIdAndNoError(t
 	assert := assert.New(t)
 
 	req := generateRequestWithQueryParams(defaultKey, sampleUuid.String())
-	ctx, _ := generateTestEchoContextFromRequest(req)
+	ctx, _ := generateTestGinContextFromRequest(req)
 
 	exists, actual, err := FetchIdFromQueryParam(defaultKey, ctx)
 	assert.True(exists)
@@ -156,12 +156,11 @@ func generateRequestWithQueryParams(key string, value string) *http.Request {
 	return req
 }
 
-func generateTestEchoContextFromRequest(
+func generateTestGinContextFromRequest(
 	req *http.Request,
-) (*echo.Context, *httptest.ResponseRecorder) {
-	e := echo.New()
+) (*gin.Context, *httptest.ResponseRecorder) {
 	rw := httptest.NewRecorder()
-
-	ctx := e.NewContext(req, rw)
+	ctx, _ := gin.CreateTestContext(rw)
+	ctx.Request = req
 	return ctx, rw
 }

@@ -1,14 +1,13 @@
 package middleware
 
 import (
-	stderrors "errors"
 	"fmt"
 	"net/http"
 	"runtime"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
-	"github.com/labstack/echo/v5"
+	"github.com/gin-gonic/gin"
 )
 
 const (
@@ -17,45 +16,47 @@ const (
 
 type recoveredErrorData struct {
 	err   error
-	ctx   *echo.Context
 	req   *http.Request
 	stack []byte
 }
 
-func Recover() MiddlewareFunc {
-	return func(next HandlerFunc) HandlerFunc {
-		return func(c *echo.Context) (err error) {
-			defer func() {
-				if r := recover(); r != nil {
-					recoveredErr, ok := r.(error)
-					if !ok {
-						recoveredErr = fmt.Errorf("%v", r)
-					}
-
-					if _, ok := recoveredErr.(*errors.ErrorWithCode); !ok {
-						recoveredErr = errors.WrapCode(recoveredErr, errUncaughtPanic)
-					}
-
-					stack := make([]byte, 4<<10) // 4 KB
-					length := runtime.Stack(stack, false)
-
-					data := recoveredErrorData{
-						err:   recoveredErr,
-						ctx:   c,
-						req:   c.Request(),
-						stack: stack[:length],
-					}
-
-					log := rest.GetContextLogger(c.Request().Context())
-					log.Error(createErrorLog(data))
-
-					err = wrapToHttpError(recoveredErr)
+func Recover() NewHandlerFunc {
+	return func(c *gin.Context) {
+		defer func() {
+			if r := recover(); r != nil {
+				recoveredErr, ok := r.(error)
+				if !ok {
+					recoveredErr = fmt.Errorf("%v", r)
 				}
-			}()
 
-			err = next(c)
-			return wrapToHttpError(err)
-		}
+				if _, ok := recoveredErr.(*errors.ErrorWithCode); !ok {
+					recoveredErr = errors.WrapCode(recoveredErr, errUncaughtPanic)
+				}
+
+				stack := make([]byte, 4<<10) // 4 KB
+				length := runtime.Stack(stack, false)
+
+				data := recoveredErrorData{
+					err:   recoveredErr,
+					req:   c.Request,
+					stack: stack[:length],
+				}
+
+				log := rest.GetContextLogger(c.Request.Context())
+				if log != nil {
+					log.Error(createErrorLog(data))
+				}
+
+				if recoveredErr != nil {
+					c.AbortWithStatusJSON(
+						http.StatusInternalServerError,
+						recoveredErr.Error(),
+					)
+				}
+			}
+		}()
+
+		c.Next()
 	}
 }
 
@@ -77,17 +78,4 @@ func pathFromRequest(req *http.Request) string {
 	}
 
 	return fmt.Sprintf("%s%s", host, path)
-}
-
-func wrapToHttpError(err error) error {
-	if err == nil {
-		return nil
-	}
-
-	var httpErr *echo.HTTPError
-	if stderrors.As(err, &httpErr) {
-		return err
-	}
-
-	return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 }
