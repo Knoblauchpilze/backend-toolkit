@@ -12,7 +12,6 @@ import (
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/require"
 )
 
@@ -72,111 +71,6 @@ func createTestRequestWithLogger(
 
 	return req, &out
 }
-
-// TODO: Deprecated
-func createTestEchoHandlerFuncWithCalledBoolean() (HandlerFunc, *bool) {
-	called := false
-	call := func(c *echo.Context) error {
-		called = true
-		return c.NoContent(http.StatusOK)
-	}
-	return call, &called
-}
-
-func createPanicHandler() (HandlerFunc, *bool) {
-	var called bool
-	handler := func(c *echo.Context) error {
-		called = true
-		panic(errSample)
-	}
-
-	return handler, &called
-}
-
-type middlewareGenerator func() MiddlewareFunc
-
-func createCallableHandler(
-	t *testing.T,
-	generator middlewareGenerator,
-) (HandlerFunc, *bool, *echo.Context) {
-	next, called := createTestEchoHandlerFuncWithCalledBoolean()
-	ctx, _ := generateTestEchoContext(t)
-
-	middlewareFunc := generator()
-	callable := middlewareFunc(next)
-
-	return callable, called, ctx
-}
-
-type contextModifier func(*testing.T, *echo.Context)
-
-func generateTestEchoContext(
-	t *testing.T,
-	modifiers ...contextModifier,
-) (*echo.Context, *httptest.ResponseRecorder) {
-	t.Helper()
-
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/", nil)
-
-	ctx, rw := generateTestEchoContextFromRequest(t, req)
-
-	for _, modifier := range modifiers {
-		modifier(t, ctx)
-	}
-
-	return ctx, rw
-}
-
-func addLogger(t *testing.T, ctx *echo.Context) {
-	t.Helper()
-
-	var out bytes.Buffer
-	slogLogger := slog.New(slog.NewJSONHandler(&out, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	req := ctx.Request()
-	reqCtx := rest.WithContextLogger(req.Context(), slogLogger)
-	ctx.SetRequest(req.WithContext(reqCtx))
-}
-
-func addRequestId(t *testing.T, ctx *echo.Context) {
-	t.Helper()
-
-	req := ctx.Request()
-	reqCtx := rest.WithContextRequestId(req.Context(), sampleRequestId.String())
-	ctx.SetRequest(req.WithContext(reqCtx))
-}
-
-func generateLoggerModifier(
-	t *testing.T,
-) (contextModifier, *bytes.Buffer) {
-	t.Helper()
-
-	var out bytes.Buffer
-
-	modifier := func(t *testing.T, ctx *echo.Context) {
-		slogLogger := slog.New(slog.NewJSONHandler(&out, &slog.HandlerOptions{Level: slog.LevelDebug}))
-		req := ctx.Request()
-		reqCtx := rest.WithContextLogger(req.Context(), slogLogger)
-		ctx.SetRequest(req.WithContext(reqCtx))
-	}
-
-	return modifier, &out
-}
-
-func generateTestEchoContextFromRequest(
-	t *testing.T,
-	req *http.Request,
-) (*echo.Context, *httptest.ResponseRecorder) {
-	t.Helper()
-
-	e := echo.New()
-	rw := httptest.NewRecorder()
-
-	ctx := e.NewContext(req, rw)
-
-	return ctx, rw
-}
-
-// TODO: End deprecated
 
 type message struct {
 	Time     time.Time `json:"time"`

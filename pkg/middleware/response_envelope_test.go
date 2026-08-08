@@ -3,9 +3,12 @@ package middleware
 import (
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"strconv"
 	"testing"
 
+	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
+	"github.com/gin-gonic/gin"
 	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -13,24 +16,26 @@ import (
 
 func TestUnit_ResponseEnvelope(t *testing.T) {
 	t.Run("calls next middleware", func(t *testing.T) {
-		callable, called, ctx := createCallableHandler(t, ResponseEnvelope)
+		handler, called := createHandlerWithCalledBoolean()
 
-		err := callable(ctx)
-		require.NoError(t, err, "Actual err: %v", err)
+		r := createTestGinRouterWithHandler(t, handler, ResponseEnvelope())
+
+		req := httptest.NewRequest(http.MethodGet, "http://example.com/", nil)
+		rw := httptest.NewRecorder()
+		r.ServeHTTP(rw, req)
 
 		assert.True(t, *called)
 	})
 
 	t.Run("wraps plain output in envelope with request id", func(t *testing.T) {
-		next := createHandlerFuncWithPlainOutput(http.StatusOK, "my-output")
+		handler := createHandlerFuncWithPlainOutput(http.StatusOK, "my-output")
 
-		middleware := ResponseEnvelope()
-		callable := middleware(next)
+		r := createTestGinRouterWithHandler(t, handler, ResponseEnvelope())
 
-		ctx, rw := generateTestEchoContext(t, addRequestId)
-
-		err := callable(ctx)
-		require.NoError(t, err, "Actual err: %v", err)
+		ctx := rest.WithContextRequestId(t.Context(), sampleRequestId.String())
+		req := httptest.NewRequestWithContext(ctx, http.MethodGet, "http://example.com/", nil)
+		rw := httptest.NewRecorder()
+		r.ServeHTTP(rw, req)
 
 		assert.Equal(t, http.StatusOK, rw.Code)
 		assert.Equal(t, echo.MIMEApplicationJSON, rw.Header().Get(echo.HeaderContentType))
@@ -52,15 +57,14 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 		sample := testStruct{
 			Key: "value",
 		}
-		next := createHandlerFuncWithJsonOutput(http.StatusOK, sample)
+		handler := createHandlerFuncWithJsonOutput(http.StatusOK, sample)
 
-		middleware := ResponseEnvelope()
-		callable := middleware(next)
+		r := createTestGinRouterWithHandler(t, handler, ResponseEnvelope())
 
-		ctx, rw := generateTestEchoContext(t, addRequestId)
-
-		err := callable(ctx)
-		require.NoError(t, err, "Actual err: %v", err)
+		ctx := rest.WithContextRequestId(t.Context(), sampleRequestId.String())
+		req := httptest.NewRequestWithContext(ctx, http.MethodGet, "http://example.com/", nil)
+		rw := httptest.NewRecorder()
+		r.ServeHTTP(rw, req)
 
 		assert.Equal(t, http.StatusOK, rw.Code)
 		assert.Equal(t, echo.MIMEApplicationJSON, rw.Header().Get(echo.HeaderContentType))
@@ -81,14 +85,13 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 		type testStruct struct {
 			Key string
 		}
+		handler := createHandlerFuncWithJsonOutput(http.StatusOK, testStruct{Key: "value"})
 
-		next := createHandlerFuncWithJsonOutput(http.StatusOK, testStruct{Key: "value"})
+		r := createTestGinRouterWithHandler(t, handler, ResponseEnvelope())
 
-		callable := ResponseEnvelope()(next)
-		ctx, rw := generateTestEchoContext(t)
-
-		err := callable(ctx)
-		require.NoError(t, err, "Actual err: %v", err)
+		req := httptest.NewRequest(http.MethodGet, "http://example.com/", nil)
+		rw := httptest.NewRecorder()
+		r.ServeHTTP(rw, req)
 
 		assert.Equal(t, echo.MIMEApplicationJSON, rw.Header().Get(echo.HeaderContentType))
 		assert.Equal(t, defaultRequestId, rw.Header().Get(requestIdHeader))
@@ -104,15 +107,14 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 	})
 
 	t.Run("when status is not 200 ok expect status reflects it", func(t *testing.T) {
-		next := createHandlerFuncWithPlainOutput(http.StatusBadGateway, "my-output")
+		handler := createHandlerFuncWithPlainOutput(http.StatusBadGateway, "my-output")
 
-		middleware := ResponseEnvelope()
-		callable := middleware(next)
+		r := createTestGinRouterWithHandler(t, handler, ResponseEnvelope())
 
-		ctx, rw := generateTestEchoContext(t, addRequestId)
-
-		err := callable(ctx)
-		require.NoError(t, err, "Actual err: %v", err)
+		ctx := rest.WithContextRequestId(t.Context(), sampleRequestId.String())
+		req := httptest.NewRequestWithContext(ctx, http.MethodGet, "http://example.com/", nil)
+		rw := httptest.NewRecorder()
+		r.ServeHTTP(rw, req)
 
 		assert.Equal(t, http.StatusBadGateway, rw.Code)
 		assert.Equal(t, echo.MIMEApplicationJSON, rw.Header().Get(echo.HeaderContentType))
@@ -130,14 +132,14 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 	})
 }
 
-func createHandlerFuncWithPlainOutput(httpCode int, out string) HandlerFunc {
-	return func(c *echo.Context) error {
-		return c.String(httpCode, out)
+func createHandlerFuncWithPlainOutput(httpCode int, out string) NewHandlerFunc {
+	return func(c *gin.Context) {
+		c.String(httpCode, out)
 	}
 }
 
-func createHandlerFuncWithJsonOutput[T any](httpCode int, out T) HandlerFunc {
-	return func(c *echo.Context) error {
-		return c.JSON(httpCode, out)
+func createHandlerFuncWithJsonOutput[T any](httpCode int, out T) NewHandlerFunc {
+	return func(c *gin.Context) {
+		c.JSON(httpCode, out)
 	}
 }
