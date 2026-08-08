@@ -8,7 +8,7 @@ import (
 
 const requestIdHeader = "X-Request-Id"
 
-func RequestId() NewHandlerFunc {
+func RequestId() HandlerFunc {
 	return func(c *gin.Context) {
 		requestId := c.GetHeader(requestIdHeader)
 		if requestId == "" {

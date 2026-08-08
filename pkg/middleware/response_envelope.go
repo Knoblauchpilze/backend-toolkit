@@ -16,7 +16,7 @@ type ginEnvelopeWriter struct {
 	envelopeWriter *rest.EnvelopeResponseWriter
 }
 
-func ResponseEnvelope() NewHandlerFunc {
+func ResponseEnvelope() HandlerFunc {
 	return func(c *gin.Context) {
 		requestId, ok := rest.RequestIdFromContext(c.Request.Context())
 		if !ok {

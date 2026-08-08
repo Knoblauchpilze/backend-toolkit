@@ -20,7 +20,7 @@ type recoveredErrorData struct {
 	stack []byte
 }
 
-func Recover() NewHandlerFunc {
+func Recover() HandlerFunc {
 	return func(c *gin.Context) {
 		defer func() {
 			if r := recover(); r != nil {

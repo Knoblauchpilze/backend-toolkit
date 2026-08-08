@@ -19,7 +19,7 @@ var (
 	sampleRequestId = uuid.MustParse("f1df556f-f7c1-4022-832c-e1a7b8a6f3d5")
 )
 
-func createPanicHandlerWithCalledBoolean() (NewHandlerFunc, *bool) {
+func createPanicHandlerWithCalledBoolean() (HandlerFunc, *bool) {
 	var called bool
 	handler := func(c *gin.Context) {
 		called = true
@@ -29,7 +29,7 @@ func createPanicHandlerWithCalledBoolean() (NewHandlerFunc, *bool) {
 	return handler, &called
 }
 
-func createHandlerWithCalledBoolean() (NewHandlerFunc, *bool) {
+func createHandlerWithCalledBoolean() (HandlerFunc, *bool) {
 	called := false
 	call := func(c *gin.Context) {
 		called = true
@@ -40,8 +40,8 @@ func createHandlerWithCalledBoolean() (NewHandlerFunc, *bool) {
 
 func createTestGinRouterWithHandler(
 	t *testing.T,
-	handler NewHandlerFunc,
-	middlewares ...NewHandlerFunc,
+	handler HandlerFunc,
+	middlewares ...HandlerFunc,
 ) *gin.Engine {
 	t.Helper()
 

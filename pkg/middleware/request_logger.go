@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RequestLogger() NewHandlerFunc {
+func RequestLogger() HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 		defer func() {

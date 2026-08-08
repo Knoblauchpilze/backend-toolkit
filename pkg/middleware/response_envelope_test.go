@@ -132,13 +132,13 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 	})
 }
 
-func createHandlerFuncWithPlainOutput(httpCode int, out string) NewHandlerFunc {
+func createHandlerFuncWithPlainOutput(httpCode int, out string) HandlerFunc {
 	return func(c *gin.Context) {
 		c.String(httpCode, out)
 	}
 }
 
-func createHandlerFuncWithJsonOutput[T any](httpCode int, out T) NewHandlerFunc {
+func createHandlerFuncWithJsonOutput[T any](httpCode int, out T) HandlerFunc {
 	return func(c *gin.Context) {
 		c.JSON(httpCode, out)
 	}

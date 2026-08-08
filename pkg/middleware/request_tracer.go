@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RequestTracer(log *slog.Logger) NewHandlerFunc {
+func RequestTracer(log *slog.Logger) HandlerFunc {
 	return func(c *gin.Context) {
 		requestId, exists := rest.RequestIdFromContext(c.Request.Context())
 		if exists {
