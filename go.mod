@@ -3,9 +3,9 @@ module github.com/Knoblauchpilze/backend-toolkit
 go 1.26.0
 
 require (
+	github.com/gin-contrib/cors v1.7.7
 	github.com/gin-gonic/gin v1.12.0
 	github.com/go-viper/mapstructure/v2 v2.5.0
-	github.com/labstack/echo/v5 v5.3.1
 )
 
 require (
@@ -16,7 +16,6 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.12 // indirect
-	github.com/gin-contrib/cors v1.7.7 // indirect
 	github.com/gin-contrib/sse v1.1.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
@@ -63,5 +62,4 @@ require (
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.40.0 // indirect
-	golang.org/x/time v0.15.0 // indirect
 )
