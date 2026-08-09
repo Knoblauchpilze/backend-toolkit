@@ -48,10 +48,7 @@ func Recover() HandlerFunc {
 				}
 
 				if recoveredErr != nil {
-					c.AbortWithStatusJSON(
-						http.StatusInternalServerError,
-						recoveredErr.Error(),
-					)
+					c.Error(recoveredErr) // nolint: errcheck
 				}
 			}
 		}()

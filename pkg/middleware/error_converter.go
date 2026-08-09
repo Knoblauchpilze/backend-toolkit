@@ -20,10 +20,7 @@ func ErrorConverter() HandlerFunc {
 			return
 		}
 
-		wrapToHttpError(c, c.Errors.Last().Err)
+		err := c.Errors.Last()
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
 	}
-}
-
-func wrapToHttpError(c *gin.Context, err error) {
-	c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
 }

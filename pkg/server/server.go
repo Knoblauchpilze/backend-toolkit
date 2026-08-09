@@ -150,6 +150,7 @@ func registerBaseMiddlewares(e *gin.Engine, log *slog.Logger) {
 	e.Use(om.RequestId())
 	e.Use(om.RequestTracer(log))
 	e.Use(om.RequestLogger())
+	e.Use(om.ErrorConverter())
 	e.Use(om.Recover())
 }
 

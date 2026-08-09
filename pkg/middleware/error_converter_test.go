@@ -26,7 +26,11 @@ func TestUnit_ErrorConverter(t *testing.T) {
 		r.ServeHTTP(rw, req)
 
 		assert.Equal(t, http.StatusInternalServerError, rw.Code)
-		assert.JSONEq(t, `{"message":"an unexpected error occurred. Code: 102"}`, rw.Body.String())
+		assert.JSONEq(
+			t,
+			`{"message":"an unexpected error occurred. Code: 102"}`,
+			rw.Body.String(),
+		)
 	})
 
 	t.Run("does not override already written response", func(t *testing.T) {

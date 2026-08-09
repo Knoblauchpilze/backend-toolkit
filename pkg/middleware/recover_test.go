@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/db"
+	"github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -50,62 +51,38 @@ func TestUnit_Recover(t *testing.T) {
 		assert.Equal(t, []byte{}, out)
 	})
 
-	t.Run("sets status to internal server error when next panics", func(t *testing.T) {
+	t.Run("stores panic as a context error when next panics", func(t *testing.T) {
 		handler, _ := createPanicHandlerWithCalledBoolean()
+		capture, actual := createErrorCaptureHandler()
 
-		r := createTestGinRouterWithHandler(t, handler, Recover())
+		r := createTestGinRouterWithHandler(t, handler, capture, Recover())
 
 		req := httptest.NewRequest(http.MethodGet, "http://example.com/", nil)
 		rw := httptest.NewRecorder()
 		r.ServeHTTP(rw, req)
 
-		assert.Equal(t, http.StatusInternalServerError, rw.Code)
+		assert.Len(t, *actual, 1)
+		err, ok := errors.AsErrorWithCode((*actual)[0])
+		require.True(t, ok)
+		assert.Equal(t, errUncaughtPanic, err.Code)
+		assert.Equal(t, "an unexpected error occurred", err.Message)
+		assert.Equal(t, errSample, err.Cause)
 	})
 
-	t.Run("sets status to internal server error when next panics with code", func(t *testing.T) {
+	t.Run("stores panic as a context error when next panics with code", func(t *testing.T) {
 		handler := func(c *gin.Context) {
 			panic(db.ErrAlreadyCommitted)
 		}
+		capture, actual := createErrorCaptureHandler()
 
-		r := createTestGinRouterWithHandler(t, handler, Recover())
-
-		req := httptest.NewRequest(http.MethodGet, "http://example.com/", nil)
-		rw := httptest.NewRecorder()
-		r.ServeHTTP(rw, req)
-
-		assert.Equal(t, http.StatusInternalServerError, rw.Code)
-	})
-
-	t.Run("returns body with error description when next panics", func(t *testing.T) {
-		handler, _ := createPanicHandlerWithCalledBoolean()
-
-		r := createTestGinRouterWithHandler(t, handler, Recover())
+		r := createTestGinRouterWithHandler(t, handler, capture, Recover())
 
 		req := httptest.NewRequest(http.MethodGet, "http://example.com/", nil)
 		rw := httptest.NewRecorder()
 		r.ServeHTTP(rw, req)
 
-		out, err := io.ReadAll(rw.Body)
-		require.NoError(t, err, "Actual err: %v", err)
-		expected := []byte("\"an unexpected error occurred. Code: 400 (cause: some error)\"")
-		assert.Equal(t, expected, out)
-	})
-
-	t.Run("returns body with error description when next panics with code", func(t *testing.T) {
-		handler := func(c *gin.Context) {
-			panic(db.ErrAlreadyCommitted)
-		}
-
-		r := createTestGinRouterWithHandler(t, handler, Recover())
-
-		req := httptest.NewRequest(http.MethodGet, "http://example.com/", nil)
-		rw := httptest.NewRecorder()
-		r.ServeHTTP(rw, req)
-
-		out, err := io.ReadAll(rw.Body)
-		require.NoError(t, err, "Actual err: %v", err)
-		expected := []byte("\"an unexpected error occurred. Code: 102\"")
-		assert.Equal(t, expected, out)
+		assert.Len(t, *actual, 1)
+		assert.ErrorIs(t, db.ErrAlreadyCommitted, (*actual)[0], "Actual err: %v", (*actual)[0])
 	})
 
 	t.Run("logs error when logger is available", func(t *testing.T) {
@@ -155,4 +132,18 @@ func TestUnit_Recover(t *testing.T) {
 			actual.Message,
 		)
 	})
+}
+
+func createErrorCaptureHandler() (HandlerFunc, *[]error) {
+	errors := []error{}
+
+	capture := func(c *gin.Context) {
+		c.Next()
+
+		for _, err := range c.Errors {
+			errors = append(errors, err.Err)
+		}
+	}
+
+	return capture, &errors
 }

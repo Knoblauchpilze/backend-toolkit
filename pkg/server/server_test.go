@@ -24,6 +24,8 @@ const (
 )
 
 func TestUnit_Server(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
 	t.Run("expect failure when adding unsupported route", func(t *testing.T) {
 		s := newTestServer(4000)
 
@@ -188,10 +190,34 @@ func TestUnit_Server(t *testing.T) {
 		require.NoError(t, err, "Actual err: %v", err)
 	})
 
+	t.Run("returns error envelope when handler returns error as JSON", func(t *testing.T) {
+		s := newTestServer(4009)
+		errorHandler := func(c *gin.Context) {
+			c.JSON(http.StatusBadGateway, db.ErrAlreadyCommitted)
+		}
+		route := rest.NewRoute(http.MethodGet, "/", errorHandler)
+		err := s.AddRoute(route)
+		require.NoError(t, err, "Actual err: %v", err)
+
+		done := asyncRunServerAndAssertStopWithoutError(t, s)
+
+		response := doRequest(t, http.MethodGet, "http://localhost:4009")
+
+		err = s.Stop()
+		<-done
+
+		require.NoError(t, err, "Actual err: %v", err)
+		assert.Equal(t, http.StatusBadGateway, response.StatusCode)
+		actual := unmarshalResponseAndAssertRequestId(t, response)
+		assert.Equal(t, "ERROR", actual.Status)
+		assert.Equal(t, http.StatusBadGateway, actual.StatusCode)
+		assert.Equal(t, `{"code":102,"message":"an unexpected error occurred"}`, string(actual.Details))
+	})
+
 	t.Run("returns error envelope when handler returns error", func(t *testing.T) {
 		s := newTestServer(4004)
 		errorHandler := func(c *gin.Context) {
-			c.Error(db.ErrAlreadyCommitted)
+			c.Error(db.ErrAlreadyCommitted) // nolint: errcheck
 		}
 		route := rest.NewRoute(http.MethodGet, "/", errorHandler)
 		err := s.AddRoute(route)
