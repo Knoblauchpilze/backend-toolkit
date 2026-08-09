@@ -30,6 +30,7 @@ package main
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"os"
 	"strconv"
@@ -37,10 +38,11 @@ import (
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/db"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/db/postgresql"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/logger"
+	"github.com/Knoblauchpilze/backend-toolkit/pkg/middleware"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/process"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/server"
-	"github.com/labstack/echo/v5"
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
@@ -56,7 +58,7 @@ func main() {
 
 	conn, err := db.New(context.Background(), dbConfig)
 	if err != nil {
-		log.Errorf("Failed to create db connection: %v", err)
+		log.Error("Failed to create db connection", slog.Any("error", err))
 		os.Exit(1)
 	}
 	defer conn.Close(context.Background())
@@ -70,36 +72,36 @@ func main() {
 	// Add a route with some handler
 	route := rest.NewRoute(http.MethodGet, "/info", infoHandlerGenerator(conn))
 	if err := s.AddRoute(route); err != nil {
-		log.Errorf("Failed to register route %v: %v", route.Path(), err)
+		log.Error("Failed to register route", slog.String("route", route.Path()), slog.Any("error", err))
 		os.Exit(1)
 	}
 
 	// Start the server
 	wait, err := process.StartWithSignalHandler(context.Background(), s)
 	if err != nil {
-		log.Errorf("Failed to start the server: %v", err)
+		log.Error("Failed to start the server", slog.Any("error", err))
 		os.Exit(1)
 	}
 
 	err = wait()
 	if err != nil {
-		log.Errorf("Error while serving: %v", err)
+		log.Error("Error while serving", slog.Any("error", err))
 		os.Exit(1)
 	}
 }
 
 func infoHandlerGenerator(conn db.Connection) middleware.HandlerFunc {
-	return func(c *echo.Context) error {
+	return func(c *gin.Context) {
 		sqlQuery := "SELECT count(*) FROM my-table"
 
 		// Use the connection to query the database and unmarshal the result
 		// easily in an integer or a struct or anything you want
-		value, err := db.QueryOne[int](c.Request().Context(), conn, sqlQuery)
+		value, err := db.QueryOne[int](c.Request.Context(), conn, sqlQuery)
 		if err != nil {
-			return c.JSON(http.StatusInternalServerError, "Failed to query database")
+			c.JSON(http.StatusInternalServerError, "failed to query database")
 		}
 
-		return c.String(http.StatusOK, strconv.Itoa(value))
+		c.String(http.StatusOK, strconv.Itoa(value))
 	}
 }
 ```
