@@ -7,7 +7,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -305,7 +304,7 @@ func TestUnit_EnvelopeResponseWriter(t *testing.T) {
 		_, err := rw.writeTyped(sampleJsonData)
 		require.NoError(t, err, "Actual err: %v", err)
 
-		assert.Equal(t, echo.MIMEApplicationJSON, out.Header().Get(echo.HeaderContentType))
+		assert.Equal(t, "application/json", out.Header().Get("Content-Type"))
 
 		assert.Equal(t, sampleRequestId, out.Header().Get("X-Request-Id"))
 
@@ -323,7 +322,7 @@ func TestUnit_EnvelopeResponseWriter(t *testing.T) {
 		_, err := rw.writeTyped(sampleJsonData)
 		require.NoError(t, err, "Actual err: %v", err)
 
-		assert.Equal(t, echo.MIMEApplicationJSON, out.Header().Get(echo.HeaderContentType))
+		assert.Equal(t, "application/json", out.Header().Get("Content-Type"))
 		assert.Equal(t, sampleRequestId, out.Header().Get("X-Request-Id"))
 
 		body := out.Body.Bytes()
@@ -340,7 +339,7 @@ func TestUnit_EnvelopeResponseWriter(t *testing.T) {
 		_, err := rw.Write([]byte("plain string output"))
 		require.NoError(t, err, "Actual err: %v", err)
 
-		assert.Equal(t, echo.MIMEApplicationJSON, out.Header().Get(echo.HeaderContentType))
+		assert.Equal(t, "application/json", out.Header().Get("Content-Type"))
 		assert.Equal(t, sampleRequestId, out.Header().Get("X-Request-Id"))
 
 		body := out.Body.Bytes()

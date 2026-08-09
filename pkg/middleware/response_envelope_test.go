@@ -9,7 +9,6 @@ import (
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
 	"github.com/gin-gonic/gin"
-	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -38,7 +37,7 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 		r.ServeHTTP(rw, req)
 
 		assert.Equal(t, http.StatusOK, rw.Code)
-		assert.Equal(t, echo.MIMEApplicationJSON, rw.Header().Get(echo.HeaderContentType))
+		assert.Equal(t, "application/json", rw.Header().Get("Content-Type"))
 		assert.Equal(t, sampleRequestId.String(), rw.Header().Get(requestIdHeader))
 		length := rw.Header().Get("Content-Length")
 		// The length includes the value (`my-output`) and the envelope
@@ -67,7 +66,7 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 		r.ServeHTTP(rw, req)
 
 		assert.Equal(t, http.StatusOK, rw.Code)
-		assert.Equal(t, echo.MIMEApplicationJSON, rw.Header().Get(echo.HeaderContentType))
+		assert.Equal(t, "application/json", rw.Header().Get("Content-Type"))
 		assert.Equal(t, sampleRequestId.String(), rw.Header().Get(requestIdHeader))
 		body, err := io.ReadAll(rw.Body)
 		require.NoError(t, err, "Actual err: %v", err)
@@ -93,7 +92,7 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 		rw := httptest.NewRecorder()
 		r.ServeHTTP(rw, req)
 
-		assert.Equal(t, echo.MIMEApplicationJSON, rw.Header().Get(echo.HeaderContentType))
+		assert.Equal(t, "application/json", rw.Header().Get("Content-Type"))
 		assert.Equal(t, defaultRequestId, rw.Header().Get(requestIdHeader))
 		body, err := io.ReadAll(rw.Body)
 		require.NoError(t, err, "Actual err: %v", err)
@@ -117,7 +116,7 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 		r.ServeHTTP(rw, req)
 
 		assert.Equal(t, http.StatusBadGateway, rw.Code)
-		assert.Equal(t, echo.MIMEApplicationJSON, rw.Header().Get(echo.HeaderContentType))
+		assert.Equal(t, "application/json", rw.Header().Get("Content-Type"))
 		assert.Equal(t, sampleRequestId.String(), rw.Header().Get(requestIdHeader))
 		body, err := io.ReadAll(rw.Body)
 		require.NoError(t, err, "Actual err: %v", err)
