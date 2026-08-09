@@ -111,8 +111,8 @@ By using only packges provided in this repository we are able to setup a server 
 The key features of the project are:
 
 - a simple way to configure a connection to a `postgre` database using [pgx](https://github.com/jackc/pgx).
-- an easy to use server using [echo](https://echo.labstack.com/) as a base.
-- a powerful logging system that leverages [zerolog](https://github.com/rs/zerolog) and integrates it with `echo`.
+- an easy to use server using [gin](https://gin-gonic.com/en/) as a base.
+- a powerful logging system that leverages [zerolog](https://github.com/rs/zerolog) and integrates it with `Gin`.
 
 We define multiple tags and versions in this repository to make it easy to pinpoint a specific behavior and upgrade when needed.
 
@@ -157,19 +157,21 @@ As a transverse concern, logging is usually quite important in a backend service
 - easily customizable to allow display of headers and prefixes (typically modules or services).
 - ability to correlate logs for a request with one another.
 
-To this end we used some capabilities provided by `echo` and `zerolog` and tried to make them work in combination.
+To this end we used some capabilities provided by `Gin` and `zerolog` and tried to make them work in combination.
 
-### Echo context
+### Gin context
 
-By default a handler using `echo` has the following prototype:
+By default a handler using `Gin` has the following prototype:
 
 ```go
-type HandlerFunc func(c *echo.Context) error
+type HandlerFunc func(c *gin.Context)
 ```
 
-The `echo.Context` uses `slog` for logging and provides a `Logger()` method which allows to request the logger for each request.
+The `gin.Context` does not provide a default logger but the [Server](pkg/server/server.go) defines a middleware to always provide one through the [GetContextLogger](pkg/rest/context.go) function to request the logger for each request.
 
-### Binding zerolog to echo logger
+The logger is configured with a prefix to include the request identifier when available.
+
+### Binding zerolog to Gin logger
 
 The `zerolog` package and the `slog` package have slightly different interfaces to allow logging. As `slog` is part of the standard library, it seems safe to rely on it. There's a binding for `slog` provided by zerolog (see [source](https://github.com/rs/zerolog?tab=readme-ov-file#integration-with-logslog)). It's easy enough to configure it: the `logger` package only provides convenience wrappers to instantiate a logger either with a default level or with a custom one.
 
@@ -235,8 +237,7 @@ Managing time is notoriously complex in most systems. As this project is mainly 
 
 ## The REST server
 
-Another common aspect of offering a backend service is to have an HTTP server. In the past we usually used the [echo](https://echo.labstack.com/) framework. Although it's already providing some good abstraction, we noticed that some operations were quite common:
-
+Another common aspect of offering a backend service is to have an HTTP server. This project provides a higher abstraction than what is typically available with `Gin`. This includes:
 - configuring the server (base path, port)
 - start and stop gracefully
 - register routes
