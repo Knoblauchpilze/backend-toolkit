@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/require"
 )
 
@@ -19,96 +19,57 @@ var (
 	sampleRequestId = uuid.MustParse("f1df556f-f7c1-4022-832c-e1a7b8a6f3d5")
 )
 
-func createTestEchoHandlerFuncWithCalledBoolean() (HandlerFunc, *bool) {
-	called := false
-	call := func(c *echo.Context) error {
+func createPanicHandlerWithCalledBoolean() (HandlerFunc, *bool) {
+	var called bool
+	handler := func(c *gin.Context) {
 		called = true
-		return c.NoContent(http.StatusOK)
+		panic(errSample)
+	}
+
+	return handler, &called
+}
+
+func createHandlerWithCalledBoolean() (HandlerFunc, *bool) {
+	called := false
+	call := func(c *gin.Context) {
+		called = true
+		c.Status(http.StatusNoContent)
 	}
 	return call, &called
 }
 
-type middlewareGenerator func() MiddlewareFunc
-
-func createCallableHandler(
+func createTestGinRouterWithHandler(
 	t *testing.T,
-	generator middlewareGenerator,
-) (HandlerFunc, *bool, *echo.Context) {
-	next, called := createTestEchoHandlerFuncWithCalledBoolean()
-	ctx, _ := generateTestEchoContext(t)
-
-	middlewareFunc := generator()
-	callable := middlewareFunc(next)
-
-	return callable, called, ctx
-}
-
-type contextModifier func(*testing.T, *echo.Context)
-
-func generateTestEchoContext(
-	t *testing.T,
-	modifiers ...contextModifier,
-) (*echo.Context, *httptest.ResponseRecorder) {
+	handler HandlerFunc,
+	middlewares ...HandlerFunc,
+) *gin.Engine {
 	t.Helper()
 
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/", nil)
+	r := gin.New()
 
-	ctx, rw := generateTestEchoContextFromRequest(t, req)
-
-	for _, modifier := range modifiers {
-		modifier(t, ctx)
+	for _, middleware := range middlewares {
+		r.Use(middleware)
 	}
 
-	return ctx, rw
+	r.GET("/", handler)
+
+	return r
 }
 
-func addLogger(t *testing.T, ctx *echo.Context) {
+func createTestRequestWithLogger(
+	t *testing.T,
+	method string,
+) (*http.Request, *bytes.Buffer) {
 	t.Helper()
 
 	var out bytes.Buffer
+
 	slogLogger := slog.New(slog.NewJSONHandler(&out, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	req := ctx.Request()
-	reqCtx := rest.WithContextLogger(req.Context(), slogLogger)
-	ctx.SetRequest(req.WithContext(reqCtx))
-}
+	ctx := rest.WithContextLogger(t.Context(), slogLogger)
 
-func addRequestId(t *testing.T, ctx *echo.Context) {
-	t.Helper()
+	req := httptest.NewRequestWithContext(ctx, method, "http://example.com/", nil)
 
-	req := ctx.Request()
-	reqCtx := rest.WithContextRequestId(req.Context(), sampleRequestId.String())
-	ctx.SetRequest(req.WithContext(reqCtx))
-}
-
-func generateLoggerModifier(
-	t *testing.T,
-) (contextModifier, *bytes.Buffer) {
-	t.Helper()
-
-	var out bytes.Buffer
-
-	modifier := func(t *testing.T, ctx *echo.Context) {
-		slogLogger := slog.New(slog.NewJSONHandler(&out, &slog.HandlerOptions{Level: slog.LevelDebug}))
-		req := ctx.Request()
-		reqCtx := rest.WithContextLogger(req.Context(), slogLogger)
-		ctx.SetRequest(req.WithContext(reqCtx))
-	}
-
-	return modifier, &out
-}
-
-func generateTestEchoContextFromRequest(
-	t *testing.T,
-	req *http.Request,
-) (*echo.Context, *httptest.ResponseRecorder) {
-	t.Helper()
-
-	e := echo.New()
-	rw := httptest.NewRecorder()
-
-	ctx := e.NewContext(req, rw)
-
-	return ctx, rw
+	return req, &out
 }
 
 type message struct {
@@ -130,14 +91,4 @@ func unmarshalLogOutput(t *testing.T, out bytes.Buffer) message {
 	require.Nil(t, err)
 
 	return actual
-}
-
-func assertIsHttpErrorWithMessageAndCode(t *testing.T, err error, message string, httpCode int) {
-	t.Helper()
-
-	httpErr, ok := err.(*echo.HTTPError)
-	require.True(t, ok)
-
-	require.Equal(t, httpCode, httpErr.Code)
-	require.Equal(t, message, httpErr.Message)
 }

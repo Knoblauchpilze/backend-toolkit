@@ -13,7 +13,7 @@ import (
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/db"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/process"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
-	"github.com/labstack/echo/v5"
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -24,6 +24,8 @@ const (
 )
 
 func TestUnit_Server(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
 	t.Run("expect failure when adding unsupported route", func(t *testing.T) {
 		s := newTestServer(4000)
 
@@ -60,8 +62,8 @@ func TestUnit_Server(t *testing.T) {
 
 	t.Run("raw route responds with no envelope wrapping", func(t *testing.T) {
 		s := newTestServer(4006)
-		helloHandler := func(c *echo.Context) error {
-			return c.String(http.StatusOK, "Hello")
+		helloHandler := func(c *gin.Context) {
+			c.String(http.StatusOK, "Hello")
 		}
 		route := rest.NewRawRoute(http.MethodGet, "/", helloHandler)
 		err := s.AddRoute(route)
@@ -87,8 +89,8 @@ func TestUnit_Server(t *testing.T) {
 
 	t.Run("route with string output returns enveloped json response", func(t *testing.T) {
 		s := newTestServer(4008)
-		stringHandler := func(c *echo.Context) error {
-			return c.String(http.StatusOK, "test-string-output")
+		stringHandler := func(c *gin.Context) {
+			c.String(http.StatusOK, "test-string-output")
 		}
 		route := rest.NewRoute(http.MethodGet, "/", stringHandler)
 		err := s.AddRoute(route)
@@ -104,7 +106,7 @@ func TestUnit_Server(t *testing.T) {
 		<-done
 
 		assert.Equal(t, http.StatusOK, response.StatusCode)
-		assert.Equal(t, echo.MIMEApplicationJSON, response.Header.Get(echo.HeaderContentType))
+		assert.Equal(t, "application/json", response.Header.Get("Content-Type"))
 		assert.Regexp(t, uuidRegex, response.Header.Get(requestIdHeader))
 		actual := unmarshalResponseAndAssertRequestId(t, response)
 		assert.Equal(t, "SUCCESS", actual.Status)
@@ -131,7 +133,7 @@ func TestUnit_Server(t *testing.T) {
 
 	t.Run("returns error envelope when handler panics", func(t *testing.T) {
 		s := newTestServer(4003)
-		errorHandler := func(c *echo.Context) error {
+		errorHandler := func(c *gin.Context) {
 			panic(errors.New("this handler panics"))
 		}
 		route := rest.NewRoute(http.MethodGet, "/", errorHandler)
@@ -159,7 +161,7 @@ func TestUnit_Server(t *testing.T) {
 
 	t.Run("returns non-envelope error when raw route handler panics", func(t *testing.T) {
 		s := newTestServer(4007)
-		errorHandler := func(c *echo.Context) error {
+		errorHandler := func(c *gin.Context) {
 			panic(errors.New("this handler panics"))
 		}
 		route := rest.NewRawRoute(http.MethodGet, "/", errorHandler)
@@ -188,10 +190,34 @@ func TestUnit_Server(t *testing.T) {
 		require.NoError(t, err, "Actual err: %v", err)
 	})
 
+	t.Run("returns error envelope when handler returns error as JSON", func(t *testing.T) {
+		s := newTestServer(4009)
+		errorHandler := func(c *gin.Context) {
+			c.JSON(http.StatusBadGateway, db.ErrAlreadyCommitted)
+		}
+		route := rest.NewRoute(http.MethodGet, "/", errorHandler)
+		err := s.AddRoute(route)
+		require.NoError(t, err, "Actual err: %v", err)
+
+		done := asyncRunServerAndAssertStopWithoutError(t, s)
+
+		response := doRequest(t, http.MethodGet, "http://localhost:4009")
+
+		err = s.Stop()
+		<-done
+
+		require.NoError(t, err, "Actual err: %v", err)
+		assert.Equal(t, http.StatusBadGateway, response.StatusCode)
+		actual := unmarshalResponseAndAssertRequestId(t, response)
+		assert.Equal(t, "ERROR", actual.Status)
+		assert.Equal(t, http.StatusBadGateway, actual.StatusCode)
+		assert.Equal(t, `{"code":102,"message":"an unexpected error occurred"}`, string(actual.Details))
+	})
+
 	t.Run("returns error envelope when handler returns error", func(t *testing.T) {
 		s := newTestServer(4004)
-		errorHandler := func(c *echo.Context) error {
-			return db.ErrAlreadyCommitted
+		errorHandler := func(c *gin.Context) {
+			c.Error(db.ErrAlreadyCommitted) // nolint: errcheck
 		}
 		route := rest.NewRoute(http.MethodGet, "/", errorHandler)
 		err := s.AddRoute(route)
@@ -246,8 +272,8 @@ func newTestServerWithOkHandler(t *testing.T, port uint16) *Server {
 	return s
 }
 
-func testHttpHandler(c *echo.Context) error {
-	return c.JSON(http.StatusOK, "OK")
+func testHttpHandler(c *gin.Context) {
+	c.JSON(http.StatusOK, "OK")
 }
 
 func asyncRunServerAndAssertStopWithoutError(
@@ -327,7 +353,7 @@ func assertIsOkResponse(t *testing.T, response *http.Response) {
 	t.Helper()
 
 	assert.Equal(t, http.StatusOK, response.StatusCode)
-	assert.Equal(t, echo.MIMEApplicationJSON, response.Header.Get(echo.HeaderContentType))
+	assert.Equal(t, "application/json", response.Header.Get("Content-Type"))
 	actual := unmarshalResponseAndAssertRequestId(t, response)
 	assert.Equal(t, "SUCCESS", actual.Status)
 	assert.Equal(t, http.StatusOK, actual.StatusCode)

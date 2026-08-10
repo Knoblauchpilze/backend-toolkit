@@ -7,24 +7,17 @@ import (
 	"time"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
-	"github.com/labstack/echo/v5"
+	"github.com/gin-gonic/gin"
 )
 
-func RequestLogger() MiddlewareFunc {
-	return func(next HandlerFunc) HandlerFunc {
-		return func(c *echo.Context) error {
-			start := time.Now()
-			defer func() {
-				req := c.Request()
-				log := rest.GetContextLogger(req.Context())
-				status := http.StatusOK
-				if echoResp, unwrapErr := echo.UnwrapResponse(c.Response()); unwrapErr == nil {
-					status = echoResp.Status
-				}
-				createRequestLog(log, req, status, time.Since(start))
-			}()
-			return next(c)
-		}
+func RequestLogger() HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+		defer func() {
+			log := rest.GetContextLogger(c.Request.Context())
+			createRequestLog(log, c.Request, c.Writer.Status(), time.Since(start))
+		}()
+		c.Next()
 	}
 }
 

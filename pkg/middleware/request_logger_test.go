@@ -1,44 +1,43 @@
 package middleware
 
 import (
-	"bytes"
-	"log/slog"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
-	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestUnit_RequestLogger(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
 	t.Run("calls next middleware", func(t *testing.T) {
-		callable, called, ctx := createCallableHandler(t, RequestLogger)
-		req := ctx.Request()
-		reqCtx := rest.WithContextLogger(req.Context(), slog.Default())
-		ctx.SetRequest(req.WithContext(reqCtx))
+		handler, called := createHandlerWithCalledBoolean()
 
-		err := callable(ctx)
+		r := createTestGinRouterWithHandler(t, handler, RequestLogger())
 
-		assert.Nil(t, err)
+		req, _ := createTestRequestWithLogger(t, http.MethodGet)
+		rw := httptest.NewRecorder()
+		r.ServeHTTP(rw, req)
+
 		assert.True(t, *called)
 	})
 
 	t.Run("prints request timing", func(t *testing.T) {
-		callable, _, ctx := createCallableHandler(t, RequestLogger)
+		handler, _ := createHandlerWithCalledBoolean()
 
-		var out bytes.Buffer
-		slogLogger := slog.New(slog.NewJSONHandler(&out, &slog.HandlerOptions{Level: slog.LevelDebug}))
-		req := ctx.Request()
-		reqCtx := rest.WithContextLogger(req.Context(), slogLogger)
-		ctx.SetRequest(req.WithContext(reqCtx))
+		r := createTestGinRouterWithHandler(t, handler, RequestLogger())
 
-		err := callable(ctx)
-		require.Nil(t, err)
+		req, out := createTestRequestWithLogger(t, http.MethodGet)
+		rw := httptest.NewRecorder()
+		r.ServeHTTP(rw, req)
+
 		afterCall := time.Now()
 
-		actual := unmarshalLogOutput(t, out)
+		actual := unmarshalLogOutput(t, *out)
 		assert.Equal(t, "INFO", actual.Level)
 
 		safetyMargin := 5 * time.Second
@@ -48,26 +47,30 @@ func TestUnit_RequestLogger(t *testing.T) {
 		assert.Equal(t, "GET", actual.Method)
 		assert.Equal(t, "example.com/", actual.Uri)
 		assert.Regexp(t, "[0-9]+.[0-9][mµn]s", actual.Duration)
-		assert.Equal(t, http.StatusOK, actual.Status)
+		assert.Equal(t, http.StatusNoContent, actual.Status)
 	})
 
 	t.Run("prints request timing when handler panics", func(t *testing.T) {
-		next, _ := createPanicHandler()
+		handler, called := createPanicHandlerWithCalledBoolean()
 
-		modifer, out := generateLoggerModifier(t)
-		ctx, _ := generateTestEchoContext(t, modifer)
+		r := createTestGinRouterWithHandler(t, handler, RequestLogger())
 
-		callable := RequestLogger()(next)
+		req, out := createTestRequestWithLogger(t, http.MethodGet)
+		rw := httptest.NewRecorder()
+
 		recovered := false
 		func() {
-			// Recover to
+			// Recover as there's nothing else preventing the panic to
+			// bubble up.
 			defer func() {
 				recover() //nolint:errcheck
 				recovered = true
 			}()
-			callable(ctx) //nolint:errcheck
+
+			r.ServeHTTP(rw, req)
 		}()
 
+		require.True(t, *called)
 		require.True(t, recovered)
 		actual := unmarshalLogOutput(t, *out)
 		assert.Equal(t, "Request processed", actual.Message)

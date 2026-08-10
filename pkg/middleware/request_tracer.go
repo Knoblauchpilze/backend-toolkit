@@ -5,22 +5,18 @@ import (
 	"log/slog"
 
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
-	"github.com/labstack/echo/v5"
+	"github.com/gin-gonic/gin"
 )
 
-func RequestTracer(log *slog.Logger) MiddlewareFunc {
-	return func(next HandlerFunc) HandlerFunc {
-		return func(c *echo.Context) error {
-			req := c.Request()
-			ctx := req.Context()
-			requestId, exists := rest.RequestIdFromContext(ctx)
-			if exists {
-				ctx = enrichRequestLoggerWithRequestId(ctx, requestId, log)
-				c.SetRequest(req.WithContext(ctx))
-			}
-
-			return next(c)
+func RequestTracer(log *slog.Logger) HandlerFunc {
+	return func(c *gin.Context) {
+		requestId, exists := rest.RequestIdFromContext(c.Request.Context())
+		if exists {
+			ctx := enrichRequestLoggerWithRequestId(c.Request.Context(), requestId, log)
+			c.Request = c.Request.WithContext(ctx)
 		}
+
+		c.Next()
 	}
 }
 
