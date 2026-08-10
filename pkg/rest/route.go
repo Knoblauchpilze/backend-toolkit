@@ -4,8 +4,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type Routes []Route
-
 type Route struct {
 	method              string
 	path                string
