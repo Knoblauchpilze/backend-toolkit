@@ -14,6 +14,8 @@ import (
 )
 
 func TestUnit_ResponseEnvelope(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
 	t.Run("calls next middleware", func(t *testing.T) {
 		handler, called := createHandlerWithCalledBoolean()
 
