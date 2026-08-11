@@ -39,7 +39,12 @@ func TestUnit_SanitizePath(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		t.Run("", func(t *testing.T) {
+		name := testCase.in
+		if name == "" {
+			name = "empty"
+		}
+
+		t.Run(name, func(t *testing.T) {
 			actual := sanitizePath(testCase.in)
 
 			assert.Equal(t, testCase.expected, actual)
@@ -68,7 +73,7 @@ func TestUnit_ConcatenateEndpoints(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		t.Run("", func(t *testing.T) {
+		t.Run(testCase.basePath+"|"+testCase.path, func(t *testing.T) {
 			actual := ConcatenateEndpoints(testCase.basePath, testCase.path)
 
 			assert.Equal(t, testCase.expected, actual)
@@ -76,73 +81,77 @@ func TestUnit_ConcatenateEndpoints(t *testing.T) {
 	}
 }
 
-func TestUnit_MarshalNilToEmptySlice_WhenNil_ExpectMarshalToEmptySlice(t *testing.T) {
-	assert := assert.New(t)
+func TestUnit_MarshalNilToEmptySlice(t *testing.T) {
+	t.Run("when nil, marshal to empty slice", func(t *testing.T) {
+		assert := assert.New(t)
 
-	var in []int
+		var in []int
 
-	actual, err := MarshalNilToEmptySlice(in)
+		actual, err := MarshalNilToEmptySlice(in)
 
-	assert.Nil(err)
-	assert.Equal("[]", string(actual))
-}
+		assert.Nil(err)
+		assert.Equal("[]", string(actual))
+	})
 
-func TestUnit_MarshalNilToEmptySlice_WhenNotNil_ExpectMarshalCorrectData(t *testing.T) {
-	assert := assert.New(t)
+	t.Run("when not nil, marshal correct data", func(t *testing.T) {
+		assert := assert.New(t)
 
-	in := []int{1, 2}
+		in := []int{1, 2}
 
-	actual, err := MarshalNilToEmptySlice(in)
+		actual, err := MarshalNilToEmptySlice(in)
 
-	assert.Nil(err)
-	assert.Equal("[1,2]", string(actual))
+		assert.Nil(err)
+		assert.Equal("[1,2]", string(actual))
+	})
 }
 
 var defaultKey = "my-key"
 
-func TestUnit_FetchIdFromQueryParam_whenNoId_expectNotExistAndNoError(t *testing.T) {
-	assert := assert.New(t)
+func TestUnit_FetchIdFromQueryParam(t *testing.T) {
+	t.Run("when no id, expect not exist and no error", func(t *testing.T) {
+		assert := assert.New(t)
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	ctx, _ := generateTestGinContextFromRequest(req)
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		ctx, _ := generateTestGinContextFromRequest(req)
 
-	exists, _, err := FetchIdFromQueryParam(defaultKey, ctx)
-	assert.False(exists)
-	assert.Nil(err)
-}
+		exists, _, err := FetchIdFromQueryParam(defaultKey, ctx)
+		assert.False(exists)
+		assert.Nil(err)
+	})
 
-func TestUnit_FetchIdFromQueryParam_whenIdSetForOtherKey_expectNotExistAndNoError(t *testing.T) {
-	assert := assert.New(t)
+	t.Run("when id set for other key, expect not exist and no error", func(t *testing.T) {
+		assert := assert.New(t)
 
-	req := generateRequestWithQueryParams("not-the-default-key", sampleUuid.String())
-	ctx, _ := generateTestGinContextFromRequest(req)
+		req := generateRequestWithQueryParams("not-the-default-key", sampleUuid.String())
+		ctx, _ := generateTestGinContextFromRequest(req)
 
-	exists, _, err := FetchIdFromQueryParam(defaultKey, ctx)
-	assert.False(exists)
-	assert.Nil(err)
-}
+		exists, _, err := FetchIdFromQueryParam(defaultKey, ctx)
+		assert.False(exists)
+		assert.Nil(err)
+	})
 
-func TestUnit_FetchIdFromQueryParam_whenIdSyntaxIsWrong_expectExistAndError(t *testing.T) {
-	assert := assert.New(t)
+	t.Run("when id syntax wrong, expect exist and error", func(t *testing.T) {
+		assert := assert.New(t)
 
-	req := generateRequestWithQueryParams(defaultKey, "not-a-uuid")
-	ctx, _ := generateTestGinContextFromRequest(req)
+		req := generateRequestWithQueryParams(defaultKey, "not-a-uuid")
+		ctx, _ := generateTestGinContextFromRequest(req)
 
-	exists, _, err := FetchIdFromQueryParam(defaultKey, ctx)
-	assert.True(exists)
-	assert.Equal("invalid UUID length: 10", err.Error())
-}
+		exists, _, err := FetchIdFromQueryParam(defaultKey, ctx)
+		assert.True(exists)
+		assert.Equal("invalid UUID length: 10", err.Error())
+	})
 
-func TestUnit_FetchIdFromQueryParam_whenIdIsSet_expectExistCorrectIdAndNoError(t *testing.T) {
-	assert := assert.New(t)
+	t.Run("when id set, expect exist correct id and no error", func(t *testing.T) {
+		assert := assert.New(t)
 
-	req := generateRequestWithQueryParams(defaultKey, sampleUuid.String())
-	ctx, _ := generateTestGinContextFromRequest(req)
+		req := generateRequestWithQueryParams(defaultKey, sampleUuid.String())
+		ctx, _ := generateTestGinContextFromRequest(req)
 
-	exists, actual, err := FetchIdFromQueryParam(defaultKey, ctx)
-	assert.True(exists)
-	assert.Equal(sampleUuid, actual)
-	assert.Nil(err)
+		exists, actual, err := FetchIdFromQueryParam(defaultKey, ctx)
+		assert.True(exists)
+		assert.Equal(sampleUuid, actual)
+		assert.Nil(err)
+	})
 }
 
 func generateRequestWithQueryParams(key string, value string) *http.Request {
