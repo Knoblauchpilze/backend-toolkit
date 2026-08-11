@@ -12,21 +12,25 @@ import (
 var testHandler = func(c *gin.Context) {}
 
 func TestUnit_Route_Method(t *testing.T) {
-	r := NewRoute(http.MethodGet, "", testHandler)
-	assert.Equal(t, http.MethodGet, r.Method())
+	t.Run("returns configured method", func(t *testing.T) {
+		r := NewRoute(http.MethodGet, "", testHandler)
+		assert.Equal(t, http.MethodGet, r.Method())
+	})
 }
 
 func TestUnit_Route_Handler(t *testing.T) {
-	handlerCalled := false
-	handler := func(c *gin.Context) {
-		handlerCalled = true
-	}
+	t.Run("returns callable configured handler", func(t *testing.T) {
+		handlerCalled := false
+		handler := func(c *gin.Context) {
+			handlerCalled = true
+		}
 
-	r := NewRoute(http.MethodGet, "", handler)
-	actual := r.Handler()
-	actual(dummyGinContext())
+		r := NewRoute(http.MethodGet, "", handler)
+		actual := r.Handler()
+		actual(dummyGinContext())
 
-	assert.True(t, handlerCalled)
+		assert.True(t, handlerCalled)
+	})
 }
 
 func TestUnit_Route_Path(t *testing.T) {
@@ -47,7 +51,7 @@ func TestUnit_Route_Path(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		t.Run("", func(t *testing.T) {
+		t.Run(tc.path, func(t *testing.T) {
 			r := NewRoute(http.MethodGet, tc.path, testHandler)
 
 			assert.Equal(t, tc.expected, r.Path())
@@ -56,11 +60,15 @@ func TestUnit_Route_Path(t *testing.T) {
 }
 
 func TestUnit_Route_UseResponseEnvelope(t *testing.T) {
-	r := NewRoute(http.MethodGet, "/path", testHandler)
-	assert.True(t, r.UseResponseEnvelope())
+	t.Run("new route uses response envelope", func(t *testing.T) {
+		r := NewRoute(http.MethodGet, "/path", testHandler)
+		assert.True(t, r.UseResponseEnvelope())
+	})
 
-	r = NewRawRoute(http.MethodGet, "/path", testHandler)
-	assert.False(t, r.UseResponseEnvelope())
+	t.Run("new raw route disables response envelope", func(t *testing.T) {
+		r := NewRawRoute(http.MethodGet, "/path", testHandler)
+		assert.False(t, r.UseResponseEnvelope())
+	})
 }
 
 func dummyGinContext() *gin.Context {
