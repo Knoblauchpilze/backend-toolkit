@@ -28,7 +28,7 @@ func TestIT_New(t *testing.T) {
 
 		conn, err := New(t.Context(), config)
 
-		assert.NotNil(t, conn)
+		assert.Nil(t, conn)
 		assert.Equal(t, ErrAuthenticationFailed, err, "Actual err: %v", err)
 	})
 }
