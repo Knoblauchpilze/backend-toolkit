@@ -16,7 +16,7 @@ func generateConnectionString(config Config) string {
 	// https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING-URIS
 	user := generateUserSpec(config.User, config.Password)
 	host := generateHostSpec(config.Host, config.Port)
-	params := generateParamSpec((config.ConnectTimeout))
+	params := generateParamSpec(config.ConnectTimeout)
 
 	out := connectionStringPrefix
 	if user != "" {

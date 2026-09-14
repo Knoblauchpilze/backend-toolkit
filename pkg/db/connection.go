@@ -34,8 +34,11 @@ func New(ctx context.Context, config Config) (Connection, error) {
 	}
 
 	err = conn.Ping(ctx)
+	if err != nil {
+		return nil, analyzeAndWrapDatabaseError(err)
+	}
 
-	return conn, analyzeAndWrapDatabaseError(err)
+	return conn, nil
 }
 
 func (ci *connectionImpl) Close(ctx context.Context) {
