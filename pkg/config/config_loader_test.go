@@ -46,7 +46,8 @@ func TestUnit_Load(t *testing.T) {
 	}
 
 	actual, err := Load(configName, in)
-	assert.Nil(t, err)
+	require.NoError(t, err, "Actual err: %v", err)
+
 	assert.Equal(t, uint16(20), actual.Server.Port)
 }
 
@@ -95,7 +96,8 @@ func TestUnit_Load_WhenEnvironmentVariableExists_ExpectTakesPrecedenceOverConfig
 	t.Setenv("ENV_SERVER_PORT", "26")
 
 	actual, err := Load(configName, in)
-	assert.Nil(t, err)
+	require.NoError(t, err, "Actual err: %v", err)
+
 	assert.Equal(t, uint16(26), actual.Server.Port)
 }
 
@@ -112,7 +114,8 @@ func TestUnit_Load_WhenConfigDoesNotExistInFileButEnvironmentVariableDoes_Expect
 	t.Setenv("ENV_SERVER_PORT", "26")
 
 	actual, err := Load(configName, in)
-	assert.Nil(t, err)
+	require.NoError(t, err, "Actual err: %v", err)
+
 	assert.Equal(t, uint16(26), actual.Server.Port)
 }
 
@@ -137,7 +140,7 @@ func TestUnit_Load_WhenUuidInConfig_ExpectSuccess(t *testing.T) {
 	}
 
 	actual, err := Load(configName, in)
-	assert.Nil(t, err)
+	require.NoError(t, err, "Actual err: %v", err)
 	expectedId := uuid.MustParse("4db2ed08-a1b0-45bf-8ffb-c93e4096372d")
 	assert.Equal(t, expectedId, actual.Service.Id)
 	expectedIdString := "5db2ed08-a1b0-45bf-8ffb-c93e4096372d"
@@ -169,14 +172,19 @@ func TestUnit_Load_WhenUuidInConfigAndInvalidData_ExpectFailure(t *testing.T) {
 }
 
 func writeSampleConfigFile(t *testing.T) string {
+	t.Helper()
+
 	// https://stackoverflow.com/questions/19975954/a-yaml-file-cannot-contain-tabs-as-indentation
 	sampleYaml := "Server:\n  Port: 20\n"
 	return writeConfigFile(t, []byte(sampleYaml))
 }
 
 func writeConfigFile(t *testing.T, content []byte) string {
+	t.Helper()
+
 	configName := fmt.Sprintf("config-%s", uuid.New())
 	configFileName := fmt.Sprintf("configs/%s.yml", configName)
+
 	err := os.WriteFile(configFileName, content, 0666)
 	require.NoError(t, err, "Actual err: %v", err)
 

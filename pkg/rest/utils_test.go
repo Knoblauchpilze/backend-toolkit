@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var sampleUuid = uuid.MustParse("08ce96a3-3430-48a8-a3b2-b1c987a207ca")
@@ -89,7 +90,7 @@ func TestUnit_MarshalNilToEmptySlice(t *testing.T) {
 
 		actual, err := MarshalNilToEmptySlice(in)
 
-		assert.Nil(err)
+		require.NoError(t, err, "Actual err: %v", err)
 		assert.Equal("[]", string(actual))
 	})
 
@@ -100,7 +101,7 @@ func TestUnit_MarshalNilToEmptySlice(t *testing.T) {
 
 		actual, err := MarshalNilToEmptySlice(in)
 
-		assert.Nil(err)
+		require.NoError(t, err, "Actual err: %v", err)
 		assert.Equal("[1,2]", string(actual))
 	})
 }
@@ -116,7 +117,7 @@ func TestUnit_FetchIdFromQueryParam(t *testing.T) {
 
 		exists, _, err := FetchIdFromQueryParam(defaultKey, ctx)
 		assert.False(exists)
-		assert.Nil(err)
+		require.NoError(t, err, "Actual err: %v", err)
 	})
 
 	t.Run("when id set for other key, expect not exist and no error", func(t *testing.T) {
@@ -127,7 +128,7 @@ func TestUnit_FetchIdFromQueryParam(t *testing.T) {
 
 		exists, _, err := FetchIdFromQueryParam(defaultKey, ctx)
 		assert.False(exists)
-		assert.Nil(err)
+		require.NoError(t, err, "Actual err: %v", err)
 	})
 
 	t.Run("when id syntax wrong, expect exist and error", func(t *testing.T) {
@@ -150,7 +151,7 @@ func TestUnit_FetchIdFromQueryParam(t *testing.T) {
 		exists, actual, err := FetchIdFromQueryParam(defaultKey, ctx)
 		assert.True(exists)
 		assert.Equal(sampleUuid, actual)
-		assert.Nil(err)
+		require.NoError(t, err, "Actual err: %v", err)
 	})
 }
 
