@@ -29,22 +29,22 @@ func TestIT_New(t *testing.T) {
 		conn, err := New(t.Context(), config)
 
 		assert.Nil(t, conn)
-		assert.Equal(t, ErrAuthenticationFailed, err, "Actual err: %v", err)
+		assert.ErrorIs(t, err, ErrAuthenticationFailed, "Actual err: %v", err)
 	})
-}
 
-func TestIT_New_ValidConfiguration(t *testing.T) {
-	conn, err := New(t.Context(), dbTestConfig)
+	t.Run("succeeds when config is vaid", func(t *testing.T) {
+		conn, err := New(t.Context(), dbTestConfig)
 
-	assert.NotNil(t, conn)
-	assert.Nil(t, err)
+		assert.NotNil(t, conn)
+		require.NoError(t, err, "Actual err: %v", err)
+	})
 }
 
 func TestIT_Connection_Ping(t *testing.T) {
 	conn := newTestConnection(t)
 
 	err := conn.Ping(t.Context())
-	assert.Nil(t, err)
+	require.NoError(t, err, "Actual err: %v", err)
 }
 
 func TestIT_Connection_Close(t *testing.T) {
@@ -55,10 +55,10 @@ func TestIT_Connection_Close(t *testing.T) {
 
 	conn.Close(t.Context())
 	err = conn.Ping(t.Context())
-	assert.Equal(t, ErrNotConnected, err, "Actual err: %v", err)
+	assert.ErrorIs(t, err, ErrNotConnected, "Actual err: %v", err)
 }
 
-func TestIT_Connection_BeginTx_TimeStampIsValid(t *testing.T) {
+func TestIT_Connection_BeginTx(t *testing.T) {
 	conn := newTestConnection(t)
 
 	t.Run("assigns timestamp when beginning transaction", func(t *testing.T) {
