@@ -13,7 +13,7 @@ import (
 func TestUnit_AnalyzeAndWrapDatabaseError(t *testing.T) {
 	t.Run("does not wrap when error is nil", func(t *testing.T) {
 		err := analyzeAndWrapDatabaseError(nil)
-		assert.Nil(t, err)
+		require.NoError(t, err, "Actual err: %v", err)
 	})
 
 	t.Run("does not wrap error when not a PgError", func(t *testing.T) {
@@ -21,7 +21,7 @@ func TestUnit_AnalyzeAndWrapDatabaseError(t *testing.T) {
 
 		actual := analyzeAndWrapDatabaseError(err)
 
-		assert.Equal(t, err, actual)
+		assert.ErrorIs(t, actual, err, "Actual err: %v", err)
 	})
 }
 
