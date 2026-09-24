@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestUnit_NewPrettyWriter(t *testing.T) {
@@ -21,8 +22,8 @@ func TestUnit_NewPrettyWriter(t *testing.T) {
 
 	w := NewPrettyWriter(&out)
 	n, err := w.Write([]byte(sampleText))
+	require.NoError(t, err, "Actual err: %v", err)
 
-	assert.Nil(t, err)
 	assert.Equal(t, 116, n)
 	expectedOutput := "\x1b[90m2024-11-15 20:54:53\x1b[0m \x1b[32mINF\x1b[0m \x1b[36mgreeting=\x1b[0mhello \x1b[36mkey=\x1b[0m1 \x1b[36mname=\x1b[0mJohn\n"
 	assert.Equal(t, expectedOutput, out.String())
@@ -41,8 +42,8 @@ func TestUnit_NewPrettyWriter_WhenTimeNotSet_ExpectNil(t *testing.T) {
 
 	w := NewPrettyWriter(&out)
 	n, err := w.Write([]byte(sampleText))
+	require.NoError(t, err, "Actual err: %v", err)
 
-	assert.Nil(t, err)
 	assert.Equal(t, 77, n)
 	expectedOutput := "\x1b[90m<nil>\x1b[0m \x1b[32mINF\x1b[0m \x1b[36mgreeting=\x1b[0mhello \x1b[36mkey=\x1b[0m1 \x1b[36mname=\x1b[0mJohn\n"
 	assert.Equal(t, expectedOutput, out.String())
@@ -61,8 +62,8 @@ func TestUnit_NewPrettyWriter_WhenLevelNotSet_ExpectQuestionMarks(t *testing.T) 
 
 	w := NewPrettyWriter(&out)
 	n, err := w.Write([]byte(sampleText))
+	require.NoError(t, err, "Actual err: %v", err)
 
-	assert.Nil(t, err)
 	assert.Equal(t, 97, n)
 	expectedOutput := "\x1b[90m2024-11-15 20:54:53\x1b[0m ??? \x1b[36mgreeting=\x1b[0mhello \x1b[36mkey=\x1b[0m1 \x1b[36mname=\x1b[0mJohn\n"
 	assert.Equal(t, expectedOutput, out.String())
