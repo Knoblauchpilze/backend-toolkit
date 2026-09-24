@@ -6,80 +6,83 @@ import (
 
 	berrors "github.com/Knoblauchpilze/backend-toolkit/pkg/errors"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var errSample = errors.New("sample error")
 
-func TestUnit_SafeRunSync_CallsProcess(t *testing.T) {
-	var called int
+func TestUnit_SafeRunSync(t *testing.T) {
+	t.Run("CallsProcess", func(t *testing.T) {
+		var called int
 
-	proc := func() error {
-		called++
-		return nil
-	}
+		proc := func() error {
+			called++
+			return nil
+		}
 
-	actual := SafeRunSync(proc)
+		err := SafeRunSync(proc)
+		require.NoError(t, err, "Actual err: %v", err)
 
-	assert.Nil(t, actual, "Actual err: %v", actual)
-	assert.Equal(t, 1, called)
-}
+		assert.Equal(t, 1, called)
+	})
 
-func TestUnit_SafeRunSync_NoPanic(t *testing.T) {
-	proc := func() error {
-		return nil
-	}
+	t.Run("NoPanic", func(t *testing.T) {
+		proc := func() error {
+			return nil
+		}
 
-	var actual error
+		var err error
 
-	run := func() {
-		actual = SafeRunSync(proc)
-	}
+		run := func() {
+			err = SafeRunSync(proc)
+		}
 
-	assert.NotPanics(t, run)
-	assert.Nil(t, actual, "Actual err: %v", actual)
-}
+		assert.NotPanics(t, run)
+		require.NoError(t, err, "Actual err: %v", err)
+	})
 
-func TestUnit_SafeRunSync_ReturnWithError(t *testing.T) {
-	proc := func() error {
-		return errSample
-	}
+	t.Run("ReturnWithError", func(t *testing.T) {
+		proc := func() error {
+			return errSample
+		}
 
-	var actual error
+		var actual error
 
-	run := func() {
-		actual = SafeRunSync(proc)
-	}
+		run := func() {
+			actual = SafeRunSync(proc)
+		}
 
-	assert.NotPanics(t, run)
-	assert.Equal(t, errSample, actual, "Actual err: %v", actual)
-}
+		assert.NotPanics(t, run)
+		assert.Equal(t, errSample, actual, "Actual err: %v", actual)
+	})
 
-func TestUnit_SafeRunSync_PanicWithError(t *testing.T) {
-	proc := func() error {
-		panic(errSample)
-	}
+	t.Run("PanicWithError", func(t *testing.T) {
+		proc := func() error {
+			panic(errSample)
+		}
 
-	var actual error
+		var actual error
 
-	run := func() {
-		actual = SafeRunSync(proc)
-	}
+		run := func() {
+			actual = SafeRunSync(proc)
+		}
 
-	assert.NotPanics(t, run)
-	assert.Equal(t, errSample, actual)
-}
+		assert.NotPanics(t, run)
+		assert.Equal(t, errSample, actual)
+	})
 
-func TestUnit_SafeRunSync_PanicWithRandomDatatype(t *testing.T) {
-	proc := func() error {
-		panic(2)
-	}
+	t.Run("PanicWithRandomDatatype", func(t *testing.T) {
+		proc := func() error {
+			panic(2)
+		}
 
-	var actual error
+		var actual error
 
-	run := func() {
-		actual = SafeRunSync(proc)
-	}
+		run := func() {
+			actual = SafeRunSync(proc)
+		}
 
-	assert.NotPanics(t, run)
-	assert.Equal(t, berrors.New("2"), actual)
+		assert.NotPanics(t, run)
+		assert.Equal(t, berrors.New("2"), actual)
+	})
 }

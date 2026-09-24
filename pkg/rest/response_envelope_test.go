@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestUnit_ResponseEnvelope(t *testing.T) {
@@ -21,8 +22,8 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 		}
 
 		out, err := json.Marshal(r)
+		require.NoError(t, err, "Actual err: %v", err)
 
-		assert.Nil(t, err)
 		expectedJson := `
 		{
 			"request_id": "1348f004-7620-4c80-915d-26da0ac144f6",
@@ -44,8 +45,8 @@ func TestUnit_ResponseEnvelope(t *testing.T) {
 		}
 
 		out, err := json.Marshal(r)
+		require.NoError(t, err, "Actual err: %v", err)
 
-		assert.Nil(t, err)
 		expectedJson := `
 		{
 			"request_id": "1348f004-7620-4c80-915d-26da0ac144f6",

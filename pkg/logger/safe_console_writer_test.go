@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestUnit_SafeConsoleWriter_WritesToProvidedWriter(t *testing.T) {
@@ -15,8 +16,8 @@ func TestUnit_SafeConsoleWriter_WritesToProvidedWriter(t *testing.T) {
 
 	data := []byte("hello")
 	actual, err := safeWriter.Write(data)
+	require.NoError(t, err, "Actual err: %v", err)
 
-	assert.Nil(t, err)
 	assert.Equal(t, len(data), actual)
 }
 

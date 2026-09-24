@@ -23,7 +23,7 @@ func TestUnit_NewPool(t *testing.T) {
 		pool, err := newPool(t.Context(), connStr)
 
 		assert.NotNil(t, pool)
-		assert.Nil(t, err)
+		require.NoError(t, err, "Actual err: %v", err)
 	})
 }
 
