@@ -84,25 +84,21 @@ func TestUnit_ConcatenateEndpoints(t *testing.T) {
 
 func TestUnit_MarshalNilToEmptySlice(t *testing.T) {
 	t.Run("when nil, marshal to empty slice", func(t *testing.T) {
-		assert := assert.New(t)
-
 		var in []int
 
 		actual, err := MarshalNilToEmptySlice(in)
 
 		require.NoError(t, err, "Actual err: %v", err)
-		assert.Equal("[]", string(actual))
+		assert.Equal(t, "[]", string(actual))
 	})
 
 	t.Run("when not nil, marshal correct data", func(t *testing.T) {
-		assert := assert.New(t)
-
 		in := []int{1, 2}
 
 		actual, err := MarshalNilToEmptySlice(in)
 
 		require.NoError(t, err, "Actual err: %v", err)
-		assert.Equal("[1,2]", string(actual))
+		assert.Equal(t, "[1,2]", string(actual))
 	})
 }
 
@@ -110,13 +106,11 @@ var defaultKey = "my-key"
 
 func TestUnit_FetchIdFromQueryParam(t *testing.T) {
 	t.Run("when no id, expect not exist and no error", func(t *testing.T) {
-		assert := assert.New(t)
-
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		ctx, _ := generateTestGinContextFromRequest(req)
 
 		exists, _, err := FetchIdFromQueryParam(defaultKey, ctx)
-		assert.False(exists)
+		assert.False(t, exists)
 		require.NoError(t, err, "Actual err: %v", err)
 	})
 
@@ -132,14 +126,12 @@ func TestUnit_FetchIdFromQueryParam(t *testing.T) {
 	})
 
 	t.Run("when id syntax wrong, expect exist and error", func(t *testing.T) {
-		assert := assert.New(t)
-
 		req := generateRequestWithQueryParams(defaultKey, "not-a-uuid")
 		ctx, _ := generateTestGinContextFromRequest(req)
 
 		exists, _, err := FetchIdFromQueryParam(defaultKey, ctx)
-		assert.True(exists)
-		assert.Equal("invalid UUID length: 10", err.Error())
+		assert.True(t, exists)
+		assert.Equal(t, "invalid UUID length: 10", err.Error())
 	})
 
 	t.Run("when id set, expect exist correct id and no error", func(t *testing.T) {
