@@ -11,7 +11,6 @@ import (
 
 var errSample = errors.New("sample error")
 
-// TODO: Improve this
 func TestUnit_SafeRunSync(t *testing.T) {
 	t.Run("calls run function", func(t *testing.T) {
 		var called int
