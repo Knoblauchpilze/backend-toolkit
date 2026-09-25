@@ -1,6 +1,8 @@
 package process
 
-func SafeRunAsync(proc RunFunc) <-chan error {
+type WaitFunc func() error
+
+func SafeRunAsync(proc RunFunc) WaitFunc {
 	out := make(chan error, 1)
 
 	go func() {
@@ -18,5 +20,7 @@ func SafeRunAsync(proc RunFunc) <-chan error {
 		err = proc()
 	}()
 
-	return out
+	return func() error {
+		return <-out
+	}
 }

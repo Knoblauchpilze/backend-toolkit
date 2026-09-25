@@ -19,7 +19,7 @@ func TestUnit_SafeRunAsync(t *testing.T) {
 		}
 
 		wait := SafeRunAsync(proc)
-		err := <-wait
+		err := wait()
 
 		require.NoError(t, err, "Actual err: %v", err)
 		assert.Equal(t, 1, called)
@@ -45,7 +45,7 @@ func TestUnit_SafeRunAsync(t *testing.T) {
 		assert.Zero(t, called)
 		// This releases the routine to complete
 		close(allowProcessToComplete)
-		err := <-wait
+		err := wait()
 
 		require.NoError(t, err, "Actual err: %v", err)
 		assert.Equal(t, 1, called)
@@ -57,7 +57,7 @@ func TestUnit_SafeRunAsync(t *testing.T) {
 		}
 
 		wait := SafeRunAsync(proc)
-		err := <-wait
+		err := wait()
 
 		require.NoError(t, err, "Actual err: %v", err)
 	})
@@ -68,7 +68,7 @@ func TestUnit_SafeRunAsync(t *testing.T) {
 		}
 
 		wait := SafeRunAsync(proc)
-		err := <-wait
+		err := wait()
 
 		assert.Equal(t, errSample, err, "Actual err: %v", err)
 	})
@@ -79,7 +79,7 @@ func TestUnit_SafeRunAsync(t *testing.T) {
 		}
 
 		wait := SafeRunAsync(proc)
-		err := <-wait
+		err := wait()
 
 		assert.Equal(t, errSample, err, "Actual err: %v", err)
 	})
@@ -90,7 +90,7 @@ func TestUnit_SafeRunAsync(t *testing.T) {
 		}
 
 		wait := SafeRunAsync(proc)
-		actual := <-wait
+		actual := wait()
 
 		err, ok := berrors.AsErrorWithCode(actual)
 		require.True(t, ok)
@@ -112,7 +112,7 @@ func TestUnit_SafeRunAsync_RunsAsync(t *testing.T) {
 	start := time.Now()
 	wait := SafeRunAsync(proc)
 	end := time.Now()
-	actual := <-wait
+	actual := wait()
 
 	assert.Nil(t, actual, "Actual err: %v", actual)
 	assert.LessOrEqual(t, end.Sub(start), 80*time.Millisecond)

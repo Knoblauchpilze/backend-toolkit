@@ -10,7 +10,7 @@ var (
 	waitForInterruption = flag.Bool(
 		"wait_for_interruption",
 		false,
-		"if true, the test will wait for a signal to be received for 500ms",
+		"if true, the test will emit an interrupt signal to itself",
 	)
 )
 

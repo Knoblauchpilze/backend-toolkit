@@ -5,8 +5,6 @@ import (
 	"os/signal"
 )
 
-type WaitFunc func() error
-
 func AsyncStartWithSignalHandler(
 	ctx context.Context,
 	process Process,
