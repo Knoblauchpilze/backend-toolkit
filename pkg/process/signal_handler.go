@@ -2,15 +2,8 @@ package process
 
 import (
 	"context"
-	"os"
 	"os/signal"
-	"syscall"
 )
-
-var defaultSignals = []os.Signal{
-	syscall.SIGINT,
-	os.Interrupt,
-}
 
 type WaitFunc func() error
 
