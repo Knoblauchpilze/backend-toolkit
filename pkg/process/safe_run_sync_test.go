@@ -11,8 +11,9 @@ import (
 
 var errSample = errors.New("sample error")
 
+// TODO: Improve this
 func TestUnit_SafeRunSync(t *testing.T) {
-	t.Run("CallsProcess", func(t *testing.T) {
+	t.Run("calls run function", func(t *testing.T) {
 		var called int
 
 		proc := func() error {
@@ -21,68 +22,55 @@ func TestUnit_SafeRunSync(t *testing.T) {
 		}
 
 		err := SafeRunSync(proc)
-		require.NoError(t, err, "Actual err: %v", err)
 
+		require.NoError(t, err, "Actual err: %v", err)
 		assert.Equal(t, 1, called)
 	})
 
-	t.Run("NoPanic", func(t *testing.T) {
+	t.Run("does not panic when function returns successfully", func(t *testing.T) {
 		proc := func() error {
 			return nil
 		}
 
-		var err error
+		err := SafeRunSync(proc)
 
-		run := func() {
-			err = SafeRunSync(proc)
-		}
-
-		assert.NotPanics(t, run)
 		require.NoError(t, err, "Actual err: %v", err)
 	})
 
-	t.Run("ReturnWithError", func(t *testing.T) {
+	t.Run("returns error when function returns error", func(t *testing.T) {
 		proc := func() error {
 			return errSample
 		}
 
-		var actual error
+		err := SafeRunSync(proc)
 
-		run := func() {
-			actual = SafeRunSync(proc)
-		}
-
-		assert.NotPanics(t, run)
-		assert.Equal(t, errSample, actual, "Actual err: %v", actual)
+		assert.Equal(t, errSample, err, "Actual err: %v", err)
 	})
 
-	t.Run("PanicWithError", func(t *testing.T) {
+	t.Run("recovers panic and returns error", func(t *testing.T) {
 		proc := func() error {
 			panic(errSample)
 		}
 
-		var actual error
+		err := SafeRunSync(proc)
 
-		run := func() {
-			actual = SafeRunSync(proc)
-		}
-
-		assert.NotPanics(t, run)
-		assert.Equal(t, errSample, actual)
+		assert.Equal(t, errSample, err, "Actual err: %v", err)
 	})
 
-	t.Run("PanicWithRandomDatatype", func(t *testing.T) {
+	t.Run("recovers panic with random type and returns wrapped error", func(t *testing.T) {
 		proc := func() error {
 			panic(2)
 		}
 
-		var actual error
+		actual := SafeRunSync(proc)
 
-		run := func() {
-			actual = SafeRunSync(proc)
+		err, ok := berrors.AsErrorWithCode(actual)
+		require.True(t, ok)
+		expected := &berrors.ErrorWithCode{
+			Code:    errPanicRecovered,
+			Message: "2",
+			Cause:   nil,
 		}
-
-		assert.NotPanics(t, run)
-		assert.Equal(t, berrors.New("2"), actual)
+		assert.Equal(t, expected, err, "Actual err: %v", err)
 	})
 }

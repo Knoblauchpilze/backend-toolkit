@@ -12,11 +12,7 @@ func SafeRunSync(proc RunFunc) error {
 	func() {
 		defer func() {
 			if recovered := recover(); recovered != nil {
-				if asErr, ok := recovered.(error); ok {
-					err = asErr
-				} else {
-					err = errors.New(fmt.Sprintf("%v", recovered))
-				}
+				err = wrapError(recovered)
 			}
 		}()
 
@@ -24,4 +20,14 @@ func SafeRunSync(proc RunFunc) error {
 	}()
 
 	return err
+}
+
+func wrapError(cause any) error {
+	asErr, ok := cause.(error)
+	if ok {
+		return asErr
+	}
+
+	msg := fmt.Sprintf("%v", cause)
+	return errors.FromCodeAndDetails(errPanicRecovered, msg)
 }
