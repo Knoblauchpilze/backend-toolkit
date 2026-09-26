@@ -37,138 +37,140 @@ func TestMain(m *testing.M) {
 }
 
 func TestUnit_Load(t *testing.T) {
-	configName := writeSampleConfigFile(t)
+	t.Run("loads values from file", func(t *testing.T) {
+		configName := writeSampleConfigFile(t)
 
-	in := sampleConfig{
-		Server: sampleServerConfig{
-			Port: 22,
-		},
-	}
+		in := sampleConfig{
+			Server: sampleServerConfig{
+				Port: 22,
+			},
+		}
 
-	actual, err := Load(configName, in)
-	require.NoError(t, err, "Actual err: %v", err)
+		actual, err := Load(configName, in)
+		require.NoError(t, err, "Actual err: %v", err)
 
-	assert.Equal(t, uint16(20), actual.Server.Port)
-}
+		assert.Equal(t, uint16(20), actual.Server.Port)
+	})
 
-func TestUnit_Load_WhenFileDoesNotExist_ExpectError(t *testing.T) {
-	configName := writeSampleConfigFile(t)
+	t.Run("returns an error when the file does not exist", func(t *testing.T) {
+		configName := writeSampleConfigFile(t)
 
-	in := sampleConfig{
-		Server: sampleServerConfig{
-			Port: 22,
-		},
-	}
+		in := sampleConfig{
+			Server: sampleServerConfig{
+				Port: 22,
+			},
+		}
 
-	otherConfigName := configName + "-suffix"
+		otherConfigName := configName + "-suffix"
 
-	_, err := Load(otherConfigName, in)
-	_, ok := err.(viper.ConfigFileNotFoundError)
-	assert.True(t, ok)
-}
+		_, err := Load(otherConfigName, in)
+		_, ok := err.(viper.ConfigFileNotFoundError)
+		assert.True(t, ok)
+	})
 
-func TestUnit_Load_WhenFileDoesNotExist_ExpectDefaultConfigReturned(t *testing.T) {
-	configName := writeSampleConfigFile(t)
+	t.Run("returns the default config when the file does not exist", func(t *testing.T) {
+		configName := writeSampleConfigFile(t)
 
-	in := sampleConfig{
-		Server: sampleServerConfig{
-			Port: 22,
-		},
-	}
+		in := sampleConfig{
+			Server: sampleServerConfig{
+				Port: 22,
+			},
+		}
 
-	otherConfigName := configName + "-suffix"
+		otherConfigName := configName + "-suffix"
 
-	actual, err := Load(otherConfigName, in)
-	assert.NotNil(t, err)
-	assert.Equal(t, in.Server.Port, actual.Server.Port)
-}
+		actual, err := Load(otherConfigName, in)
+		assert.NotNil(t, err)
+		assert.Equal(t, in.Server.Port, actual.Server.Port)
+	})
 
-func TestUnit_Load_WhenEnvironmentVariableExists_ExpectTakesPrecedenceOverConfig(t *testing.T) {
-	configName := writeSampleConfigFile(t)
+	t.Run("environment variables take precedence over file values", func(t *testing.T) {
+		configName := writeSampleConfigFile(t)
 
-	in := sampleConfig{
-		Server: sampleServerConfig{
-			Port: 22,
-		},
-	}
+		in := sampleConfig{
+			Server: sampleServerConfig{
+				Port: 22,
+			},
+		}
 
-	// https://stackoverflow.com/questions/68686006/set-particular-environment-variables-during-execution-of-a-test-suite
-	t.Setenv("ENV_SERVER_PORT", "26")
+		// https://stackoverflow.com/questions/68686006/set-particular-environment-variables-during-execution-of-a-test-suite
+		t.Setenv("ENV_SERVER_PORT", "26")
 
-	actual, err := Load(configName, in)
-	require.NoError(t, err, "Actual err: %v", err)
+		actual, err := Load(configName, in)
+		require.NoError(t, err, "Actual err: %v", err)
 
-	assert.Equal(t, uint16(26), actual.Server.Port)
-}
+		assert.Equal(t, uint16(26), actual.Server.Port)
+	})
 
-// https://github.com/spf13/viper/issues/1797
-func TestUnit_Load_WhenConfigDoesNotExistInFileButEnvironmentVariableDoes_ExpectValueIsOverridden(t *testing.T) {
-	configName := writeConfigFile(t, nil)
+	// https://github.com/spf13/viper/issues/1797
+	t.Run("environment variables override missing file values", func(t *testing.T) {
+		configName := writeConfigFile(t, nil)
 
-	in := sampleConfig{
-		Server: sampleServerConfig{
-			Port: 22,
-		},
-	}
+		in := sampleConfig{
+			Server: sampleServerConfig{
+				Port: 22,
+			},
+		}
 
-	t.Setenv("ENV_SERVER_PORT", "26")
+		t.Setenv("ENV_SERVER_PORT", "26")
 
-	actual, err := Load(configName, in)
-	require.NoError(t, err, "Actual err: %v", err)
+		actual, err := Load(configName, in)
+		require.NoError(t, err, "Actual err: %v", err)
 
-	assert.Equal(t, uint16(26), actual.Server.Port)
-}
+		assert.Equal(t, uint16(26), actual.Server.Port)
+	})
 
-func TestUnit_Load_WhenUuidInConfig_ExpectSuccess(t *testing.T) {
-	type sampleServiceConfig struct {
-		Id       uuid.UUID
-		IdString string
-	}
+	t.Run("loads UUID values from config", func(t *testing.T) {
+		type sampleServiceConfig struct {
+			Id       uuid.UUID
+			IdString string
+		}
 
-	type sampleConfig struct {
-		Service sampleServiceConfig
-	}
+		type sampleConfig struct {
+			Service sampleServiceConfig
+		}
 
-	sampleYaml := "Service:\n  Id: 4db2ed08-a1b0-45bf-8ffb-c93e4096372d\n  IdString: 5db2ed08-a1b0-45bf-8ffb-c93e4096372d\n"
-	configName := writeConfigFile(t, []byte(sampleYaml))
+		sampleYaml := "Service:\n  Id: 4db2ed08-a1b0-45bf-8ffb-c93e4096372d\n  IdString: 5db2ed08-a1b0-45bf-8ffb-c93e4096372d\n"
+		configName := writeConfigFile(t, []byte(sampleYaml))
 
-	in := sampleConfig{
-		Service: sampleServiceConfig{
-			Id:       uuid.New(),
-			IdString: uuid.NewString(),
-		},
-	}
+		in := sampleConfig{
+			Service: sampleServiceConfig{
+				Id:       uuid.New(),
+				IdString: uuid.NewString(),
+			},
+		}
 
-	actual, err := Load(configName, in)
-	require.NoError(t, err, "Actual err: %v", err)
-	expectedId := uuid.MustParse("4db2ed08-a1b0-45bf-8ffb-c93e4096372d")
-	assert.Equal(t, expectedId, actual.Service.Id)
-	expectedIdString := "5db2ed08-a1b0-45bf-8ffb-c93e4096372d"
-	assert.Equal(t, expectedIdString, actual.Service.IdString)
-}
+		actual, err := Load(configName, in)
+		require.NoError(t, err, "Actual err: %v", err)
+		expectedId := uuid.MustParse("4db2ed08-a1b0-45bf-8ffb-c93e4096372d")
+		assert.Equal(t, expectedId, actual.Service.Id)
+		expectedIdString := "5db2ed08-a1b0-45bf-8ffb-c93e4096372d"
+		assert.Equal(t, expectedIdString, actual.Service.IdString)
+	})
 
-func TestUnit_Load_WhenUuidInConfigAndInvalidData_ExpectFailure(t *testing.T) {
-	type sampleServiceConfig struct {
-		Id uuid.UUID
-	}
+	t.Run("returns an error for invalid UUID config data", func(t *testing.T) {
+		type sampleServiceConfig struct {
+			Id uuid.UUID
+		}
 
-	type sampleConfig struct {
-		Service sampleServiceConfig
-	}
+		type sampleConfig struct {
+			Service sampleServiceConfig
+		}
 
-	sampleYaml := "Service:\n  Id: 4db2ed08-a1b0-45bf-8ffb-c93e409\n"
-	configName := writeConfigFile(t, []byte(sampleYaml))
+		sampleYaml := "Service:\n  Id: 4db2ed08-a1b0-45bf-8ffb-c93e409\n"
+		configName := writeConfigFile(t, []byte(sampleYaml))
 
-	in := sampleConfig{
-		Service: sampleServiceConfig{
-			Id: uuid.New(),
-		},
-	}
+		in := sampleConfig{
+			Service: sampleServiceConfig{
+				Id: uuid.New(),
+			},
+		}
 
-	actual, err := Load(configName, in)
+		actual, err := Load(configName, in)
 
-	assert.NotNil(t, err)
-	assert.Equal(t, in.Service.Id, actual.Service.Id)
+		assert.ErrorContains(t, err, "'Service.Id' invalid UUID length: 31")
+		assert.Equal(t, in.Service.Id, actual.Service.Id)
+	})
 }
 
 func writeSampleConfigFile(t *testing.T) string {
