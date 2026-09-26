@@ -52,10 +52,7 @@ func (erw *EnvelopeResponseWriter) Write(data []byte) (int, error) {
 		return 0, ErrMultipleBodyWrite
 	}
 
-	details, err := decodeJSONOrString(data)
-	if err != nil {
-		return 0, err
-	}
+	details := decodeJSONOrString(data)
 
 	return erw.writeTyped(details)
 }
