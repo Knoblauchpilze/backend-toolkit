@@ -1,12 +1,10 @@
 package server
 
 import (
-	"encoding/json"
 	"errors"
 	"io"
 	"log/slog"
 	"net/http"
-	"strconv"
 	"testing"
 	"time"
 
@@ -239,13 +237,6 @@ func TestUnit_Server(t *testing.T) {
 	})
 }
 
-type responseEnvelope struct {
-	RequestId  string          `json:"request_id"`
-	Status     string          `json:"status"`
-	StatusCode int             `json:"status_code"`
-	Details    json.RawMessage `json:"details"`
-}
-
 func newTestServer(port uint16) *Server {
 	return newTestServerWithPath(port, "/")
 }
@@ -272,10 +263,6 @@ func newTestServerWithOkHandler(t *testing.T, port uint16) *Server {
 	return s
 }
 
-func testHttpHandler(c *gin.Context) {
-	c.JSON(http.StatusOK, "OK")
-}
-
 func asyncRunServerAndAssertStopWithoutError(
 	t *testing.T, s *Server,
 ) <-chan struct{} {
@@ -296,66 +283,4 @@ func asyncRunServerAndAssertStopWithoutError(
 	time.Sleep(reasonableTimeForServerToBeUp)
 
 	return done
-}
-
-func doRequest(
-	t *testing.T, method string, url string,
-) *http.Response {
-	t.Helper()
-
-	req, err := http.NewRequest(method, url, nil)
-	require.NoError(t, err, "Actual err: %v", err)
-
-	client := &http.Client{}
-	rw, err := client.Do(req)
-	require.NoError(t, err, "Actual err: %v", err)
-
-	return rw
-}
-
-func unmarshalResponseAndAssertRequestId(t *testing.T, resp *http.Response) responseEnvelope {
-	t.Helper()
-
-	defer func() {
-		err := resp.Body.Close()
-		require.NoError(t, err, "Actual err: %v", err)
-	}()
-
-	data, err := io.ReadAll(resp.Body)
-	require.NoError(t, err, "Actual err: %v", err)
-	assertResponseContentLengthMatchesBody(t, resp, data)
-
-	var out responseEnvelope
-	err = json.Unmarshal(data, &out)
-	require.NoError(t, err, "Actual err: %v", err)
-
-	headerRequestId := resp.Header.Get(requestIdHeader)
-	assert.Regexp(t, uuidRegex, headerRequestId)
-	assert.Regexp(t, uuidRegex, out.RequestId)
-	assert.Equal(t, headerRequestId, out.RequestId)
-
-	return out
-}
-
-func assertResponseContentLengthMatchesBody(
-	t *testing.T,
-	resp *http.Response,
-	body []byte,
-) {
-	t.Helper()
-
-	contentLength, err := strconv.Atoi(resp.Header.Get("Content-Length"))
-	require.NoError(t, err, "Actual err: %v", err)
-	assert.Equal(t, len(body), contentLength)
-}
-
-func assertIsOkResponse(t *testing.T, response *http.Response) {
-	t.Helper()
-
-	assert.Equal(t, http.StatusOK, response.StatusCode)
-	assert.Equal(t, "application/json", response.Header.Get("Content-Type"))
-	actual := unmarshalResponseAndAssertRequestId(t, response)
-	assert.Equal(t, "SUCCESS", actual.Status)
-	assert.Equal(t, http.StatusOK, actual.StatusCode)
-	assert.Equal(t, `"OK"`, string(actual.Details))
 }

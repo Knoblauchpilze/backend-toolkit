@@ -2,12 +2,14 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"net"
 	"net/http"
+	"strconv"
 	"testing"
 	"time"
 
@@ -43,7 +45,11 @@ func TestUnit_HttpServer(t *testing.T) {
 	})
 
 	t.Run("route responds with envelope wrapping", func(t *testing.T) {
-		s := newTestHttpServerWithOkHandler(t)
+		s := newTestHttpServer()
+
+		route := rest.NewRoute(http.MethodGet, "/", testHttpHandler)
+		err := s.AddRoute(route)
+		require.NoError(t, err, "Actual err: %v", err)
 
 		url := asyncRunHttpServerAndAssertStopWithoutError(t, s)
 
@@ -215,18 +221,6 @@ func newTestHttpServerWithPath(path string) *HttpServer {
 	return NewHttpServerWithLogger(config, slog.Default())
 }
 
-func newTestHttpServerWithOkHandler(t *testing.T) *HttpServer {
-	t.Helper()
-
-	s := newTestHttpServer()
-
-	route := rest.NewRoute(http.MethodGet, "/", testHttpHandler)
-	err := s.AddRoute(route)
-	require.NoError(t, err, "Actual err: %v", err)
-
-	return s
-}
-
 // Returns the base url the server listens on. Serving is stopped and asserted
 // to have terminated without error when the test ends.
 func asyncRunHttpServerAndAssertStopWithoutError(
@@ -256,4 +250,77 @@ func asyncRunHttpServerAndAssertStopWithoutError(
 	require.True(t, ok)
 
 	return fmt.Sprintf("http://localhost:%d", addr.Port)
+}
+
+func testHttpHandler(c *gin.Context) {
+	c.JSON(http.StatusOK, "OK")
+}
+
+func doRequest(
+	t *testing.T, method string, url string,
+) *http.Response {
+	t.Helper()
+
+	req, err := http.NewRequest(method, url, nil)
+	require.NoError(t, err, "Actual err: %v", err)
+
+	client := &http.Client{}
+	rw, err := client.Do(req)
+	require.NoError(t, err, "Actual err: %v", err)
+
+	return rw
+}
+
+type responseEnvelope struct {
+	RequestId  string          `json:"request_id"`
+	Status     string          `json:"status"`
+	StatusCode int             `json:"status_code"`
+	Details    json.RawMessage `json:"details"`
+}
+
+func unmarshalResponseAndAssertRequestId(t *testing.T, resp *http.Response) responseEnvelope {
+	t.Helper()
+
+	defer func() {
+		err := resp.Body.Close()
+		require.NoError(t, err, "Actual err: %v", err)
+	}()
+
+	data, err := io.ReadAll(resp.Body)
+	require.NoError(t, err, "Actual err: %v", err)
+	assertResponseContentLengthMatchesBody(t, resp, data)
+
+	var out responseEnvelope
+	err = json.Unmarshal(data, &out)
+	require.NoError(t, err, "Actual err: %v", err)
+
+	headerRequestId := resp.Header.Get(requestIdHeader)
+	assert.Regexp(t, uuidRegex, headerRequestId)
+	assert.Regexp(t, uuidRegex, out.RequestId)
+	assert.Equal(t, headerRequestId, out.RequestId)
+
+	return out
+}
+
+func assertResponseContentLengthMatchesBody(
+	t *testing.T,
+	resp *http.Response,
+	body []byte,
+) {
+	t.Helper()
+
+	contentLength, err := strconv.Atoi(resp.Header.Get("Content-Length"))
+	require.NoError(t, err, "Actual err: %v", err)
+	assert.Equal(t, len(body), contentLength)
+}
+
+func assertIsOkResponse(t *testing.T, response *http.Response) {
+	t.Helper()
+
+	assert.Equal(t, http.StatusOK, response.StatusCode)
+	assert.Equal(t, "application/json", response.Header.Get("Content-Type"))
+	actual := unmarshalResponseAndAssertRequestId(t, response)
+	assert.Equal(t, "SUCCESS", actual.Status)
+	assert.Equal(t, http.StatusOK, actual.StatusCode)
+	assert.Equal(t, `"OK"`, string(actual.Details))
 }
