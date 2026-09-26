@@ -9,19 +9,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type dummyConnection struct {
-	Connection
-}
-
 const sampleSqlQuery = "SELECT name FROM my_table"
 
 func TestIT_QueryOne(t *testing.T) {
-	t.Run("returns error when connection is not supported", func(t *testing.T) {
-		_, err := QueryOne[int](t.Context(), &dummyConnection{}, sampleSqlQuery)
-
-		assert.ErrorIs(t, ErrUnsupportedOperation, err, "Actual err: %v", err)
-	})
-
 	t.Run("returns error when connection is closed", func(t *testing.T) {
 		conn := newTestConnection(t)
 		conn.Close(t.Context())
@@ -138,12 +128,6 @@ func TestIT_QueryOne(t *testing.T) {
 }
 
 func TestIT_QueryAll(t *testing.T) {
-	t.Run("returns error when connection is not supported", func(t *testing.T) {
-		_, err := QueryAll[int](t.Context(), &dummyConnection{}, sampleSqlQuery)
-
-		assert.ErrorIs(t, ErrUnsupportedOperation, err, "Actual err: %v", err)
-	})
-
 	t.Run("returns error when connection is closed", func(t *testing.T) {
 		conn := newTestConnection(t)
 		conn.Close(t.Context())

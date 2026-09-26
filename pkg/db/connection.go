@@ -8,20 +8,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type Connection interface {
-	Close(ctx context.Context)
-	Ping(ctx context.Context) error
-
-	BeginTx(ctx context.Context) (Transaction, error)
-
-	Exec(ctx context.Context, sql string, arguments ...any) (int64, error)
-}
-
-type connectionImpl struct {
+type Connection struct {
 	pool *pgxpool.Pool
 }
 
-func New(ctx context.Context, config Config) (Connection, error) {
+func New(ctx context.Context, config Config) (*Connection, error) {
 	connStr := config.ToConnectionString()
 
 	pool, err := newPool(ctx, connStr)
@@ -29,7 +20,7 @@ func New(ctx context.Context, config Config) (Connection, error) {
 		return nil, err
 	}
 
-	conn := &connectionImpl{
+	conn := &Connection{
 		pool: pool,
 	}
 
@@ -41,21 +32,21 @@ func New(ctx context.Context, config Config) (Connection, error) {
 	return conn, nil
 }
 
-func (ci *connectionImpl) Close(ctx context.Context) {
+func (ci *Connection) Close(ctx context.Context) {
 	if ci.pool != nil {
 		ci.pool.Close()
 		ci.pool = nil
 	}
 }
 
-func (ci *connectionImpl) Ping(ctx context.Context) error {
+func (ci *Connection) Ping(ctx context.Context) error {
 	if ci.pool == nil {
 		return ErrNotConnected
 	}
 	return ci.pool.Ping(ctx)
 }
 
-func (ci *connectionImpl) BeginTx(ctx context.Context) (Transaction, error) {
+func (ci *Connection) BeginTx(ctx context.Context) (Transaction, error) {
 	if ci.pool == nil {
 		return nil, ErrNotConnected
 	}
@@ -73,7 +64,7 @@ func (ci *connectionImpl) BeginTx(ctx context.Context) (Transaction, error) {
 	return tx, nil
 }
 
-func (ci *connectionImpl) Exec(ctx context.Context, sql string, arguments ...any) (int64, error) {
+func (ci *Connection) Exec(ctx context.Context, sql string, arguments ...any) (int64, error) {
 	if ci.pool == nil {
 		return 0, ErrNotConnected
 	}
@@ -86,7 +77,7 @@ func (ci *connectionImpl) Exec(ctx context.Context, sql string, arguments ...any
 	return tag.RowsAffected(), err
 }
 
-func (ci *connectionImpl) query(ctx context.Context, sql string, arguments ...any) (pgx.Rows, error) {
+func (ci *Connection) Query(ctx context.Context, sql string, arguments ...any) (pgx.Rows, error) {
 	if ci.pool == nil {
 		return nil, ErrNotConnected
 	}

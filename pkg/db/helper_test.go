@@ -15,7 +15,7 @@ type element struct {
 	Name string
 }
 
-func newTestConnection(t *testing.T) Connection {
+func newTestConnection(t *testing.T) *Connection {
 	t.Helper()
 
 	conn, err := New(t.Context(), dbTestConfig)
@@ -28,7 +28,7 @@ func newTestConnection(t *testing.T) Connection {
 	return conn
 }
 
-func newTestTransaction(t *testing.T) (Connection, Transaction) {
+func newTestTransaction(t *testing.T) (*Connection, Transaction) {
 	t.Helper()
 
 	conn := newTestConnection(t)
@@ -43,7 +43,7 @@ func newTestTransaction(t *testing.T) (Connection, Transaction) {
 	return conn, tx
 }
 
-func insertTestData(t *testing.T, conn Connection) element {
+func insertTestData(t *testing.T, conn *Connection) element {
 	t.Helper()
 
 	element := element{
@@ -69,7 +69,7 @@ func insertTestDataTx(t *testing.T, tx Transaction) element {
 	return element
 }
 
-func assertNameForId(t *testing.T, conn Connection, id uuid.UUID, expectedName string) {
+func assertNameForId(t *testing.T, conn *Connection, id uuid.UUID, expectedName string) {
 	t.Helper()
 
 	value, err := QueryOne[string](t.Context(), conn, "SELECT name FROM my_table WHERE id = $1", id)
@@ -77,7 +77,7 @@ func assertNameForId(t *testing.T, conn Connection, id uuid.UUID, expectedName s
 	require.Equal(t, expectedName, value)
 }
 
-func assertIdExists(t *testing.T, conn Connection, id uuid.UUID) {
+func assertIdExists(t *testing.T, conn *Connection, id uuid.UUID) {
 	t.Helper()
 
 	value, err := QueryOne[int](t.Context(), conn, "SELECT COUNT(*) FROM my_table WHERE id = $1", id)
@@ -85,7 +85,7 @@ func assertIdExists(t *testing.T, conn Connection, id uuid.UUID) {
 	require.Equal(t, 1, value)
 }
 
-func assertIdDoesNotExist(t *testing.T, conn Connection, id uuid.UUID) {
+func assertIdDoesNotExist(t *testing.T, conn *Connection, id uuid.UUID) {
 	t.Helper()
 
 	value, err := QueryOne[int](t.Context(), conn, "SELECT COUNT(*) FROM my_table WHERE id = $1", id)
@@ -93,7 +93,7 @@ func assertIdDoesNotExist(t *testing.T, conn Connection, id uuid.UUID) {
 	require.Equal(t, 0, value)
 }
 
-func assertDependentIdDoesNotExist(t *testing.T, conn Connection, id uuid.UUID) {
+func assertDependentIdDoesNotExist(t *testing.T, conn *Connection, id uuid.UUID) {
 	t.Helper()
 
 	value, err := QueryOne[int](t.Context(), conn, "SELECT COUNT(*) FROM dependent_table WHERE id = $1", id)

@@ -8,14 +8,14 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func QueryOne[T any](ctx context.Context, conn Connection, sql string, arguments ...any) (T, error) {
+type DbConnection interface {
+	Query(ctx context.Context, sql string, arguments ...any) (pgx.Rows, error)
+}
+
+func QueryOne[T any](ctx context.Context, conn DbConnection, sql string, arguments ...any) (T, error) {
 	var out T
 
-	connImpl, ok := conn.(*connectionImpl)
-	if !ok {
-		return out, ErrUnsupportedOperation
-	}
-	rows, err := connImpl.query(ctx, sql, arguments...)
+	rows, err := conn.Query(ctx, sql, arguments...)
 	if err != nil {
 		return out, analyzeAndWrapDatabaseError(err)
 	}
@@ -35,14 +35,10 @@ func QueryOne[T any](ctx context.Context, conn Connection, sql string, arguments
 	return out, nil
 }
 
-func QueryAll[T any](ctx context.Context, conn Connection, sql string, arguments ...any) ([]T, error) {
+func QueryAll[T any](ctx context.Context, conn DbConnection, sql string, arguments ...any) ([]T, error) {
 	var out []T
 
-	connImpl, ok := conn.(*connectionImpl)
-	if !ok {
-		return out, ErrUnsupportedOperation
-	}
-	rows, err := connImpl.query(ctx, sql, arguments...)
+	rows, err := conn.Query(ctx, sql, arguments...)
 	if err != nil {
 		return out, analyzeAndWrapDatabaseError(err)
 	}
