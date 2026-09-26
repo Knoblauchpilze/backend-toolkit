@@ -223,7 +223,7 @@ func newTestHttpServerWithPath(path string) *HttpServer {
 		ShutdownTimeout: 2 * time.Second,
 	}
 
-	return NewHttpServerWithLogger(config, slog.Default())
+	return NewWithLogger(config, slog.Default())
 }
 
 // Returns the base url the server listens on. Serving is stopped and asserted

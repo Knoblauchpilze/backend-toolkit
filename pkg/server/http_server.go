@@ -22,7 +22,7 @@ type HttpServer struct {
 	router          *gin.RouterGroup
 }
 
-func NewHttpServerWithLogger(config Config, log *slog.Logger) *HttpServer {
+func NewWithLogger(config Config, log *slog.Logger) *HttpServer {
 	engine := createGinEngine(log)
 
 	s := &HttpServer{

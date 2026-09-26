@@ -64,10 +64,7 @@ func main() {
 	defer conn.Close(context.Background())
 
 	// Create the server
-	serverConfig := server.Config{
-		Port: 1234,
-	}
-	s := server.NewHttpServerWithLogger(serverConfig, log)
+	s := server.NewWithLogger(server.Config{}, log)
 
 	// Add a route with some handler
 	route := rest.NewRoute(http.MethodGet, "/info", infoHandlerGenerator(conn))
@@ -77,9 +74,9 @@ func main() {
 	}
 
 	// Start the server
-	listener, err := s.Bind(serverConfig.Port)
+	listener, err := s.Bind(1234)
 	if err != nil {
-		log.Error("Failed to bind server", slog.Int("port", int(serverConfig.Port)), slog.Any("error", err))
+		log.Error("Failed to bind server", slog.Int("port", 1234), slog.Any("error", err))
 		os.Exit(1)
 	}
 
@@ -100,7 +97,7 @@ func main() {
 	}
 }
 
-func infoHandlerGenerator(conn db.Connection) middleware.HandlerFunc {
+func infoHandlerGenerator(conn db.DbConnection) middleware.HandlerFunc {
 	return func(c *gin.Context) {
 		sqlQuery := "SELECT count(*) FROM my-table"
 
