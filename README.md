@@ -4,7 +4,7 @@
 
 This project uses the following technologies:
 
-- [postgre](https://www.postgresql.org/) for the databases.
+- [PostgreSQL](https://www.postgresql.org/) for the databases.
 - [go](https://go.dev/) as the server backend language.
 
 # Badges
@@ -117,7 +117,7 @@ By using only packges provided in this repository we are able to setup a server 
 
 The key features of the project are:
 
-- a simple way to configure a connection to a `postgre` database using [pgx](https://github.com/jackc/pgx).
+- a simple way to configure a connection to a `PostgreSQL` database using [pgx](https://github.com/jackc/pgx).
 - an easy to use server using [gin](https://gin-gonic.com/en/) as a base.
 - a powerful logging system that leverages [zerolog](https://github.com/rs/zerolog) and integrates it with `Gin`.
 
@@ -196,7 +196,7 @@ This allows to create a logger and forward it to the server.
 
 ## Database interaction
 
-An important part of a backend service is usually to interact with some database where the information is stored. For most of the projects we had to work with in the past this meant spinning up a `postgre` database and interact with it.
+An important part of a backend service is usually to interact with some database where the information is stored. For most of the projects we had to work with in the past this meant spinning up a `PostgreSQL` database and interact with it.
 
 We've been using the [pgx](https://github.com/jackc/pgx) for a long time and found it quite versatile. The `db` package is using it under the hood but hiding some of the internals in an attempt to allow easily upgrading to newer version and hide some of the complexity of managing the connection to the database.
 
@@ -218,7 +218,7 @@ type myStruct struct {
 	B string
 }
 
-func foo(conn db.Connection) error {
+func foo(conn *db.Connection) error {
 	s, err := conn.Query[myStruct](conn, "SELECT A, B FROM my_table")
 	if err != nil {
 		return err
@@ -335,7 +335,7 @@ We also assume that this repository is cloned locally and available to use. To a
 git clone git@github.com:Knoblauchpilze/backend-toolkit.git
 ```
 
-**Note:** the migrate tool and postgre are only used for the test database and for tests. If you don't install them it means you'll not be able to run the tests locally.
+**Note:** the migrate tool and PostgreSQL are only used for the test database and for tests. If you don't install them it means you'll not be able to run the tests locally.
 
 # How to extend this project
 
