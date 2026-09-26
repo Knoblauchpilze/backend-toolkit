@@ -51,9 +51,9 @@ func main() {
 
 	// Create the connection to access the database
 	dbConfig := postgresql.NewConfigForLocalhost(
-		"my-database",
-		"my-user",
-		"my-password",
+		"db_galactic_sovereign",
+		"galactic_sovereign_manager",
+		"manager_password",
 	)
 
 	conn, err := db.New(context.Background(), dbConfig)
@@ -67,7 +67,7 @@ func main() {
 	serverConfig := server.Config{
 		Port: 1234,
 	}
-	s := server.NewWithLogger(serverConfig, log)
+	s := server.NewHttpServerWithLogger(serverConfig, log)
 
 	// Add a route with some handler
 	route := rest.NewRoute(http.MethodGet, "/info", infoHandlerGenerator(conn))
@@ -77,7 +77,17 @@ func main() {
 	}
 
 	// Start the server
-	wait, err := process.StartWithSignalHandler(context.Background(), s)
+	listener, err := s.Bind(serverConfig.Port)
+	if err != nil {
+		log.Error("Failed to bind server", slog.Int("port", int(serverConfig.Port)), slog.Any("error", err))
+		os.Exit(1)
+	}
+
+	serveFunc := func(ctx context.Context) error {
+		return s.Serve(ctx, listener)
+	}
+	proc := process.NewContextProcess(serveFunc)
+	wait, err := process.AsyncStartWithSignalHandler(context.Background(), proc)
 	if err != nil {
 		log.Error("Failed to start the server", slog.Any("error", err))
 		os.Exit(1)
