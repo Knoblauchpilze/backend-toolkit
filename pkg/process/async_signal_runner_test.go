@@ -1,8 +1,8 @@
 package process
 
 import (
+	"bytes"
 	"context"
-	"fmt"
 	"os"
 	"os/exec"
 	"syscall"
@@ -161,103 +161,43 @@ func TestUnit_AsyncStartWithSignalHandler(t *testing.T) {
 	})
 }
 
-func TestUnit_AsyncStartWithSignalHandler_WhenSIGINTReceived_ExpectCloseToBeCalled(t *testing.T) {
-	// Case where we need to wait for a signal
+func TestUnit_AsyncStartWithSignalHandler_WhenSIGINTReceived_ExpectProcessExitsCleanly(t *testing.T) {
 	if *waitForInterruption {
-		runInterruptedProcess(nil)
+		proc := newControlledProcess(nil, nil)
+		wait, err := AsyncStartWithSignalHandler(context.Background(), proc.Process())
+		require.NoError(t, err, "Actual err: %v", err)
+		requireClosed(t, proc.started, "run was not started")
+
+		err = wait()
+		requireClosed(t, proc.interruptCalled, "interrupt was not called")
+		require.NoError(t, err, "Actual err: %v", err)
 		return
 	}
 
-	// Body of the test: we need to start the part above as a subprocess
-	// and send a SIGINT to the corresponding child process
-	args := []string{
-		"-test.v",
-		"-test.run=^TestUnit_AsyncStartWithSignalHandler_WhenSIGINTReceived_ExpectCloseToBeCalled$",
+	// Body of the test: we need to start the part above as a subprocess and send
+	// a SIGINT to the corresponding child process.
+
+	// The 5 second timeout should be enough to allow the child process to pick up
+	// the SIGINT and terminate.
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(
+		ctx,
+		os.Args[0],
+		"-test.run=^TestUnit_AsyncStartWithSignalHandler_WhenSIGINTReceived_ExpectProcessExitsCleanly$",
 		"-wait_for_interruption",
-	}
+	)
+	var output bytes.Buffer
+	cmd.Stdout = &output
+	cmd.Stderr = &output
+	err := cmd.Start()
+	require.NoError(t, err, "Actual err: %v", err)
 
-	cmd := exec.Command(os.Args[0], args...)
-
-	// Voluntarily ignoring errors: the subprocess sometimes does not return
-	// any error and sometimes an error status.
-	output, _ := cmd.Output()
-
-	actual := formatTestOutput(output)
-
-	expected := []string{
-		"start called",
-		"interrupt called",
-		"stopping process",
-	}
-	assert.ElementsMatch(t, expected, actual)
-}
-
-func TestUnit_AsyncStartWithSignalHandler_ExpectInterruptErrorToBeReturned(t *testing.T) {
-	if *waitForInterruption {
-		runInterruptedProcess(errSample)
-		return
-	}
-
-	args := []string{
-		"-test.v",
-		"-test.run=^TestUnit_AsyncStartWithSignalHandler_ExpectInterruptErrorToBeReturned$",
-		"-wait_for_interruption",
-	}
-
-	cmd := exec.Command(os.Args[0], args...)
-
-	output, _ := cmd.Output()
-
-	actual := formatTestOutput(output)
-
-	expected := []string{
-		"start called",
-		"interrupt called",
-		"stopping process",
-		"error waiting for process: sample error",
-	}
-	assert.ElementsMatch(t, expected, actual)
-}
-
-func runInterruptedProcess(interruptError error) {
-	stop := make(chan bool, 2)
-
-	process := Process{
-		Run: func() error {
-			fmt.Println("start called")
-			ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
-			defer cancel()
-			select {
-			case <-ctx.Done():
-				fmt.Println("process reached timeout")
-			case <-stop:
-				fmt.Println("stopping process")
-			}
-			return nil
-		},
-		Interrupt: func() error {
-			fmt.Println("interrupt called")
-			stop <- true
-			return interruptError
-		},
-	}
-
-	go func() {
-		time.AfterFunc(100*time.Millisecond, func() {
-			err := syscall.Kill(syscall.Getpid(), syscall.SIGINT)
-			if err != nil {
-				panic(err)
-			}
-		})
-	}()
-
-	wait, err := AsyncStartWithSignalHandler(context.Background(), process)
-	if err != nil {
-		fmt.Println("error starting process:", err)
-	}
-
-	err = wait()
-	if err != nil {
-		fmt.Println("error waiting for process:", err)
-	}
+	// This delay assumes the child's signal watcher registers before SIGINT arrives.
+	time.Sleep(250 * time.Millisecond)
+	signalErr := cmd.Process.Signal(syscall.SIGINT)
+	waitErr := cmd.Wait()
+	require.NoError(t, signalErr, "Actual err: %v, output:\n%s", signalErr, output.String())
+	require.NoError(t, waitErr, "Actual err: %v, output:\n%s", waitErr, output.String())
 }
