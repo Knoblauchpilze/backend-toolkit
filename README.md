@@ -177,7 +177,7 @@ By default a handler using `Gin` has the following prototype:
 type HandlerFunc func(c *gin.Context)
 ```
 
-The `gin.Context` does not provide a default logger but the [Server](pkg/server/server.go) defines a middleware to always provide one through the [GetContextLogger](pkg/rest/context.go) function to request the logger for each request.
+The `gin.Context` does not provide a default logger but the [HttpServer](pkg/server/http_server.go) defines a middleware to always provide one through the [GetContextLogger](pkg/rest/context.go) function to request the logger for each request.
 
 The logger is configured with a prefix to include the request identifier when available.
 
