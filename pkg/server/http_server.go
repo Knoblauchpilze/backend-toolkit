@@ -8,7 +8,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Knoblauchpilze/backend-toolkit/pkg/middleware"
 	"github.com/Knoblauchpilze/backend-toolkit/pkg/rest"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -107,4 +109,51 @@ func (s *HttpServer) Serve(ctx context.Context, listener net.Listener) error {
 	s.log.Info("Server gracefully shutdown", slog.String("address", address))
 
 	return nil
+}
+
+func createGinEngine(log *slog.Logger) *gin.Engine {
+	e := gin.New()
+
+	e.Use(func(c *gin.Context) {
+		ctx := rest.WithContextLogger(c.Request.Context(), log)
+		c.Request = c.Request.WithContext(ctx)
+		c.Next()
+	})
+
+	registerBaseMiddlewares(e, log)
+
+	return e
+}
+
+func registerBaseMiddlewares(e *gin.Engine, log *slog.Logger) {
+	// https://stackoverflow.com/questions/74020538/cors-preflight-did-not-succeed
+	// https://stackoverflow.com/questions/6660019/restful-api-methods-head-options
+	corsConfig := cors.Config{
+		// https://www.stackhawk.com/blog/golang-cors-guide-what-it-is-and-how-to-enable-it/
+		AllowAllOrigins: true,
+		AllowMethods: []string{
+			http.MethodOptions,
+			http.MethodGet,
+			http.MethodPost,
+			http.MethodPatch,
+			http.MethodDelete,
+		},
+	}
+
+	e.Use(cors.New(corsConfig))
+	e.Use(middleware.RequestId())
+	e.Use(middleware.RequestTracer(log))
+	e.Use(middleware.RequestLogger())
+	e.Use(middleware.ErrorConverter())
+	e.Use(middleware.Recover())
+}
+
+func buildMiddlewaresForRoute(route *rest.Route) []gin.HandlerFunc {
+	out := []gin.HandlerFunc{}
+
+	if route.UseResponseEnvelope() {
+		out = append(out, middleware.ResponseEnvelope())
+	}
+
+	return out
 }
