@@ -9,16 +9,30 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestUnit_SafeConsoleWriter_WritesToProvidedWriter(t *testing.T) {
-	var out bytes.Buffer
+func TestUnit_SafeConsoleWriter(t *testing.T) {
+	t.Run("writes to provided buffer", func(t *testing.T) {
+		var out bytes.Buffer
 
-	safeWriter := newSafeConsoleWriter(&out)
+		safeWriter := newSafeConsoleWriter(&out)
 
-	data := []byte("hello")
-	actual, err := safeWriter.Write(data)
-	require.NoError(t, err, "Actual err: %v", err)
+		data := []byte("hello")
+		actual, err := safeWriter.Write(data)
+		require.NoError(t, err, "Actual err: %v", err)
 
-	assert.Equal(t, len(data), actual)
+		assert.Equal(t, len(data), actual)
+	})
+
+	t.Run("returns error when writer fails", func(t *testing.T) {
+		m := &mockWriter{
+			err: errors.New("some error"),
+		}
+
+		safeWriter := newSafeConsoleWriter(m)
+
+		_, err := safeWriter.Write([]byte{})
+
+		assert.ErrorIs(t, err, m.err, "Actual err: %v", err)
+	})
 }
 
 type mockWriter struct {
@@ -27,16 +41,4 @@ type mockWriter struct {
 
 func (m *mockWriter) Write(p []byte) (int, error) {
 	return 0, m.err
-}
-
-func TestUnit_SafeConsoleWriter_WhenWriterFails_ExpectFailure(t *testing.T) {
-	m := &mockWriter{
-		err: errors.New("some error"),
-	}
-
-	safeWriter := newSafeConsoleWriter(m)
-
-	_, err := safeWriter.Write([]byte{})
-
-	assert.Equal(t, m.err, err)
 }
