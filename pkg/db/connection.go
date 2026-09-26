@@ -46,7 +46,7 @@ func (ci *Connection) Ping(ctx context.Context) error {
 	return ci.pool.Ping(ctx)
 }
 
-func (ci *Connection) BeginTx(ctx context.Context) (Transaction, error) {
+func (ci *Connection) BeginTx(ctx context.Context) (*Transaction, error) {
 	if ci.pool == nil {
 		return nil, ErrNotConnected
 	}
@@ -56,7 +56,7 @@ func (ci *Connection) BeginTx(ctx context.Context) (Transaction, error) {
 		return nil, err
 	}
 
-	tx := &transactionImpl{
+	tx := &Transaction{
 		timeStamp: time.Now(),
 		tx:        pgxTx,
 	}

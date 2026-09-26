@@ -28,7 +28,7 @@ func newTestConnection(t *testing.T) *Connection {
 	return conn
 }
 
-func newTestTransaction(t *testing.T) (*Connection, Transaction) {
+func newTestTransaction(t *testing.T) (*Connection, *Transaction) {
 	t.Helper()
 
 	conn := newTestConnection(t)
@@ -56,7 +56,7 @@ func insertTestData(t *testing.T, conn *Connection) element {
 	return element
 }
 
-func insertTestDataTx(t *testing.T, tx Transaction) element {
+func insertTestDataTx(t *testing.T, tx *Transaction) element {
 	t.Helper()
 
 	element := element{

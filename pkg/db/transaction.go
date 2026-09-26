@@ -8,25 +8,13 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-type Transaction interface {
-	Close(ctx context.Context)
-	TimeStamp() time.Time
-
-	Exec(ctx context.Context, sql string, arguments ...any) (int64, error)
-
-	// Rollback allows to mark the transaction for rollback, independently of any
-	// error which might or might not have occurred during the execution.
-	// This function can only be called if the transaction was not already committed.
-	Rollback() error
-}
-
-type transactionImpl struct {
+type Transaction struct {
 	timeStamp time.Time
 	tx        pgx.Tx
 	err       error
 }
 
-func (ti *transactionImpl) Close(ctx context.Context) {
+func (ti *Transaction) Close(ctx context.Context) {
 	if ti.tx == nil {
 		return
 	}
@@ -49,11 +37,11 @@ func (ti *transactionImpl) Close(ctx context.Context) {
 	ti.tx = nil
 }
 
-func (ti *transactionImpl) TimeStamp() time.Time {
+func (ti *Transaction) TimeStamp() time.Time {
 	return ti.timeStamp
 }
 
-func (ti *transactionImpl) Exec(ctx context.Context, sql string, arguments ...any) (int64, error) {
+func (ti *Transaction) Exec(ctx context.Context, sql string, arguments ...any) (int64, error) {
 	if ti.tx == nil {
 		return int64(0), ErrAlreadyCommitted
 	}
@@ -68,7 +56,7 @@ func (ti *transactionImpl) Exec(ctx context.Context, sql string, arguments ...an
 	return tag.RowsAffected(), err
 }
 
-func (ti *transactionImpl) Rollback() error {
+func (ti *Transaction) Rollback() error {
 	if ti.tx == nil {
 		return ErrAlreadyCommitted
 	}
@@ -78,7 +66,7 @@ func (ti *transactionImpl) Rollback() error {
 	return nil
 }
 
-func (ti *transactionImpl) query(ctx context.Context, sql string, arguments ...any) (pgx.Rows, error) {
+func (ti *Transaction) Query(ctx context.Context, sql string, arguments ...any) (pgx.Rows, error) {
 	if ti.tx == nil {
 		return nil, ErrAlreadyCommitted
 	}
@@ -89,7 +77,7 @@ func (ti *transactionImpl) query(ctx context.Context, sql string, arguments ...a
 	return rows, err
 }
 
-func (t *transactionImpl) updateErrorStatus(err error) {
+func (t *Transaction) updateErrorStatus(err error) {
 	if err != nil {
 		t.err = err
 	}

@@ -9,17 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type dummyTransaction struct {
-	Transaction
-}
-
 func TestIT_QueryOneTx(t *testing.T) {
-	t.Run("returns error when transaction is not supported", func(t *testing.T) {
-		_, err := QueryOneTx[int](t.Context(), &dummyTransaction{}, sampleSqlQuery)
-
-		assert.ErrorIs(t, ErrUnsupportedOperation, err, "Actual err: %v", err)
-	})
-
 	t.Run("returns error when already committed", func(t *testing.T) {
 		_, tx := newTestTransaction(t)
 		tx.Close(t.Context())
@@ -135,12 +125,6 @@ func TestIT_QueryOneTx(t *testing.T) {
 }
 
 func TestIT_QueryAllTx(t *testing.T) {
-	t.Run("returns error when transaction is not supported", func(t *testing.T) {
-		_, err := QueryAllTx[int](t.Context(), &dummyTransaction{}, sampleSqlQuery)
-
-		assert.ErrorIs(t, ErrUnsupportedOperation, err, "Actual err: %v", err)
-	})
-
 	t.Run("returns error when already committed", func(t *testing.T) {
 		_, tx := newTestTransaction(t)
 		tx.Close(t.Context())
