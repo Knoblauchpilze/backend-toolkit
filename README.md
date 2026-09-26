@@ -132,11 +132,13 @@ We define multiple tags and versions in this repository to make it easy to pinpo
 
 A fundamental aspect of Go is that error should be integrated as part of the normal flow of a program. To this end, we usually create quite a lot of distinct errors and can need to wrap errors when they are interpreted by a higher layer of the programs we write.
 
-In this project we define the concept of an [error with code](https://github.com/Knoblauchpilze/backend-toolkit/blob/master/pkg/errors/error.go#L15) as follows:
+In this project we define the concept of an [error with code](pkg/errors/error.go) as follows:
 
 ```go
-type ErrorWithCode interface {
-	Code() ErrorCode
+type ErrorWithCode struct {
+	Code    ErrorCode
+	Message string
+	Cause   error
 }
 ```
 
@@ -236,7 +238,7 @@ The problem with this syntax is that the generic type to assign to the `Query` m
 To this end, the `db` package defines a free function like below:
 
 ```go
-func Query[T any](conn db.Connection, sqlQuery string, arguments ...any) (T, error) {
+func Query[T any](conn db.DbConnection, sqlQuery string, arguments ...any) (T, error) {
 	/* ... */
 }
 ```
