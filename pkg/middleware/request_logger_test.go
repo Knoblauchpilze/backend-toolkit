@@ -46,7 +46,7 @@ func TestUnit_RequestLogger(t *testing.T) {
 		assert.Equal(t, "Request processed", actual.Message)
 		assert.Equal(t, "GET", actual.Method)
 		assert.Equal(t, "example.com/", actual.Uri)
-		assert.Regexp(t, "[0-9]+.[0-9][mµn]s", actual.Duration)
+		assert.Regexp(t, "[0-9]+.[0-9]+[mµn]s", actual.Duration)
 		assert.Equal(t, http.StatusNoContent, actual.Status)
 	})
 
