@@ -54,7 +54,8 @@ func TestUnit_Status_MarshalJSON(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			data, err := json.Marshal(tc.status)
-			require.Nil(t, err)
+			require.NoError(t, err, "Actual err: %v", err)
+
 			assert.Equal(t, tc.expected, string(data))
 		})
 	}
@@ -82,7 +83,8 @@ func TestUnit_Status_UnmarshalJSON(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var s Status
 			err := json.Unmarshal([]byte(tc.input), &s)
-			require.Nil(t, err)
+			require.NoError(t, err, "Actual err: %v", err)
+
 			assert.Equal(t, tc.expected, s)
 		})
 	}
@@ -144,11 +146,11 @@ func TestUnit_Status_RoundtripInStruct(t *testing.T) {
 			original := envelope{Status: tc.status}
 
 			data, err := json.Marshal(original)
-			require.Nil(t, err)
+			require.NoError(t, err, "Actual err: %v", err)
 
 			var unmarshaled envelope
 			err = json.Unmarshal(data, &unmarshaled)
-			require.Nil(t, err)
+			require.NoError(t, err, "Actual err: %v", err)
 
 			assert.Equal(t, original.Status, unmarshaled.Status)
 		})
@@ -163,7 +165,7 @@ func TestUnit_Status_ProducesValidJSON(t *testing.T) {
 	e := envelope{Status: StatusSuccess}
 
 	data, err := json.Marshal(e)
-	require.Nil(t, err)
+	require.NoError(t, err, "Actual err: %v", err)
 
 	expectedJSON := `{"status":"SUCCESS"}`
 	assert.JSONEq(t, expectedJSON, string(data))
@@ -205,8 +207,8 @@ func TestUnit_Status_SuccessfullyMarshalsArray(t *testing.T) {
 	statuses := []Status{StatusSuccess, StatusError}
 
 	data, err := json.Marshal(statuses)
+	require.NoError(t, err, "Actual err: %v", err)
 
-	require.Nil(t, err)
 	assert.JSONEq(t, `["SUCCESS","ERROR"]`, string(data))
 }
 
@@ -214,7 +216,7 @@ func TestUnit_Status_SuccessfullyUnmarshalsArray(t *testing.T) {
 	var statuses []Status
 
 	err := json.Unmarshal([]byte(`["SUCCESS","ERROR"]`), &statuses)
+	require.NoError(t, err, "Actual err: %v", err)
 
-	require.Nil(t, err)
 	assert.Equal(t, []Status{StatusSuccess, StatusError}, statuses)
 }

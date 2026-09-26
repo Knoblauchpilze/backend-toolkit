@@ -88,7 +88,7 @@ func unmarshalLogOutput(t *testing.T, out bytes.Buffer) message {
 	var actual message
 
 	err := json.Unmarshal(out.Bytes(), &actual)
-	require.Nil(t, err)
+	require.NoError(t, err, "Actual err: %v", err)
 
 	return actual
 }

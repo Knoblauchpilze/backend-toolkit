@@ -114,6 +114,6 @@ func TestUnit_SafeRunAsync_RunsAsync(t *testing.T) {
 	end := time.Now()
 	actual := wait()
 
-	assert.Nil(t, actual, "Actual err: %v", actual)
+	require.NoError(t, actual, "Actual err: %v", actual)
 	assert.LessOrEqual(t, end.Sub(start), 80*time.Millisecond)
 }

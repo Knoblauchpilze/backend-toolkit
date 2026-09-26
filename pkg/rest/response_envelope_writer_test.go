@@ -211,7 +211,7 @@ func TestUnit_EnvelopeResponseWriter(t *testing.T) {
 		rw := NewResponseEnvelopeWriter(out, sampleRequestId)
 
 		_, err := rw.Write([]byte(`{"value":12}`))
-		require.Nil(t, err)
+		require.NoError(t, err, "Actual err: %v", err)
 
 		expectedJson := `
 		{
@@ -233,10 +233,10 @@ func TestUnit_EnvelopeResponseWriter(t *testing.T) {
 
 		value := details{Value: 45}
 		data, err := json.Marshal(value)
-		require.Nil(t, err, "Actual err: %v", err)
+		require.NoError(t, err, "Actual err: %v", err)
 
 		_, err = rw.Write(data)
-		require.Nil(t, err)
+		require.NoError(t, err, "Actual err: %v", err)
 
 		expectedJson := `
 		{
@@ -257,7 +257,7 @@ func TestUnit_EnvelopeResponseWriter(t *testing.T) {
 		rw := NewResponseEnvelopeWriter(out, sampleRequestId)
 
 		_, err := rw.Write([]byte("An error occurred"))
-		require.Nil(t, err)
+		require.NoError(t, err, "Actual err: %v", err)
 
 		expectedJson := `
 		{
