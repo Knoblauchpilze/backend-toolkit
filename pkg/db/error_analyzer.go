@@ -12,6 +12,7 @@ const (
 	foreignKeyViolation          = "23503"
 	uniqueValidation             = "23505"
 	passwordAuthenticationFailed = "28P01"
+	checkConstraintViolation     = "23514"
 )
 
 func analyzeAndWrapDatabaseError(err error) error {
@@ -63,6 +64,8 @@ func mapPostgreCodeToErrorCode(postgreCode string) errors.ErrorCode {
 		return ErrForeignKeyValidation
 	case uniqueValidation:
 		return ErrUniqueConstraintViolation
+	case checkConstraintViolation:
+		return ErrCheckConstraintViolation
 	}
 
 	return ErrGenericSqlError

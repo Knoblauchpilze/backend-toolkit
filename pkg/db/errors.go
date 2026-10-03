@@ -15,6 +15,7 @@ const (
 	ErrForeignKeyValidation      errors.ErrorCode = 151
 	ErrUniqueConstraintViolation errors.ErrorCode = 152
 	errAuthenticationFailed      errors.ErrorCode = 153
+	ErrCheckConstraintViolation  errors.ErrorCode = 154
 )
 
 var ()

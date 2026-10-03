@@ -112,7 +112,11 @@ func TestIT_Connection_Exec(t *testing.T) {
 		element := insertTestData(t, conn)
 		id := uuid.New()
 
-		affectedRows, err := conn.Exec(t.Context(), "INSERT INTO my_table VALUES ($1, $2)", id, element.Name)
+		affectedRows, err := conn.Exec(
+			t.Context(),
+			"INSERT INTO my_table VALUES ($1, $2)",
+			id, element.Name,
+		)
 
 		assert.Equal(t, int64(0), affectedRows)
 		actual, ok := AsDatabaseError(err)
@@ -134,7 +138,11 @@ func TestIT_Connection_Exec(t *testing.T) {
 
 	t.Run("returns error when foreign key constraint is violated", func(t *testing.T) {
 		id := uuid.New()
-		affectedRows, err := conn.Exec(t.Context(), "INSERT INTO dependent_table VALUES ($1, $2)", id, "props")
+		affectedRows, err := conn.Exec(
+			t.Context(),
+			"INSERT INTO dependent_table VALUES ($1, $2, 'ALLOWED')",
+			id, "props",
+		)
 
 		assert.Equal(t, int64(0), affectedRows)
 		actual, ok := AsDatabaseError(err)
@@ -152,6 +160,33 @@ func TestIT_Connection_Exec(t *testing.T) {
 		}
 		assert.Equal(t, expected, actual, "Actual err: %v", err)
 		assertDependentIdDoesNotExist(t, conn, id)
+	})
+
+	t.Run("returns error when checked constraint is violated", func(t *testing.T) {
+		conn := newTestConnection(t)
+
+		parent := insertTestData(t, conn)
+
+		_, err := conn.Exec(
+			t.Context(),
+			"INSERT INTO dependent_table VALUES ($1, $2, 'NOT_ALLOWED')",
+			parent.Id, "props",
+		)
+
+		actual, ok := AsDatabaseError(err)
+		require.True(t, ok)
+
+		expected := &DatabaseError{
+			Code:       ErrCheckConstraintViolation,
+			Message:    `new row for relation "dependent_table" violates check constraint "dependent_table_enum_value_check"`,
+			SqlCode:    "23514",
+			Schema:     "test_db_schema",
+			Table:      "dependent_table",
+			Constraint: "dependent_table_enum_value_check",
+			Cause:      actual.Cause,
+		}
+		assert.Equal(t, expected, actual)
+		assertDependentIdDoesNotExist(t, conn, parent.Id)
 	})
 
 	t.Run("successfull updates data", func(t *testing.T) {

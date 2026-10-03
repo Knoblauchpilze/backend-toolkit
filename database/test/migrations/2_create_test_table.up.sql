@@ -12,6 +12,7 @@ CREATE TABLE my_table (
 CREATE TABLE dependent_table (
   id UUID NOT NULL,
   props TEXT NOT NULL,
+  enum_value TEXT NOT NULL CHECK (enum_value IN ('ALLOWED', 'ENABLED')),
   FOREIGN KEY (id) REFERENCES my_table(id)
 );
 
