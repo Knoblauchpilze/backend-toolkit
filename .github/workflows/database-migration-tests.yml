@@ -35,7 +35,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v7
         with:
-          go-version: "1.26.0"
+          go-version: "1.27.3"
       - name: Install migrate tool
         run: go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
       - name: Create user
